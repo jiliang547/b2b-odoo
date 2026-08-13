@@ -1,6 +1,6 @@
 # Architecture
 
-Status: **Architecture gate — awaiting approval**
+Status: **Approved and implemented; Odoo.sh validation pending**
 
 ## Context
 

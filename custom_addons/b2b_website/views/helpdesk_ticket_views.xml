@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="helpdesk_ticket_view_form_b2b" model="ir.ui.view">
+        <field name="name">helpdesk.ticket.view.form.b2b</field>
+        <field name="model">helpdesk.ticket</field>
+        <field name="inherit_id" ref="helpdesk.helpdesk_ticket_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="inside">
+                <group string="Partner Hub" invisible="not b2b_request_type">
+                    <field name="b2b_request_type"/><field name="b2b_product_id"/><field name="b2b_serial_number"/><field name="b2b_sale_order_id"/><field name="b2b_contact_name"/><field name="b2b_company_name"/><field name="b2b_contact_phone"/><field name="b2b_contact_email"/><field name="b2b_submitted_at"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_partner_form_b2b" model="ir.ui.view">
+        <field name="name">res.partner.form.b2b</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet/notebook" position="inside">
+                <page string="Partner Hub" name="b2b_partner_hub" groups="b2b_core.group_b2b_operator">
+                    <group>
+                        <group>
+                            <field name="b2b_approved" readonly="1"/>
+                            <field name="b2b_segment_ids" widget="many2many_tags"/>
+                            <field name="property_product_pricelist"/>
+                        </group>
+                        <group>
+                            <field name="b2b_erp_customer_id"/>
+                            <field name="b2b_approval_date"/>
+                            <field name="b2b_approved_by_id"/>
+                        </group>
+                    </group>
+                    <group groups="b2b_core.group_b2b_manager">
+                        <button name="action_b2b_approve" type="object" string="Approve Partner Hub Access" class="btn-primary" invisible="b2b_approved"/>
+                        <button name="action_b2b_revoke" type="object" string="Revoke Partner Hub Access" class="btn-secondary" invisible="not b2b_approved" confirm="Revoke this customer's Partner Hub approval?"/>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

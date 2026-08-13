@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="b2b_management.Dashboard">
+        <div class="o_b2b_dashboard">
+            <header><div><span>LUCKY TONE</span><h1>Partner Hub Operations</h1><p>Customer access, samples, orders and integrations at a glance.</p></div><a class="btn btn-primary" href="/" target="_blank">Open website</a></header>
+            <section class="o_b2b_metrics" aria-label="Operational metrics">
+                <button type="button" t-on-click="() => this.openAction('b2b_sample.action_b2b_sample_requests')"><span>Awaiting sample review</span><strong t-out="state.loading ? '—' : state.samples"/></button>
+                <button type="button" t-on-click="() => this.openAction('b2b_erp_connector.action_b2b_integration_jobs')"><span>ERP jobs needing attention</span><strong t-out="state.loading ? '—' : state.failedJobs"/></button>
+                <button type="button" t-on-click="() => this.openAction('base.action_partner_form')"><span>Approved companies</span><strong t-out="state.loading ? '—' : state.approvedPartners"/></button>
+            </section>
+            <section class="o_b2b_shortcuts"><h2>Workspaces</h2><div class="o_b2b_shortcut_grid">
+                <button type="button" t-on-click="() => this.openAction('base.action_partner_form')"><i class="fa fa-building"/><span><strong>Customers</strong><small>Approval, segments and pricelists</small></span></button>
+                <button type="button" t-on-click="() => this.openAction('product.product_template_action')"><i class="fa fa-cubes"/><span><strong>Products</strong><small>Media, documents and visibility</small></span></button>
+                <button type="button" t-on-click="() => this.openAction('sale.action_orders')"><i class="fa fa-shopping-cart"/><span><strong>Sales Orders</strong><small>Native quotations and orders</small></span></button>
+                <button type="button" t-on-click="() => this.openAction('b2b_sample.action_b2b_sample_requests')"><i class="fa fa-flask"/><span><strong>Samples</strong><small>Review, approve and synchronize</small></span></button>
+                <button type="button" t-on-click="() => this.openAction('b2b_erp_connector.action_b2b_integration_jobs')"><i class="fa fa-exchange"/><span><strong>ERP Integration</strong><small>Queue status and controlled retries</small></span></button>
+                <button type="button" t-on-click="() => this.openAction('repair.action_repair_order_tree')"><i class="fa fa-wrench"/><span><strong>Repairs</strong><small>Native repair operations</small></span></button>
+            </div></section>
+        </div>
+    </t>
+</templates>

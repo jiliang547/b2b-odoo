@@ -1,6 +1,6 @@
 # RBAC Matrix
 
-Status: **Architecture gate — awaiting approval**
+Status: **Implemented baseline; Odoo.sh role-combination validation pending**
 
 Odoo groups are cumulative. This matrix is the target policy and must be mapped
 to native Odoo app groups plus small Partner Hub groups. `Scope` always means

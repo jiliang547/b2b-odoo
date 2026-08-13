@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="group_b2b_integration_manager" model="res.groups">
+        <field name="name">B2B Integration Manager</field>
+        <field name="comment">Manage ERP jobs, masked logs, retries, and connector settings.</field>
+        <field name="implied_ids" eval="[Command.link(ref('b2b_core.group_b2b_operator'))]"/>
+    </record>
+</odoo>

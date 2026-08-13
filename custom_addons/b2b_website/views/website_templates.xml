@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="partner_layout" name="Partner Hub Layout">
+        <t t-call="website.layout">
+            <t t-set="additional_title">Lucky Tone Partner Hub</t>
+            <t t-set="meta_description">Professional audio and video solutions for Lucky Tone partners.</t>
+            <div class="lt-hub">
+                <nav class="lt-subnav" aria-label="Partner Hub navigation">
+                    <div class="container lt-subnav__inner">
+                        <a class="lt-brand" href="/">LUCKY TONE <span>Partner Hub</span></a>
+                        <button class="lt-nav-toggle" type="button" aria-expanded="false" aria-controls="lt-partner-navigation">
+                            <span class="visually-hidden">Toggle navigation</span>
+                            <i class="fa fa-bars" aria-hidden="true"/>
+                        </button>
+                        <div id="lt-partner-navigation" class="lt-nav-links">
+                            <a href="/products">Products</a>
+                            <a t-if="not request.env.user._is_public()" href="/sample/request">Samples</a>
+                            <a t-if="not request.env.user._is_public()" href="/service">Service</a>
+                            <a t-if="not request.env.user._is_public()" href="/my">My Account</a>
+                            <a t-if="request.env.user._is_public()" href="/web/login?redirect=/my">Partner Login</a>
+                            <a href="/shop/cart" aria-label="Shopping cart"><i class="fa fa-shopping-bag" aria-hidden="true"/></a>
+                        </div>
+                    </div>
+                </nav>
+                <main id="main" tabindex="-1">
+                    <t t-out="0"/>
+                </main>
+                <footer class="lt-footer">
+                    <div class="container lt-footer__grid">
+                        <div>
+                            <div class="lt-brand lt-brand--light">LUCKY TONE <span>Partner Hub</span></div>
+                            <p>One place for products, partner pricing, orders, samples and service.</p>
+                        </div>
+                        <div><h2>Explore</h2><a href="/products">Product catalog</a><a href="/my">My account</a></div>
+                        <div><h2>Support</h2><a href="/service">After-sales service</a><a href="/contactus">Contact us</a></div>
+                    </div>
+                </footer>
+            </div>
+        </t>
+    </template>
+
+    <template id="price_display" name="Partner Price Display">
+        <div t-att-class="'lt-price lt-price--%s' % price.get('state')">
+            <t t-if="price.get('state') == 'visible'">
+                <span class="lt-price__label">Your price</span>
+                <strong t-out="price.get('price')" t-options="{'widget': 'monetary', 'display_currency': price.get('currency')}"/>
+            </t>
+            <t t-elif="price.get('state') == 'login'">
+                <span>Login to view your price</span><a href="/web/login?redirect=/products">Login</a>
+            </t>
+            <t t-elif="price.get('state') == 'quote'">
+                <span>Price available by quotation</span><a href="/contactus">Request quote</a>
+            </t>
+            <t t-else=""><span>Contact us for pricing</span><a href="/contactus">Contact us</a></t>
+        </div>
+    </template>
+
+    <template id="product_card" name="Partner Product Card">
+        <article class="lt-product-card">
+            <a class="lt-product-card__image" t-att-href="'/products/%s' % request.env['ir.http']._slug(product)">
+                <img t-att-src="'/web/image/product.template/%s/image_512' % product.id" t-att-alt="product.name" loading="lazy"/>
+            </a>
+            <div class="lt-product-card__body">
+                <span class="lt-eyebrow" t-out="product.b2b_brand_id.name or (product.public_categ_ids[:1].name if product.public_categ_ids else 'Professional AV')"/>
+                <h3><a t-att-href="'/products/%s' % request.env['ir.http']._slug(product)" t-out="product.name"/></h3>
+                <p class="lt-product-card__model" t-out="product.b2b_model_number or product.default_code or 'Model available on request'"/>
+                <p class="lt-product-card__description" t-out="product.description_sale or ''"/>
+                <t t-set="price" t-value="prices.get(product.id)"/>
+                <t t-call="b2b_website.price_display"/>
+                <a class="lt-link-arrow" t-att-href="'/products/%s' % request.env['ir.http']._slug(product)">View details <span aria-hidden="true">→</span></a>
+            </div>
+        </article>
+    </template>
+
+    <template id="partner_hub_homepage" name="Partner Hub Homepage">
+        <t t-call="b2b_website.partner_layout">
+            <section class="lt-hero">
+                <div class="container lt-hero__grid">
+                    <div class="lt-hero__copy">
+                        <span class="lt-kicker">PARTNER-ONLY PLATFORM</span>
+                        <h1>Build remarkable audio experiences.</h1>
+                        <p>Discover professional solutions, access your commercial terms and move projects forward from one secure workspace.</p>
+                        <div class="lt-actions"><a class="lt-btn lt-btn--primary" href="/products">Explore products</a><a class="lt-btn lt-btn--ghost" href="/my">Open my account</a></div>
+                    </div>
+                    <div class="lt-hero__visual" aria-hidden="true"><span>PRECISION</span><strong>Sound engineered<br/>for real spaces.</strong></div>
+                </div>
+            </section>
+            <section class="lt-section">
+                <div class="container">
+                    <div class="lt-section-heading"><div><span class="lt-kicker">FEATURED SOLUTIONS</span><h2>Designed for the way you work</h2></div><a class="lt-link-arrow" href="/products">View full catalog →</a></div>
+                    <div t-if="products" class="lt-product-grid">
+                        <t t-foreach="products" t-as="product"><t t-call="b2b_website.product_card"/></t>
+                    </div>
+                    <div t-else="" class="lt-empty"><h3>No products are available yet</h3><p>Published products that match your partner access will appear here.</p></div>
+                </div>
+            </section>
+            <section class="lt-section lt-section--ink">
+                <div class="container lt-capability-grid">
+                    <div><span>01</span><h3>Partner pricing</h3><p>See final prices calculated by your assigned Odoo pricelist.</p></div>
+                    <div><span>02</span><h3>Project resources</h3><p>Find approved manuals, certificates, drawings and software.</p></div>
+                    <div><span>03</span><h3>One service channel</h3><p>Track orders, sample applications and after-sales requests.</p></div>
+                </div>
+            </section>
+        </t>
+    </template>
+</odoo>

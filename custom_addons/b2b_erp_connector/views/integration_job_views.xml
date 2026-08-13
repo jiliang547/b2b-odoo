@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_b2b_integration_job_list" model="ir.ui.view">
+        <field name="name">b2b.integration.job.list</field>
+        <field name="model">b2b.integration.job</field>
+        <field name="arch" type="xml">
+            <list decoration-success="state == 'success'" decoration-danger="state in ('failed', 'dead')" decoration-warning="state == 'pending'">
+                <field name="name"/>
+                <field name="job_type"/>
+                <field name="reference_name"/>
+                <field name="state" widget="badge"/>
+                <field name="attempt_count"/>
+                <field name="next_retry_at"/>
+                <field name="completed_at"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_b2b_integration_job_form" model="ir.ui.view">
+        <field name="name">b2b.integration.job.form</field>
+        <field name="model">b2b.integration.job</field>
+        <field name="arch" type="xml">
+            <form create="0" delete="0">
+                <header>
+                    <button name="action_process_now" type="object" string="Process Now" class="btn-primary" invisible="state not in ('pending', 'failed')" groups="b2b_erp_connector.group_b2b_integration_manager"/>
+                    <button name="action_retry" type="object" string="Retry" class="btn-secondary" invisible="state not in ('failed', 'dead')" groups="b2b_erp_connector.group_b2b_integration_manager"/>
+                    <field name="state" widget="statusbar" statusbar_visible="pending,processing,success,failed,dead"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group><field name="name"/><field name="job_type"/><field name="reference_name"/><field name="idempotency_key"/></group>
+                        <group><field name="attempt_count"/><field name="next_retry_at"/><field name="started_at"/><field name="completed_at"/></group>
+                    </group>
+                    <notebook>
+                        <page string="Safe Summaries"><field name="safe_request_summary"/><field name="safe_response_summary"/></page>
+                        <page string="Last Error"><field name="last_error" nolabel="1"/></page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+    <record id="view_b2b_integration_job_search" model="ir.ui.view">
+        <field name="name">b2b.integration.job.search</field>
+        <field name="model">b2b.integration.job</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="reference_name"/>
+                <field name="idempotency_key"/>
+                <filter name="pending" string="Pending" domain="[('state','=','pending')]"/>
+                <filter name="failed" string="Failed" domain="[('state','in',['failed','dead'])]"/>
+                <group expand="0" string="Group By"><filter name="group_state" string="State" context="{'group_by':'state'}"/><filter name="group_type" string="Type" context="{'group_by':'job_type'}"/></group>
+            </search>
+        </field>
+    </record>
+    <record id="action_b2b_integration_jobs" model="ir.actions.act_window">
+        <field name="name">ERP Integration Jobs</field>
+        <field name="res_model">b2b.integration.job</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_b2b_integration_job_search"/>
+    </record>
+</odoo>

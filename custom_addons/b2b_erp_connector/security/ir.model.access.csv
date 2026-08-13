@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_b2b_integration_job_operator,b2b.integration.job operator,model_b2b_integration_job,b2b_core.group_b2b_operator,1,0,0,0
+access_b2b_integration_job_manager,b2b.integration.job manager,model_b2b_integration_job,b2b_erp_connector.group_b2b_integration_manager,1,1,0,0

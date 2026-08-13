@@ -1,6 +1,6 @@
 # System Assets Register
 
-Status: **Template requiring company owner assignment**
+Status: **Implemented register template; company owner assignment required before Production**
 
 Do not put passwords, API keys, recovery codes or bearer tokens in this file or
 any Git revision. Store them in approved company-controlled systems.

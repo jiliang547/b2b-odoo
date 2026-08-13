@@ -1,0 +1,7 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_b2b_sample_request_portal,b2b.sample.request portal,model_b2b_sample_request,base.group_portal,1,0,1,0
+access_b2b_sample_line_portal,b2b.sample.request.line portal,model_b2b_sample_request_line,base.group_portal,1,0,0,0
+access_b2b_sample_request_operator,b2b.sample.request operator,model_b2b_sample_request,b2b_core.group_b2b_operator,1,1,1,0
+access_b2b_sample_line_operator,b2b.sample.request.line operator,model_b2b_sample_request_line,b2b_core.group_b2b_operator,1,1,1,0
+access_b2b_sample_request_manager,b2b.sample.request manager,model_b2b_sample_request,b2b_core.group_b2b_manager,1,1,1,1
+access_b2b_sample_line_manager,b2b.sample.request.line manager,model_b2b_sample_request_line,b2b_core.group_b2b_manager,1,1,1,1

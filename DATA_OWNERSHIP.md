@@ -1,6 +1,6 @@
 # Data Ownership
 
-Status: **Architecture gate — awaiting approval**
+Status: **Implemented policy; named business owners required before Production**
 
 Data ownership means responsibility for correctness and lifecycle. It does not
 automatically grant unrestricted access, deletion or export rights.
