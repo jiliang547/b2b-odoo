@@ -1,0 +1,19 @@
+.o_b2b_dashboard { background: #f3f4f2; min-height: 100%; overflow: auto; padding: clamp(24px, 4vw, 56px); }
+.o_b2b_dashboard > header { align-items: end; background: #101820; border-radius: 22px; color: white; display: flex; justify-content: space-between; padding: clamp(30px, 5vw, 62px); }
+.o_b2b_dashboard > header span { color: #d6ff3f; font-size: 12px; font-weight: 800; letter-spacing: .18em; }
+.o_b2b_dashboard > header h1 { font-size: clamp(34px, 5vw, 64px); letter-spacing: -.04em; margin: 10px 0; }
+.o_b2b_dashboard > header p { color: #b8c0c6; font-size: 16px; margin: 0; }
+.o_b2b_dashboard .btn-primary { background: #d6ff3f; border-color: #d6ff3f; color: #101820; font-weight: 700; }
+.o_b2b_metrics { display: grid; gap: 18px; grid-template-columns: repeat(3, 1fr); margin: 24px 0 48px; }
+.o_b2b_metrics button { background: white; border: 0; border-radius: 18px; display: flex; flex-direction: column; padding: 25px; text-align: left; }
+.o_b2b_metrics span { color: #66717a; font-size: 13px; }
+.o_b2b_metrics strong { color: #225cff; font-size: 42px; margin-top: 10px; }
+.o_b2b_shortcuts h2 { font-size: 28px; letter-spacing: -.03em; }
+.o_b2b_shortcut_grid { display: grid; gap: 16px; grid-template-columns: repeat(3, 1fr); }
+.o_b2b_shortcut_grid button { align-items: center; background: white; border: 1px solid transparent; border-radius: 16px; display: flex; gap: 18px; padding: 24px; text-align: left; transition: .18s ease; }
+.o_b2b_shortcut_grid button:hover { border-color: #225cff; box-shadow: 0 12px 28px rgba(16,24,32,.08); transform: translateY(-2px); }
+.o_b2b_shortcut_grid i { align-items: center; background: #ecf0ff; border-radius: 12px; color: #225cff; display: flex; font-size: 19px; height: 48px; justify-content: center; width: 48px; }
+.o_b2b_shortcut_grid span { display: flex; flex-direction: column; }
+.o_b2b_shortcut_grid strong { font-size: 16px; }
+.o_b2b_shortcut_grid small { color: #747d84; margin-top: 4px; }
+@media (max-width: 900px) { .o_b2b_metrics, .o_b2b_shortcut_grid { grid-template-columns: 1fr; } .o_b2b_dashboard > header { align-items: start; flex-direction: column; gap: 24px; } }

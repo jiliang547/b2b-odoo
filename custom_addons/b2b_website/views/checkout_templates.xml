@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="checkout_layout_partner_style" inherit_id="website_sale.checkout_layout" name="Partner Hub Checkout Style">
+        <xpath expr="//div[@id='wrap']" position="attributes"><attribute name="class" add="lt-checkout" separator=" "/></xpath>
+    </template>
+    <template id="ordering_unavailable" name="Partner Ordering Unavailable">
+        <t t-call="b2b_website.partner_layout"><t t-set="no_index" t-value="True"/>
+            <section class="lt-section"><div class="container lt-narrow"><div class="lt-state-card"><i class="fa fa-lock"/><span class="lt-kicker">ACCOUNT ACCESS</span><h1>Ordering is not enabled yet</h1><p>Your account may need approval or price access before products can be added to an order.</p><div class="lt-actions"><a class="lt-btn lt-btn--primary" href="/my">Open my account</a><a class="lt-btn lt-btn--ghost-dark" href="/contactus">Contact us</a></div></div></div></section>
+        </t>
+    </template>
+</odoo>

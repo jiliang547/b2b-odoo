@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="product_document_form_b2b" model="ir.ui.view">
+        <field name="name">product.document.form.b2b</field>
+        <field name="model">product.document</field>
+        <field name="inherit_id" ref="product.product_document_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet/group[1]" position="after">
+                <group string="Partner Hub">
+                    <group>
+                        <field name="shown_on_product_page"/>
+                        <field name="b2b_resource_type"/>
+                        <field name="b2b_version"/>
+                        <field name="b2b_language"/>
+                    </group>
+                    <group>
+                        <field name="b2b_visibility_mode"/>
+                        <field name="b2b_visible_segment_ids" widget="many2many_tags" invisible="b2b_visibility_mode != 'segments'" required="b2b_visibility_mode == 'segments'"/>
+                    </group>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form_b2b_erp" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.b2b.erp</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="b2b_core.res_config_settings_view_form_b2b"/>
+        <field name="arch" type="xml">
+            <block id="b2b_partner_hub_settings" position="after">
+                <block title="Partner Hub ERP" id="b2b_erp_settings" groups="b2b_erp_connector.group_b2b_integration_manager">
+                    <setting string="Enable ERP connector"><field name="b2b_erp_enabled"/></setting>
+                    <setting string="Adapter"><field name="b2b_erp_adapter"/></setting>
+                    <setting string="Base URL"><field name="b2b_erp_base_url" placeholder="Configured after the real ERP contract is approved"/></setting>
+                    <setting string="API version"><field name="b2b_erp_api_version"/></setting>
+                    <setting string="Timeout and retry"><field name="b2b_erp_timeout"/><field name="b2b_erp_retry_count"/></setting>
+                    <setting string="API token" help="Stored in the Odoo database configuration, never in Git. Restrict backups and rotate per environment."><field name="b2b_erp_api_token" password="True"/></setting>
+                </block>
+            </block>
+        </field>
+    </record>
+</odoo>

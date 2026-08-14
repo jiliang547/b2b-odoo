@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_b2b_dashboard" model="ir.actions.client">
+        <field name="name">Partner Hub</field><field name="tag">b2b_management.dashboard</field>
+    </record>
+    <menuitem id="menu_b2b_management_root" name="B2B Management" sequence="38" web_icon="b2b_management,static/description/icon.png" groups="b2b_core.group_b2b_operator"/>
+    <menuitem id="menu_b2b_dashboard" name="Dashboard" parent="menu_b2b_management_root" action="action_b2b_dashboard" sequence="5"/>
+    <menuitem id="menu_b2b_operations" name="Operations" parent="menu_b2b_management_root" sequence="10"/>
+    <menuitem id="menu_b2b_samples" name="Sample Requests" parent="menu_b2b_operations" action="b2b_sample.action_b2b_sample_requests" sequence="10"/>
+    <menuitem id="menu_b2b_erp_jobs" name="ERP Jobs" parent="menu_b2b_operations" action="b2b_erp_connector.action_b2b_integration_jobs" sequence="20" groups="b2b_erp_connector.group_b2b_integration_manager"/>
+    <menuitem id="menu_b2b_business_data" name="Business Data" parent="menu_b2b_management_root" sequence="20"/>
+    <menuitem id="menu_b2b_customers" name="Customers" parent="menu_b2b_business_data" action="base.action_partner_form" sequence="10"/>
+    <menuitem id="menu_b2b_products" name="Products" parent="menu_b2b_business_data" action="product.product_template_action" sequence="20"/>
+    <menuitem id="menu_b2b_configuration" name="Configuration" parent="menu_b2b_management_root" sequence="90" groups="b2b_core.group_b2b_manager"/>
+    <menuitem id="menu_b2b_segments" name="Customer Segments" parent="menu_b2b_configuration" action="b2b_core.action_b2b_customer_segments" sequence="10"/>
+    <menuitem id="menu_b2b_brands" name="Product Brands" parent="menu_b2b_configuration" action="b2b_core.action_b2b_product_brands" sequence="20"/>
+    <menuitem id="menu_b2b_applications" name="Product Applications" parent="menu_b2b_configuration" action="b2b_core.action_b2b_product_applications" sequence="30"/>
+    <menuitem id="menu_b2b_settings" name="Settings" parent="menu_b2b_configuration" action="base_setup.action_general_configuration" sequence="90"/>
+</odoo>

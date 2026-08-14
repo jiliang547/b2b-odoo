@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="sample_request_form" name="Partner Sample Request">
+        <t t-call="b2b_website.partner_layout">
+            <t t-set="no_index" t-value="True"/>
+            <section class="lt-page-head lt-page-head--compact"><div class="container"><span class="lt-kicker">SAMPLE PROGRAM</span><h1>Request a product sample</h1><p>Tell our team what you need for your evaluation or project.</p></div></section>
+            <section class="lt-section"><div class="container lt-form-shell">
+                <div t-if="error" class="lt-alert lt-alert--error" role="alert"><strong>We could not submit your request.</strong><span t-out="error"/></div>
+                <div t-if="not sample_allowed" class="lt-state-card"><i class="fa fa-lock"/><h2>Sample requests are not enabled yet</h2><p>Your Partner Hub company must be approved before requesting samples.</p><a class="lt-btn lt-btn--primary" href="/contactus">Contact us</a></div>
+                <form t-else="" class="lt-form-card" action="/sample/request" method="post">
+                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                    <div class="lt-form-section"><div><span>01</span><h2>Sample</h2></div><div class="lt-form-grid">
+                        <div class="lt-field lt-field--wide"><label for="sample-product">Product</label><select id="sample-product" name="product_id" required="required"><option value="">Choose a product</option><option t-foreach="sample_products" t-as="item" t-att-value="item.id" t-att-selected="product and item.id == product.id" t-out="item.display_name"/></select><p class="lt-help">Up to 200 currently available product variants are shown.</p></div>
+                        <div class="lt-field"><label for="sample-quantity">Quantity</label><input id="sample-quantity" name="quantity" type="number" min="1" step="1" required="required" t-att-value="post.get('quantity', '1')"/></div>
+                        <div class="lt-field lt-field--wide"><label for="sample-reason">Reason / project use</label><textarea id="sample-reason" name="reason" maxlength="4000" required="required" t-out="post.get('reason', '')"/></div>
+                    </div></div>
+                    <div class="lt-form-section"><div><span>02</span><h2>Contact</h2></div><div class="lt-form-grid">
+                        <div class="lt-field"><label for="sample-contact">Contact name</label><input id="sample-contact" name="contact_name" maxlength="160" required="required" t-att-value="post.get('contact_name', contact_name)"/></div>
+                        <div class="lt-field"><label for="sample-company">Company</label><input id="sample-company" name="company_name" maxlength="200" required="required" t-att-value="post.get('company_name', company_name)"/></div>
+                        <div class="lt-field"><label for="sample-email">Email</label><input id="sample-email" name="email" type="email" maxlength="254" required="required" t-att-value="post.get('email', email)"/></div>
+                        <div class="lt-field"><label for="sample-phone">Phone</label><input id="sample-phone" name="phone" maxlength="64" required="required" t-att-value="post.get('phone', phone)"/></div>
+                    </div></div>
+                    <div class="lt-form-section"><div><span>03</span><h2>Delivery</h2></div><div class="lt-form-grid">
+                        <div t-if="shipping_partners" class="lt-field lt-field--wide"><label for="shipping-partner">Saved delivery address</label><select id="shipping-partner" name="shipping_partner_id"><option value="">Use the address entered below</option><option t-foreach="shipping_partners" t-as="address" t-att-value="address.id" t-out="address.display_name"/></select></div>
+                        <div class="lt-field lt-field--wide"><label for="shipping-address">Shipping address</label><textarea id="shipping-address" name="shipping_address" maxlength="2000" required="required" t-out="post.get('shipping_address', shipping_address)"/></div>
+                        <div class="lt-field lt-field--wide"><label for="sample-notes">Additional notes <span>(optional)</span></label><textarea id="sample-notes" name="notes" maxlength="4000" t-out="post.get('notes', '')"/></div>
+                    </div></div>
+                    <div class="lt-form-submit"><p>Submitting creates a review request for the Lucky Tone team.</p><button class="lt-btn lt-btn--primary" type="submit">Submit sample request</button></div>
+                </form>
+            </div></section>
+        </t>
+    </template>
+</odoo>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_b2b_product_brand_list" model="ir.ui.view">
+        <field name="name">b2b.product.brand.list</field>
+        <field name="model">b2b.product.brand</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="product_count"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_b2b_product_brand_form" model="ir.ui.view">
+        <field name="name">b2b.product.brand.form</field>
+        <field name="model">b2b.product.brand</field>
+        <field name="arch" type="xml">
+            <form><sheet><group><field name="name"/><field name="sequence"/><field name="active"/></group><field name="description"/></sheet></form>
+        </field>
+    </record>
+    <record id="action_b2b_product_brands" model="ir.actions.act_window">
+        <field name="name">Product Brands</field>
+        <field name="res_model">b2b.product.brand</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="view_b2b_product_application_list" model="ir.ui.view">
+        <field name="name">b2b.product.application.list</field>
+        <field name="model">b2b.product.application</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_b2b_product_application_form" model="ir.ui.view">
+        <field name="name">b2b.product.application.form</field>
+        <field name="model">b2b.product.application</field>
+        <field name="arch" type="xml">
+            <form><sheet><group><field name="name"/><field name="sequence"/><field name="active"/></group><field name="description"/></sheet></form>
+        </field>
+    </record>
+    <record id="action_b2b_product_applications" model="ir.actions.act_window">
+        <field name="name">Product Applications</field>
+        <field name="res_model">b2b.product.application</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

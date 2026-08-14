@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_b2b_sample_request_list" model="ir.ui.view">
+        <field name="name">b2b.sample.request.list</field>
+        <field name="model">b2b.sample.request</field>
+        <field name="arch" type="xml">
+            <list decoration-success="state == 'erp_synced'" decoration-danger="state in ('rejected', 'erp_failed')" decoration-warning="state in ('submitted', 'erp_pending')">
+                <field name="name"/>
+                <field name="commercial_partner_id"/>
+                <field name="contact_name"/>
+                <field name="state" widget="badge"/>
+                <field name="reviewer_id"/>
+                <field name="review_date"/>
+                <field name="create_date"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_b2b_sample_request_form" model="ir.ui.view">
+        <field name="name">b2b.sample.request.form</field>
+        <field name="model">b2b.sample.request</field>
+        <field name="arch" type="xml">
+            <form delete="0">
+                <header>
+                    <button name="action_start_review" type="object" string="Start Review" invisible="state != 'submitted'" groups="b2b_core.group_b2b_operator"/>
+                    <button name="action_approve" type="object" string="Approve" class="btn-primary" invisible="state not in ('submitted', 'under_review')" groups="b2b_core.group_b2b_manager"/>
+                    <button name="action_reject" type="object" string="Reject" invisible="state not in ('submitted', 'under_review')" groups="b2b_core.group_b2b_manager"/>
+                    <button name="action_retry_erp" type="object" string="Retry ERP" invisible="state != 'erp_failed'" groups="b2b_erp_connector.group_b2b_integration_manager"/>
+                    <button name="action_cancel" type="object" string="Cancel" invisible="state not in ('draft', 'submitted', 'under_review')"/>
+                    <field name="state" widget="statusbar" statusbar_visible="submitted,under_review,approved,erp_pending,erp_synced,erp_failed"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_erp_jobs" type="object" class="oe_stat_button" icon="fa-exchange" invisible="erp_job_count == 0">
+                            <field name="erp_job_count" widget="statinfo" string="ERP Jobs"/>
+                        </button>
+                    </div>
+                    <h1><field name="name" readonly="1"/></h1>
+                    <group>
+                        <group><field name="partner_id"/><field name="commercial_partner_id"/><field name="contact_id"/><field name="contact_name"/><field name="company_name"/></group>
+                        <group><field name="email"/><field name="phone"/><field name="shipping_partner_id"/><field name="reviewer_id"/><field name="review_date"/></group>
+                    </group>
+                    <field name="shipping_address"/>
+                    <field name="line_ids" readonly="state not in ('draft', 'submitted')">
+                        <list editable="bottom"><field name="product_id"/><field name="quantity"/><field name="uom_id"/><field name="notes"/></list>
+                    </field>
+                    <notebook>
+                        <page string="Request"><field name="reason"/><field name="notes"/><field name="rejection_reason" invisible="state != 'rejected'"/></page>
+                        <page string="ERP"><field name="erp_reference"/><field name="erp_last_error"/></page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+    <record id="view_b2b_sample_request_search" model="ir.ui.view">
+        <field name="name">b2b.sample.request.search</field>
+        <field name="model">b2b.sample.request</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/><field name="commercial_partner_id"/><field name="contact_name"/><field name="reviewer_id"/>
+                <filter name="to_review" string="To Review" domain="[('state','in',['submitted','under_review'])]"/>
+                <filter name="erp_failed" string="ERP Failed" domain="[('state','=','erp_failed')]"/>
+                <group expand="0" string="Group By"><filter name="group_state" string="State" context="{'group_by':'state'}"/><filter name="group_customer" string="Customer" context="{'group_by':'commercial_partner_id'}"/><filter name="group_reviewer" string="Reviewer" context="{'group_by':'reviewer_id'}"/></group>
+            </search>
+        </field>
+    </record>
+    <record id="action_b2b_sample_requests" model="ir.actions.act_window">
+        <field name="name">Sample Requests</field>
+        <field name="res_model">b2b.sample.request</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_b2b_sample_request_search"/>
+    </record>
+</odoo>

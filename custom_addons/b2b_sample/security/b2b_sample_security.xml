@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="rule_b2b_sample_portal" model="ir.rule">
+        <field name="name">Portal customers: own company sample requests</field>
+        <field name="model_id" ref="model_b2b_sample_request"/>
+        <field name="groups" eval="[Command.link(ref('base.group_portal'))]"/>
+        <field name="domain_force">[('commercial_partner_id', '=', user.partner_id.commercial_partner_id.id)]</field>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="rule_b2b_sample_line_portal" model="ir.rule">
+        <field name="name">Portal customers: own company sample lines</field>
+        <field name="model_id" ref="model_b2b_sample_request_line"/>
+        <field name="groups" eval="[Command.link(ref('base.group_portal'))]"/>
+        <field name="domain_force">[('commercial_partner_id', '=', user.partner_id.commercial_partner_id.id)]</field>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+</odoo>

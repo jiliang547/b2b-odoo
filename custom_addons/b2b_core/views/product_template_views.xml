@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="product_template_form_b2b" model="ir.ui.view">
+        <field name="name">product.template.form.b2b</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_only_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet/notebook" position="inside">
+                <page string="Partner Hub" name="b2b_partner_hub" groups="b2b_core.group_b2b_product_manager,b2b_core.group_b2b_manager">
+                    <group>
+                        <group string="Catalog">
+                            <field name="b2b_brand_id"/>
+                            <field name="b2b_application_ids" widget="many2many_tags"/>
+                            <field name="b2b_model_number"/>
+                        </group>
+                        <group string="Visibility">
+                            <field name="b2b_visibility_mode"/>
+                            <field name="b2b_visible_segment_ids" widget="many2many_tags" invisible="b2b_visibility_mode != 'segments'" required="b2b_visibility_mode == 'segments'"/>
+                        </group>
+                    </group>
+                    <separator string="Technical Specifications"/>
+                    <field name="b2b_specifications" widget="html"/>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>
