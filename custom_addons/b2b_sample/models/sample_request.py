@@ -83,7 +83,12 @@ class B2BSampleRequest(models.Model):
         current_company = current_contact.commercial_partner_id
         for vals in vals_list:
             if vals.get("name", _("New")) == _("New"):
-                vals["name"] = self.env["ir.sequence"].next_by_code("b2b.sample.request") or _("New")
+                # Portal users are intentionally not granted generic sequence
+                # access. Elevate only this fixed server-owned sequence lookup.
+                vals["name"] = (
+                    self.env["ir.sequence"].sudo().next_by_code("b2b.sample.request")
+                    or _("New")
+                )
             if portal_request:
                 vals.update({
                     "partner_id": current_company.id,

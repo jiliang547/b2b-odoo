@@ -19,7 +19,7 @@
                     <setting string="Require approved customer at checkout">
                         <field name="b2b_require_approved_checkout"/>
                     </setting>
-                    <setting string="Require approved customer for samples">
+                    <setting name="b2b_require_approved_sample_setting" string="Require approved customer for samples">
                         <field name="b2b_require_approved_sample"/>
                     </setting>
                 </block>

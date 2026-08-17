@@ -49,7 +49,7 @@
                 <field name="idempotency_key"/>
                 <filter name="pending" string="Pending" domain="[('state','=','pending')]"/>
                 <filter name="failed" string="Failed" domain="[('state','in',['failed','dead'])]"/>
-                <group expand="0" string="Group By"><filter name="group_state" string="State" context="{'group_by':'state'}"/><filter name="group_type" string="Type" context="{'group_by':'job_type'}"/></group>
+                <group><filter name="group_state" string="State" context="{'group_by':'state'}"/><filter name="group_type" string="Type" context="{'group_by':'job_type'}"/></group>
             </search>
         </field>
     </record>

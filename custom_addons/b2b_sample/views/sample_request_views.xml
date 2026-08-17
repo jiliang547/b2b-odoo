@@ -30,7 +30,7 @@
                 </header>
                 <sheet>
                     <div class="oe_button_box" name="button_box">
-                        <button name="action_view_erp_jobs" type="object" class="oe_stat_button" icon="fa-exchange" invisible="erp_job_count == 0">
+                        <button name="action_view_erp_jobs" type="object" class="oe_stat_button" icon="fa-exchange" invisible="erp_job_count == 0" groups="b2b_core.group_b2b_operator">
                             <field name="erp_job_count" widget="statinfo" string="ERP Jobs"/>
                         </button>
                     </div>
@@ -60,7 +60,7 @@
                 <field name="name"/><field name="commercial_partner_id"/><field name="contact_name"/><field name="reviewer_id"/>
                 <filter name="to_review" string="To Review" domain="[('state','in',['submitted','under_review'])]"/>
                 <filter name="erp_failed" string="ERP Failed" domain="[('state','=','erp_failed')]"/>
-                <group expand="0" string="Group By"><filter name="group_state" string="State" context="{'group_by':'state'}"/><filter name="group_customer" string="Customer" context="{'group_by':'commercial_partner_id'}"/><filter name="group_reviewer" string="Reviewer" context="{'group_by':'reviewer_id'}"/></group>
+                <group><filter name="group_state" string="State" context="{'group_by':'state'}"/><filter name="group_customer" string="Customer" context="{'group_by':'commercial_partner_id'}"/><filter name="group_reviewer" string="Reviewer" context="{'group_by':'reviewer_id'}"/></group>
             </search>
         </field>
     </record>
