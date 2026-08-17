@@ -132,6 +132,7 @@ class PartnerHubWebsite(Controller):
     @route(
         '/products/<model("product.template"):product>',
         type="http", auth="public", website=True, sitemap=True,
+        handle_params_access_error=lambda error, **kwargs: NotFound.code,
     )
     def product_detail(self, product, **kwargs):
         service = self._service()
@@ -345,7 +346,9 @@ class PartnerHubWebsite(Controller):
     @route("/my/orders/<int:order_id>/erp-status", type="http", auth="user", website=True)
     def order_erp_status(self, order_id, **kwargs):
         company = request.env.user.partner_id.commercial_partner_id
-        order = request.env["sale.order"].browse(order_id).exists()
+        # Resolve without the portal record rule so unauthorized ids return the
+        # same 404 as missing ids instead of leaking existence through a 403.
+        order = request.env["sale.order"].sudo().browse(order_id).exists()
         if not order or order.partner_id.commercial_partner_id != company:
             raise NotFound()
         status = False
