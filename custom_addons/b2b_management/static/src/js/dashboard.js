@@ -10,14 +10,34 @@ export class B2BManagementDashboard extends Component {
     setup() {
         this.action = useService("action");
         this.orm = useService("orm");
-        this.state = useState({loading: true, samples: 0, failedJobs: 0, approvedPartners: 0});
+        this.state = useState({
+            loading: true,
+            pendingApprovals: 0,
+            samples: 0,
+            openService: 0,
+            failedJobs: 0,
+        });
         onWillStart(async () => {
-            const [samples, failedJobs, approvedPartners] = await Promise.all([
-                this.orm.searchCount("b2b.sample.request", [["state", "in", ["submitted", "under_review"]]]),
-                this.orm.searchCount("b2b.integration.job", [["state", "in", ["failed", "dead"]]]),
-                this.orm.searchCount("res.partner", [["b2b_approved", "=", true], ["is_company", "=", true]]),
+            const safeCount = async (model, domain) => {
+                try {
+                    return await this.orm.searchCount(model, domain);
+                } catch {
+                    return 0;
+                }
+            };
+            const [pendingApprovals, samples, openService, failedJobs] = await Promise.all([
+                safeCount("res.partner", [["b2b_approved", "=", false], ["is_company", "=", true], ["customer_rank", ">", 0]]),
+                safeCount("b2b.sample.request", [["state", "in", ["submitted", "under_review"]]]),
+                safeCount("helpdesk.ticket", [["stage_id.fold", "=", false]]),
+                safeCount("b2b.integration.job", [["state", "in", ["failed", "dead"]]]),
             ]);
-            Object.assign(this.state, {loading: false, samples, failedJobs, approvedPartners});
+            Object.assign(this.state, {
+                loading: false,
+                pendingApprovals,
+                samples,
+                openService,
+                failedJobs,
+            });
         });
     }
 
