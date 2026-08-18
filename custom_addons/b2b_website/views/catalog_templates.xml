@@ -3,16 +3,18 @@
     <template id="product_catalog" name="Partner Product Catalog">
         <t t-call="b2b_website.partner_layout">
             <section class="lt-catalog-page"><div class="container">
-                <div class="lt-catalog-intro"><span class="lt-kicker">CATALOG</span><h1>Products</h1><p>Search, filter, compare and order with account-specific pricing.</p></div>
+                <nav class="lt-breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><span>Products</span></nav>
+                <div class="lt-catalog-intro"><h1>Product Catalog</h1><p><t t-out="total"/> industrial products with certified specifications and account-specific pricing.</p></div>
                 <form class="lt-catalog-toolbar" action="/products" method="get">
                     <div class="lt-search"><label class="visually-hidden" for="lt-toolbar-search">Search products</label><input id="lt-toolbar-search" name="search" type="search" t-att-value="query.get('search', '')" placeholder="Search SKU, model or keyword"/><button type="submit" aria-label="Search"><i class="fa fa-search"/></button></div>
                     <button class="lt-btn lt-btn--outline lt-mobile-filter" type="button" data-lt-filter-toggle="">Filters <span t-if="active_filter_count" t-out="active_filter_count"/></button>
-                    <span class="lt-results-summary"><strong t-out="total"/> products</span>
+                    <div class="lt-catalog-toolbar__right"><span class="lt-results-summary"><strong t-out="total"/> products</span><label class="visually-hidden" for="lt-sort">Sort products</label><select id="lt-sort" name="sort" data-lt-auto-submit=""><option value="featured" t-att-selected="sort == 'featured'">Featured</option><option value="newest" t-att-selected="sort == 'newest'">Newest</option><option value="name" t-att-selected="sort == 'name'">Name A–Z</option><option value="name_desc" t-att-selected="sort == 'name_desc'">Name Z–A</option></select><div class="lt-view-switch" role="group" aria-label="Product view"><button type="button" class="is-active" data-lt-view="grid" aria-label="Grid view"><i class="fa fa-th-large"/></button><button type="button" data-lt-view="list" aria-label="List view"><i class="fa fa-list"/></button></div></div>
                 </form>
                 <div class="lt-catalog-layout">
                     <aside class="lt-filter-panel" aria-label="Product filters">
                         <form action="/products" method="get">
                             <h2>Filter products</h2>
+                            <input t-if="sort and sort != 'featured'" type="hidden" name="sort" t-att-value="sort"/>
                             <input t-if="query.get('search')" type="hidden" name="search" t-att-value="query.get('search')"/>
                             <div class="lt-field"><label for="lt-category">Product category</label><select id="lt-category" name="category"><option value="">All categories</option><option t-foreach="categories" t-as="item" t-att-value="item.id" t-att-selected="str(item.id) == query.get('category')" t-out="item.name"/></select></div>
                             <div class="lt-field"><label for="lt-brand">Brand</label><select id="lt-brand" name="brand"><option value="">All brands</option><option t-foreach="brands" t-as="item" t-att-value="item.id" t-att-selected="str(item.id) == query.get('brand')" t-out="item.name"/></select></div>
@@ -22,8 +24,8 @@
                         </form>
                     </aside>
                     <div class="lt-catalog-results">
-                        <p class="lt-results-bar"><strong><t t-out="total"/> products</strong><span t-if="not request.env.user._is_public()">Partner pricing active</span><span t-else="">Sign in for partner pricing</span></p>
-                        <div t-if="products" class="lt-product-grid"><t t-foreach="products" t-as="product"><t t-call="b2b_website.product_card"/></t></div>
+                        <p class="lt-results-bar"><strong><t t-out="total"/> products</strong><span t-if="price_state == 'visible'">Partner pricing active</span><span t-elif="price_state == 'login'">Sign in for partner pricing</span><span t-elif="price_state == 'quote'">Request a quote for pricing</span><span t-else="">Contact sales for pricing</span></p>
+                        <div t-if="products" class="lt-product-grid" data-lt-product-grid=""><t t-foreach="products" t-as="product"><t t-call="b2b_website.product_card"/></t></div>
                         <div t-else="" class="lt-empty"><div class="lt-empty__icon"><i class="fa fa-search"/></div><h2>No matching products</h2><p>Adjust your filters, or contact us if you expect access to a product family.</p><a class="lt-btn lt-btn--outline" href="/products">Reset filters</a></div>
                         <t t-if="pager"><t t-call="portal.pager"/></t>
                     </div>
@@ -48,15 +50,17 @@
                     <aside class="lt-purchase-panel">
                         <span class="lt-pill lt-pill--green">PARTNER CATALOG</span>
                         <h1 t-out="product.name"/>
-                        <p class="lt-purchase-panel__model"><span t-out="product.b2b_model_number or variant.default_code or 'Model on request'"/><t t-if="product.public_categ_ids"> · <span t-out="product.public_categ_ids[:1].name"/></t></p>
+                        <p class="lt-purchase-panel__model">SKU: <span t-out="product.b2b_model_number or variant.default_code or 'Model on request'"/><t t-if="product.public_categ_ids"> · <span t-out="product.public_categ_ids[:1].name"/></t><t t-if="product.b2b_brand_id"> · <span t-out="product.b2b_brand_id.name"/></t></p>
                         <t t-call="b2b_website.price_display"/>
                         <div class="lt-fact-pills"><span class="lt-pill lt-pill--slate" t-out="variant.default_code or 'Partner SKU'"/><span class="lt-pill lt-pill--blue">Account pricing</span><span class="lt-pill lt-pill--green">Approved resources</span></div>
                         <form t-if="price.get('state') == 'visible'" class="lt-cart-form" data-lt-cart-form="">
                             <input type="hidden" name="product_template_id" t-att-value="product.id"/><input type="hidden" name="product_id" t-att-value="variant.id"/><input type="hidden" name="uom_id" t-att-value="variant.uom_id.id"/>
                             <label for="lt-qty">Quantity</label><input id="lt-qty" type="number" name="add_qty" min="1" max="10000" value="1"/>
-                            <div class="lt-purchase-actions"><button class="lt-btn lt-btn--blue" type="submit">Add to cart</button><a t-if="not request.env.user._is_public()" class="lt-btn lt-btn--outline" t-att-href="'/sample/request?product_id=%s' % variant.id">Request sample</a></div><div class="lt-cart-form__status" data-lt-cart-status="" aria-live="polite"/>
+                            <div class="lt-purchase-actions"><button class="lt-btn lt-btn--blue" type="submit">Add to cart</button></div><div class="lt-cart-form__status" data-lt-cart-status="" aria-live="polite"/>
                         </form>
                         <a t-if="request.env.user._is_public()" class="lt-btn lt-btn--outline" t-att-href="'/web/login?redirect=/sample/request?product_id=%s' % variant.id">Sign in to request sample</a>
+                        <a t-elif="sample_allowed" class="lt-btn lt-btn--outline" t-att-href="'/sample/request?product_id=%s' % variant.id">Request sample</a>
+                        <a t-else="" class="lt-btn lt-btn--outline" t-att-href="'/sample/request?product_id=%s' % variant.id">Sample approval required</a>
                         <a class="lt-contact-sales" href="/contactus">Contact sales</a>
                     </aside>
                 </div>

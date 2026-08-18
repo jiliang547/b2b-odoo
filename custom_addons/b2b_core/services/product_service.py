@@ -68,6 +68,12 @@ class B2BProductService(models.AbstractModel):
     def can_view_price(self, partner=None, website=None):
         website = website or self.env["website"].get_current_website()
         partner = self.commercial_partner(partner)
+        # Website administrators need to preview and validate the effective
+        # website pricelist even when their own contact is not a B2B customer.
+        # Keep the exception narrow: ordinary internal users still follow the
+        # configured customer approval policy.
+        if self.env.user.has_group("base.group_system"):
+            return True
         mode = website.b2b_price_display_mode
         if mode == "always":
             return True
