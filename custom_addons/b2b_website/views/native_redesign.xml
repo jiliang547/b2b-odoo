@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="portal_layout_figma" inherit_id="portal.portal_layout" name="Partner Hub Portal Layout">
+        <xpath expr="//div[@id='wrap']" position="before"><t t-call="b2b_website.partner_topbar"/></xpath>
+        <xpath expr="//div[@id='wrap']" position="attributes"><attribute name="class" add="lt-portal-wrap" separator=" "/></xpath>
+        <xpath expr="//div[@id='wrap']/div[hasclass('container')]" position="attributes"><attribute name="class" add="lt-portal-shell" separator=" "/></xpath>
+        <xpath expr="//div[@id='wrap']/div[hasclass('container')]" position="inside"><t t-call="b2b_website.partner_portal_sidebar"/></xpath>
+    </template>
+
+    <template id="portal_home_figma" inherit_id="portal.portal_my_home" name="Partner Hub Account Dashboard" priority="90">
+        <xpath expr="//div[hasclass('o_portal_docs')]" position="before">
+            <section class="lt-dashboard-intro"><span class="lt-kicker">ACCOUNT</span><h1>Welcome back, <t t-out="request.env.user.name"/></h1><p>Orders, samples, service and company access at a glance.</p></section>
+            <section class="lt-dashboard-metrics" aria-label="Account metrics">
+                <a href="/my/orders"><span>Orders</span><strong t-out="order_count or 0"/><small>Sales orders</small></a>
+                <a href="/my/sample-requests"><span>Samples</span><strong t-out="sample_count or 0"/><small>Requests</small></a>
+                <a href="/my/tickets"><span>Service</span><strong t-out="ticket_count or 0"/><small>Tickets</small></a>
+                <a href="/my/company"><span>Account</span><strong t-out="'Active' if request.env.user.partner_id.commercial_partner_id.b2b_approved else 'Review'"/><small>Partner status</small></a>
+            </section>
+            <div class="lt-account-section-title"><h2>Workspaces</h2><span>Secure company data from Odoo</span></div>
+        </xpath>
+    </template>
+
+    <template id="portal_orders_figma" inherit_id="sale.portal_my_orders" name="Partner Orders Layout">
+        <xpath expr="//t[@t-call='portal.portal_searchbar']" position="after"><div class="lt-list-intro"><span class="lt-kicker">PROCUREMENT</span><h1>Orders</h1><p>Review confirmed orders, totals and fulfilment status.</p></div></xpath>
+    </template>
+
+    <template id="sale_order_figma" inherit_id="sale.sale_order_portal_template" name="Partner Order Detail Layout" priority="90">
+        <xpath expr="//div[hasclass('o_portal_sale_sidebar')]" position="attributes"><attribute name="class" add="lt-order-detail" separator=" "/></xpath>
+        <xpath expr="//div[hasclass('o_portal_sale_sidebar')]" position="before"><div class="lt-list-intro lt-list-intro--detail"><span class="lt-kicker">ORDER DETAIL</span><h1><t t-out="sale_order.name"/></h1><p>Native Odoo order data, payment actions and fulfilment tracking.</p></div></xpath>
+    </template>
+
+    <template id="helpdesk_list_figma" inherit_id="helpdesk.portal_helpdesk_ticket" name="Partner Service Ticket List">
+        <xpath expr="//t[@t-call='portal.portal_searchbar']" position="after"><div class="lt-list-intro"><span class="lt-kicker">AFTER-SALES</span><h1>Service requests</h1><p>Assign, reply and follow customer support tickets.</p><a class="lt-btn lt-btn--blue" href="/service">New service request</a></div></xpath>
+    </template>
+
+    <template id="helpdesk_detail_figma" inherit_id="helpdesk.tickets_followup" name="Partner Service Ticket Detail">
+        <xpath expr="//div[hasclass('o_project_portal_sidebar')]" position="attributes"><attribute name="class" add="lt-ticket-detail" separator=" "/></xpath>
+        <xpath expr="//div[hasclass('o_project_portal_sidebar')]" position="before"><div class="lt-list-intro lt-list-intro--detail"><span class="lt-kicker">SERVICE REQUEST</span><h1><t t-out="ticket.name"/></h1><p>Ticket #<t t-out="ticket.ticket_ref"/> · <t t-out="ticket.stage_id.name"/></p></div></xpath>
+    </template>
+
+    <template id="checkout_layout_figma_shell" inherit_id="website_sale.checkout_layout" name="Partner Checkout Shell" priority="90">
+        <xpath expr="//div[@id='wrap']" position="before"><t t-call="b2b_website.partner_topbar"/></xpath>
+        <xpath expr="//div[@id='wrap']" position="attributes"><attribute name="class" add="lt-native-checkout" separator=" "/></xpath>
+    </template>
+
+    <template id="cart_figma" inherit_id="website_sale.cart" name="Partner Cart">
+        <xpath expr="//div[@id='shop_cart']" position="attributes"><attribute name="class" add="lt-cart-page" separator=" "/></xpath>
+        <xpath expr="//div[@id='shop_cart']/*[1]" position="before"><div class="lt-checkout-heading"><span class="lt-kicker">ORDER</span><h1>Shopping cart</h1><p>Review products and quantities before checkout.</p></div></xpath>
+    </template>
+
+    <template id="checkout_figma" inherit_id="website_sale.checkout" name="Partner Checkout">
+        <xpath expr="//div[@id='shop_checkout']" position="attributes"><attribute name="class" add="lt-checkout-page" separator=" "/></xpath>
+    </template>
+
+    <template id="confirmation_figma" inherit_id="website_sale.confirmation" name="Partner Order Confirmation">
+        <xpath expr="//div[@id='order_name']" position="attributes"><attribute name="class" add="lt-confirmation-page" separator=" "/></xpath>
+        <xpath expr="//div[@id='order_name']" position="before"><div class="lt-confirmation-mark"><i class="fa fa-check"/><span class="lt-kicker">ORDER CONFIRMED</span></div></xpath>
+    </template>
+
+    <template id="contactus_figma" inherit_id="website.contactus" name="Partner Contact Page" priority="90">
+        <xpath expr="//div[@id='wrap']" position="before"><t t-call="b2b_website.partner_topbar"/></xpath>
+        <xpath expr="//div[@id='wrap']" position="attributes"><attribute name="class" add="lt-contact-page" separator=" "/></xpath>
+        <xpath expr="//form[@id='contactus_form']" position="attributes"><attribute name="class" add="lt-contact-form" separator=" "/></xpath>
+    </template>
+
+    <template id="login_layout_figma" inherit_id="web.login" name="Partner Hub Login">
+        <xpath expr="//form" position="attributes"><attribute name="class" add="lt-login-card" separator=" "/></xpath>
+        <xpath expr="//form" position="before"><div class="lt-login-heading"><span class="lt-kicker">PARTNER HUB</span><h1>Sign in to your account</h1><p>Access pricing, orders, samples and support.</p></div></xpath>
+    </template>
+</odoo>

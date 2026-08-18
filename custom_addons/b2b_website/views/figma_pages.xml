@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="partner_topbar" name="Partner Hub Topbar">
+        <nav class="lt-subnav lt-subnav--native" aria-label="Partner Hub navigation">
+            <div class="container lt-subnav__inner">
+                <a class="lt-brand" href="/" aria-label="Lucky Tone home">
+                    <span class="lt-brand__mark" aria-hidden="true"><i/></span>
+                    <strong>LUCKY TONE</strong>
+                </a>
+                <button class="lt-nav-toggle" type="button" aria-expanded="false" aria-controls="lt-native-navigation">
+                    <span class="visually-hidden">Toggle navigation</span><i class="fa fa-bars" aria-hidden="true"/>
+                </button>
+                <div id="lt-native-navigation" class="lt-nav-shell">
+                    <div class="lt-nav-links">
+                        <a href="/products">Products</a><a href="/resources">Resources</a>
+                        <a t-if="not request.env.user._is_public()" href="/samples">Samples</a>
+                        <a t-if="not request.env.user._is_public()" href="/service-center">Service</a>
+                        <a href="/about">About</a><a href="/contactus">Contact</a>
+                    </div>
+                    <div class="lt-nav-actions">
+                        <a t-if="request.env.user._is_public()" class="lt-btn lt-btn--light lt-btn--nav" href="/web/login?redirect=/my">Sign in</a>
+                        <a t-else="" class="lt-btn lt-btn--light lt-btn--nav" href="/my">My Account</a>
+                        <a class="lt-btn lt-btn--lime lt-btn--nav" href="/shop/cart">Cart <span t-if="request.session.get('website_sale_cart_quantity')" t-out="request.session.get('website_sale_cart_quantity')"/></a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </template>
+
+    <template id="partner_portal_sidebar" name="Partner Portal Sidebar">
+        <aside class="lt-account-sidebar">
+            <a class="lt-account-sidebar__brand" href="/my"><span>LT</span><strong>Partner Hub</strong></a>
+            <nav aria-label="Account navigation">
+                <a t-att-class="'is-active' if page_name == 'home' else ''" href="/my"><i class="fa fa-th-large"/>Overview</a>
+                <a t-att-class="'is-active' if page_name in ('order', 'quote') else ''" href="/my/orders"><i class="fa fa-shopping-bag"/>Orders</a>
+                <a t-att-class="'is-active' if page_name in ('sample_requests', 'sample_request_detail') else ''" href="/my/sample-requests"><i class="fa fa-flask"/>Samples</a>
+                <a t-att-class="'is-active' if page_name in ('ticket', 'service_center') else ''" href="/my/tickets"><i class="fa fa-life-ring"/>Service</a>
+                <a t-att-class="'is-active' if page_name == 'company_profile' else ''" href="/my/company"><i class="fa fa-building"/>Company profile</a>
+                <a t-att-class="'is-active' if page_name == 'company_users' else ''" href="/my/company/users"><i class="fa fa-users"/>Company users</a>
+                <a t-att-class="'is-active' if page_name == 'my_details' else ''" href="/my/account"><i class="fa fa-user"/>Personal profile</a>
+            </nav>
+            <div class="lt-account-sidebar__help"><strong>Need help?</strong><p>Our partner support team is ready to assist.</p><a href="/contactus">Contact support</a></div>
+        </aside>
+    </template>
+
+    <template id="partner_about" name="Partner About">
+        <t t-call="b2b_website.partner_layout">
+            <section class="lt-about-hero"><div class="container lt-about-hero__grid">
+                <div><span class="lt-kicker">ABOUT LUCKY TONE</span><h1>Built for dependable professional audio.</h1><p>We help integrators, distributors and project teams source commercial audio products with clear technical information and responsive partner support.</p><div class="lt-actions"><a class="lt-btn lt-btn--blue" href="/products">Explore products</a><a class="lt-btn lt-btn--outline" href="/contactus">Talk to our team</a></div></div>
+                <div class="lt-about-visual"><img src="/b2b_website/static/src/img/partner-hub-industrial.svg" alt="Professional audio equipment"/></div>
+            </div></section>
+            <section class="lt-section"><div class="container"><div class="lt-section-heading lt-section-heading--stacked"><span class="lt-kicker">CAPABILITIES</span><h2>One partner hub, from evaluation to after-sales.</h2></div>
+                <div class="lt-capability-grid">
+                    <article><i class="fa fa-cubes"/><h3>Product expertise</h3><p>Structured specifications, media and approved technical resources.</p></article>
+                    <article><i class="fa fa-tags"/><h3>Account pricing</h3><p>Server-calculated pricing from your assigned Odoo pricelist.</p></article>
+                    <article><i class="fa fa-flask"/><h3>Sample workflow</h3><p>Submit, review and track evaluation requests from one place.</p></article>
+                    <article><i class="fa fa-wrench"/><h3>Service continuity</h3><p>Order-linked repair and replacement requests backed by Helpdesk.</p></article>
+                </div>
+            </div></section>
+        </t>
+    </template>
+
+    <template id="partner_application" name="Partner Application">
+        <t t-call="b2b_website.partner_layout"><t t-set="no_index" t-value="True"/>
+            <section class="lt-page-head lt-page-head--compact"><div class="container"><span class="lt-kicker">PARTNER NETWORK</span><h1>Apply for Partner Hub access</h1><p>Tell us about your company and the markets you serve.</p></div></section>
+            <section class="lt-section"><div class="container lt-form-shell">
+                <form action="/website/form/" method="post" enctype="multipart/form-data" class="lt-form-card s_website_form o_mark_required" data-mark="*" data-model_name="mail.mail" data-success-mode="redirect" data-success-page="/contactus-thank-you">
+                    <input type="hidden" name="email_to" t-att-value="request.env.company.email"/>
+                    <input type="hidden" name="subject" value="New Partner Hub application"/>
+                    <div class="lt-form-section"><div><span>01</span><h2>Company</h2></div><div class="lt-form-grid">
+                        <div class="lt-field"><label for="pa-company">Legal company name</label><input id="pa-company" class="s_website_form_input" name="company" required="required"/></div>
+                        <div class="lt-field"><label for="pa-country">Country / region</label><input id="pa-country" class="s_website_form_input" name="country_region" required="required"/></div>
+                        <div class="lt-field"><label for="pa-website">Company website</label><input id="pa-website" class="s_website_form_input" name="company_website" type="url"/></div>
+                        <div class="lt-field"><label for="pa-type">Business type</label><select id="pa-type" class="s_website_form_input" name="business_type" required="required"><option value="">Select</option><option>Distributor</option><option>System integrator</option><option>Installer</option><option>Retailer</option><option>Consultant</option></select></div>
+                    </div></div>
+                    <div class="lt-form-section"><div><span>02</span><h2>Primary contact</h2></div><div class="lt-form-grid">
+                        <div class="lt-field"><label for="pa-name">Full name</label><input id="pa-name" class="s_website_form_input" name="name" required="required"/></div>
+                        <div class="lt-field"><label for="pa-role">Role / title</label><input id="pa-role" class="s_website_form_input" name="job_title"/></div>
+                        <div class="lt-field"><label for="pa-email">Business email</label><input id="pa-email" class="s_website_form_input" name="email_from" type="email" required="required"/></div>
+                        <div class="lt-field"><label for="pa-phone">Phone</label><input id="pa-phone" class="s_website_form_input" name="phone" type="tel" required="required"/></div>
+                    </div></div>
+                    <div class="lt-form-section"><div><span>03</span><h2>Partnership</h2></div><div class="lt-form-grid">
+                        <div class="lt-field lt-field--wide"><label for="pa-markets">Markets, channels and project types</label><textarea id="pa-markets" class="s_website_form_input" name="description" required="required"/></div>
+                        <div class="lt-field lt-field--wide"><label><input type="checkbox" required="required"/> I confirm that the information is accurate and may be reviewed by Lucky Tone.</label></div>
+                    </div></div>
+                    <div class="lt-form-submit"><p>Submission sends a review request; access is activated only after staff approval.</p><a href="#" role="button" class="lt-btn lt-btn--blue s_website_form_send">Submit application</a><span class="s_website_form_result"/></div>
+                </form>
+            </div></section>
+        </t>
+    </template>
+
+    <template id="product_comparison" name="Product Comparison">
+        <t t-call="b2b_website.partner_layout"><section class="lt-catalog-page"><div class="container">
+            <div class="lt-catalog-intro"><span class="lt-kicker">COMPARE</span><h1>Product comparison</h1><p>Compare visible products and your current account pricing.</p></div>
+            <div t-if="not products" class="lt-empty"><h2>No products selected</h2><a class="lt-btn lt-btn--blue" href="/products">Browse products</a></div>
+            <div t-else="" class="lt-compare-wrap"><table class="lt-compare-table"><thead><tr><th>Specification</th><th t-foreach="products" t-as="product"><img t-att-src="'/web/image/product.template/%s/image_256' % product.id" t-att-alt="product.name"/><strong t-out="product.name"/><small t-out="product.b2b_model_number or product.product_variant_id.default_code or ''"/></th></tr></thead><tbody>
+                <tr><th>Partner price</th><td t-foreach="products" t-as="product"><t t-set="price" t-value="prices.get(product.id)"/><t t-call="b2b_website.price_display"/></td></tr>
+                <tr><th>Category</th><td t-foreach="products" t-as="product" t-out="product.public_categ_ids[:1].name if product.public_categ_ids else '—'"/></tr>
+                <tr><th>Availability</th><td t-foreach="products" t-as="product"><span class="lt-status-badge lt-status-badge--available">Available</span></td></tr>
+                <tr><th>Overview</th><td t-foreach="products" t-as="product" t-out="product.description_sale or 'Contact us for application guidance.'"/></tr>
+                <tr><th>Action</th><td t-foreach="products" t-as="product"><a class="lt-btn lt-btn--outline lt-btn--small" t-att-href="'/products/%s' % request.env['ir.http']._slug(product)">View product</a></td></tr>
+            </tbody></table></div>
+        </div></section></t>
+    </template>
+
+    <template id="resource_center" name="Resource Center">
+        <t t-call="b2b_website.partner_layout"><section class="lt-catalog-page"><div class="container">
+            <div class="lt-catalog-intro"><span class="lt-kicker">TECHNICAL LIBRARY</span><h1>Resources</h1><p>Permission-aware product manuals, specifications and downloads.</p></div>
+            <form class="lt-catalog-toolbar" action="/resources" method="get"><div class="lt-search"><label class="visually-hidden" for="resource-search">Search resources</label><input id="resource-search" type="search" name="search" t-att-value="search" placeholder="Search product, document or language"/><button type="submit"><i class="fa fa-search"/></button></div><span class="lt-results-summary"><strong t-out="len(resources)"/> resources</span></form>
+            <div t-if="resources" class="lt-resource-library"><article t-foreach="resources" t-as="row" class="lt-library-card"><div class="lt-library-card__icon"><i class="fa fa-file-text-o"/></div><div><span class="lt-kicker" t-out="row['product'].b2b_model_number or row['product'].name"/><h2 t-out="row['document'].name"/><p><span t-out="row['product'].name"/><t t-if="row['document'].b2b_version"> · v<t t-out="row['document'].b2b_version"/></t><t t-if="row['document'].b2b_language"> · <t t-out="row['document'].b2b_language"/></t></p></div><div class="lt-library-card__actions"><a class="lt-btn lt-btn--outline lt-btn--small" t-att-href="'/resources/%s' % row['document'].id">Details</a><a class="lt-btn lt-btn--blue lt-btn--small" t-att-href="'/products/resource/%s' % row['document'].id">Download</a></div></article></div>
+            <div t-else="" class="lt-empty"><h2>No resources match</h2><p>Sign in or adjust your search. Access is based on product visibility and partner approval.</p></div>
+        </div></section></t>
+    </template>
+
+    <template id="resource_detail" name="Resource Detail">
+        <t t-call="b2b_website.partner_layout"><section class="lt-section"><div class="container lt-resource-detail">
+            <a class="lt-back-link" href="/resources">← Back to resources</a><div class="lt-resource-detail__grid">
+                <div class="lt-resource-preview"><i class="fa fa-file-text-o"/><span t-out="(document.mimetype or 'File').split('/')[-1].upper()"/></div>
+                <aside class="lt-resource-meta"><span class="lt-kicker">TECHNICAL RESOURCE</span><h1 t-out="document.name"/><p t-out="product.name"/><dl><dt>Model</dt><dd t-out="product.b2b_model_number or product.product_variant_id.default_code or '—'"/><dt>Version</dt><dd t-out="document.b2b_version or 'Current'"/><dt>Language</dt><dd t-out="document.b2b_language or 'Not specified'"/><dt>Format</dt><dd t-out="(document.mimetype or 'File').split('/')[-1].upper()"/></dl><a class="lt-btn lt-btn--blue lt-btn--wide" t-att-href="'/products/resource/%s' % document.id">Download resource</a></aside>
+            </div>
+        </div></section></t>
+    </template>
+
+    <template id="sample_center" name="Sample Center">
+        <t t-call="b2b_website.partner_layout"><section class="lt-account-page"><div class="container">
+            <div class="lt-account-heading"><div><span class="lt-kicker">SAMPLES</span><h1>Sample Center</h1><p>Request evaluation units and follow fulfilment status.</p></div><a class="lt-btn lt-btn--blue" href="/sample/request">New sample request</a></div>
+            <div class="lt-metrics lt-metrics--account"><article><span class="lt-pill lt-pill--blue">All requests</span><strong t-out="sample_total"/><small>Your company</small></article><article><span class="lt-pill lt-pill--amber">In progress</span><strong t-out="sample_open"/><small>Review or fulfilment</small></article></div>
+            <div class="lt-account-card"><div class="lt-account-card__head"><h2>Recent requests</h2><a href="/my/sample-requests">View all</a></div><div t-if="samples" class="table-responsive"><table class="lt-data-table"><thead><tr><th>Request</th><th>Products</th><th>Submitted</th><th>Status</th></tr></thead><tbody><tr t-foreach="samples" t-as="sample"><td><a t-att-href="'/my/sample-requests/%s' % sample.id" t-out="sample.name"/></td><td t-out="', '.join(sample.line_ids.product_id.mapped('display_name'))"/><td><span t-field="sample.create_date" t-options="{'widget':'date'}"/></td><td><span t-att-class="'lt-status-badge lt-status-badge--%s' % sample.state" t-out="dict(sample._fields['state'].selection).get(sample.state)"/></td></tr></tbody></table></div><div t-else="" class="lt-empty lt-empty--compact"><p>No sample requests yet.</p></div></div>
+        </div></section></t>
+    </template>
+
+    <template id="service_center" name="Service Center">
+        <t t-call="b2b_website.partner_layout"><section class="lt-account-page"><div class="container">
+            <div t-if="request.params.get('submitted')" class="lt-alert lt-alert--success">Your service request was submitted successfully.</div>
+            <div class="lt-account-heading"><div><span class="lt-kicker">AFTER-SALES</span><h1>Service Center</h1><p>Order-linked technical, repair and replacement support.</p></div><a class="lt-btn lt-btn--blue" href="/service">New service request</a></div>
+            <div class="lt-service-categories"><a href="/service"><i class="fa fa-wrench"/><strong>Repair request</strong><span>Diagnose or repair an ordered product.</span></a><a href="/service"><i class="fa fa-refresh"/><strong>Replacement request</strong><span>Submit a replacement case for review.</span></a><a href="/my/tickets"><i class="fa fa-comments-o"/><strong>Technical support</strong><span>Continue conversations in Helpdesk.</span></a></div>
+            <div class="lt-account-card"><div class="lt-account-card__head"><h2>Recent service requests</h2><span><t t-out="ticket_total"/> total</span></div><div t-if="tickets" class="table-responsive"><table class="lt-data-table"><thead><tr><th>Request</th><th>Type</th><th>Created</th><th>Status</th><th>Owner</th></tr></thead><tbody><tr t-foreach="tickets" t-as="ticket"><td><a t-att-href="'/helpdesk/ticket/%s' % ticket.id"><small>#</small><t t-out="ticket.ticket_ref"/> · <t t-out="ticket.name"/></a></td><td t-out="dict(ticket._fields['b2b_request_type'].selection).get(ticket.b2b_request_type) if ticket.b2b_request_type else 'Technical'"/><td><span t-field="ticket.create_date" t-options="{'widget':'date'}"/></td><td t-out="ticket.stage_id.name"/><td t-out="ticket.user_id.name or 'Unassigned'"/></tr></tbody></table></div><div t-else="" class="lt-empty lt-empty--compact"><p>No service requests yet.</p></div></div>
+        </div></section></t>
+    </template>
+
+    <template id="company_profile" name="Company Profile">
+        <t t-call="portal.portal_layout"><t t-set="breadcrumbs_searchbar" t-value="True"/><t t-call="portal.portal_searchbar"><t t-set="title">Company profile</t></t>
+            <div class="lt-account-card lt-company-card"><div class="lt-account-card__head"><div><span class="lt-kicker">ACCOUNT</span><h1 t-out="company.name"/></div><span t-att-class="'lt-status-badge ' + ('lt-status-badge--approved' if company.b2b_approved else 'lt-status-badge--under_review')" t-out="'Approved partner' if company.b2b_approved else 'Pending approval'"/></div>
+                <div class="lt-company-grid"><div><label>Company name</label><strong t-out="company.name"/></div><div><label>Tax ID</label><strong t-out="company.vat or '—'"/></div><div><label>Email</label><strong t-out="company.email or '—'"/></div><div><label>Phone</label><strong t-out="company.phone or '—'"/></div><div class="lt-company-grid__wide"><label>Address</label><strong t-out="company.contact_address or '—'"/></div></div>
+                <div class="lt-account-card__footer"><p>Company-level changes are controlled by Odoo permissions and staff review.</p><a class="lt-btn lt-btn--outline" href="/my/account">Edit my contact details</a></div>
+            </div>
+        </t>
+    </template>
+
+    <template id="company_users" name="Company Users">
+        <t t-call="portal.portal_layout"><t t-set="breadcrumbs_searchbar" t-value="True"/><t t-call="portal.portal_searchbar"><t t-set="title">Company users</t></t>
+            <div class="lt-account-card"><div class="lt-account-card__head"><div><span class="lt-kicker">ACCESS</span><h1>Company users</h1><p>Contacts currently associated with <t t-out="company.name"/>.</p></div><a class="lt-btn lt-btn--outline" href="/contactus">Request a user change</a></div>
+                <div t-if="contacts" class="table-responsive"><table class="lt-data-table"><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Portal access</th></tr></thead><tbody><tr t-foreach="contacts" t-as="contact"><td><strong t-out="contact.name"/></td><td t-out="contact.email or '—'"/><td t-out="contact.phone or '—'"/><td><span t-att-class="'lt-status-badge ' + ('lt-status-badge--approved' if contact.user_ids else 'lt-pill--slate')" t-out="'Active' if contact.user_ids else 'Contact only'"/></td></tr></tbody></table></div><div t-else="" class="lt-empty lt-empty--compact"><p>No additional company contacts are visible.</p></div>
+            </div>
+        </t>
+    </template>
+</odoo>

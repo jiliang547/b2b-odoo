@@ -1,7 +1,7 @@
 {
     "name": "Lucky Tone Partner Hub Website",
     "summary": "B2B catalog, portal, ordering, samples, service, and ERP tracking",
-    "version": "19.0.1.0.0",
+    "version": "19.0.1.1.0",
     "category": "Website/Website",
     "license": "LGPL-3",
     "author": "Lucky Tone",
@@ -18,6 +18,8 @@
         "views/res_config_settings_views.xml",
         "views/helpdesk_ticket_views.xml",
         "views/website_templates.xml",
+        "views/figma_pages.xml",
+        "views/native_redesign.xml",
         "views/catalog_templates.xml",
         "views/sample_templates.xml",
         "views/service_templates.xml",

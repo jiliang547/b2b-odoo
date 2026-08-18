@@ -85,16 +85,164 @@ class PartnerHubWebsite(Controller):
         values.update(extra)
         return values
 
+    def _visible_products(self, limit=200):
+        return request.env["product.template"].search(
+            self._service().visible_domain(website=self._website()),
+            limit=limit,
+            order="website_sequence, name",
+        )
+
+    @route("/about", type="http", auth="public", website=True, sitemap=True)
+    def about(self, **kwargs):
+        return request.render("b2b_website.partner_about", {"page_name": "partner_about"})
+
+    @route("/partner-application", type="http", auth="public", website=True, sitemap=True)
+    def partner_application(self, **kwargs):
+        return request.render(
+            "b2b_website.partner_application",
+            {"page_name": "partner_application"},
+        )
+
+    @route("/products/compare", type="http", auth="public", website=True, sitemap=False)
+    def product_compare(self, **query):
+        raw_ids = (query.get("ids") or "").split(",")
+        ids = [value for value in (self._safe_int(item) for item in raw_ids) if value][:4]
+        domain = Domain.AND([
+            self._service().visible_domain(website=self._website()),
+            [("id", "in", ids)],
+        ])
+        products = request.env["product.template"].search(domain)
+        products = products.sorted(key=lambda item: ids.index(item.id) if item.id in ids else 99)
+        if not products:
+            products = self._visible_products(limit=3)
+        return request.render(
+            "b2b_website.product_comparison",
+            self._catalog_values(
+                products,
+                page_name="partner_product_compare",
+            ),
+        )
+
+    def _resource_rows(self, search=""):
+        rows = []
+        needle = search.casefold().strip()[:120]
+        for product in self._visible_products(limit=200):
+            for document in self._service().allowed_documents(
+                product, website=self._website()
+            ):
+                haystack = " ".join(filter(None, [
+                    document.name,
+                    document.b2b_version,
+                    document.b2b_language,
+                    product.name,
+                    product.b2b_model_number,
+                ])).casefold()
+                if not needle or needle in haystack:
+                    rows.append({"document": document, "product": product})
+        return rows
+
+    @route("/resources", type="http", auth="public", website=True, sitemap=True)
+    def resources(self, **query):
+        search = (query.get("search") or "").strip()
+        return request.render(
+            "b2b_website.resource_center",
+            {
+                "resources": self._resource_rows(search=search),
+                "search": search,
+                "page_name": "partner_resources",
+            },
+        )
+
+    @route("/resources/<int:document_id>", type="http", auth="public", website=True)
+    def resource_detail(self, document_id, **kwargs):
+        document = request.env["product.document"].sudo().browse(document_id).exists()
+        if not document or not self._service().document_is_allowed(
+            document, website=self._website()
+        ):
+            raise NotFound()
+        return request.render(
+            "b2b_website.resource_detail",
+            {
+                "document": document,
+                "product": self._service().product_from_document(document),
+                "page_name": "partner_resource_detail",
+                "no_index": True,
+            },
+        )
+
+    @route("/samples", type="http", auth="user", website=True, sitemap=False)
+    def sample_center(self, **kwargs):
+        company = request.env.user.partner_id.commercial_partner_id
+        Sample = request.env["b2b.sample.request"]
+        domain = [("commercial_partner_id", "=", company.id)]
+        samples = Sample.search(domain, limit=5, order="create_date desc")
+        return request.render(
+            "b2b_website.sample_center",
+            {
+                "samples": samples,
+                "sample_total": Sample.search_count(domain),
+                "sample_open": Sample.search_count(Domain.AND([domain, [("state", "in", ("submitted", "under_review", "approved"))]])),
+                "page_name": "sample_center",
+                "no_index": True,
+            },
+        )
+
+    @route("/service-center", type="http", auth="user", website=True, sitemap=False)
+    def service_center(self, **kwargs):
+        company = request.env.user.partner_id.commercial_partner_id
+        Ticket = request.env["helpdesk.ticket"]
+        domain = [("partner_id", "child_of", company.id)]
+        tickets = Ticket.search(domain, limit=8, order="create_date desc")
+        return request.render(
+            "b2b_website.service_center",
+            {
+                "tickets": tickets,
+                "ticket_total": Ticket.search_count(domain),
+                "page_name": "service_center",
+                "no_index": True,
+            },
+        )
+
+    @route("/my/company", type="http", auth="user", website=True, sitemap=False)
+    def company_profile(self, **kwargs):
+        company = request.env.user.partner_id.commercial_partner_id
+        return request.render(
+            "b2b_website.company_profile",
+            {"company": company, "page_name": "company_profile", "no_index": True},
+        )
+
+    @route("/my/company/users", type="http", auth="user", website=True, sitemap=False)
+    def company_users(self, **kwargs):
+        company = request.env.user.partner_id.commercial_partner_id
+        contacts = request.env["res.partner"].search([
+            ("id", "child_of", company.id),
+            ("is_company", "=", False),
+        ], order="name")
+        return request.render(
+            "b2b_website.company_users",
+            {
+                "company": company,
+                "contacts": contacts,
+                "page_name": "company_users",
+                "no_index": True,
+            },
+        )
+
     @route("/", type="http", auth="public", website=True, sitemap=True)
     def homepage(self, **kwargs):
+        domain = self._service().visible_domain(website=self._website())
         products = request.env["product.template"].search(
-            self._service().visible_domain(website=self._website()),
+            domain,
             limit=6,
             order="website_sequence, name",
         )
         return request.render(
             "b2b_website.partner_hub_homepage",
-            self._catalog_values(products, page_name="partner_home"),
+            self._catalog_values(
+                products,
+                catalog_total=request.env["product.template"].search_count(domain),
+                page_name="partner_home",
+            ),
         )
 
     @route(["/products", "/products/page/<int:page>"], type="http", auth="public", website=True, sitemap=True)
@@ -122,6 +270,10 @@ class PartnerHubWebsite(Controller):
             "b2b_website.product_catalog",
             self._catalog_values(
                 products,
+                active_filter_count=sum(
+                    bool(query.get(key))
+                    for key in ("category", "brand", "tag", "application")
+                ),
                 pager=pager,
                 total=total,
                 query=query,
@@ -184,7 +336,7 @@ class PartnerHubWebsite(Controller):
             "contact_name": contact.name or "",
             "company_name": company.name or "",
             "email": contact.email or company.email or "",
-            "phone": contact.phone or contact.mobile or company.phone or "",
+            "phone": contact.phone or company.phone or "",
             "shipping_address": contact.contact_address or company.contact_address or "",
             "shipping_partners": request.env["res.partner"].search([
                 ("id", "child_of", company.id), ("type", "=", "delivery")
@@ -235,10 +387,16 @@ class PartnerHubWebsite(Controller):
 
     def _owned_orders(self):
         company = request.env.user.partner_id.commercial_partner_id
-        return request.env["sale.order"].search([
-            ("partner_id", "child_of", company.id),
-            ("state", "in", ("sale", "done")),
-        ], order="date_order desc", limit=100)
+        try:
+            return request.env["sale.order"].search([
+                ("partner_id", "child_of", company.id),
+                ("state", "in", ("sale", "done")),
+            ], order="date_order desc", limit=100)
+        except AccessError:
+            # Internal users without Sales access may still visit the public
+            # Partner Hub navigation. Render the safe empty state instead of a
+            # framework 403; no records are elevated or disclosed.
+            return request.env["sale.order"]
 
     def _service_defaults(self):
         contact = request.env.user.partner_id
@@ -253,7 +411,7 @@ class PartnerHubWebsite(Controller):
             "contact_name": contact.name or "",
             "company_name": company.name or "",
             "email": contact.email or company.email or "",
-            "phone": contact.phone or contact.mobile or company.phone or "",
+            "phone": contact.phone or company.phone or "",
         }
 
     def _validated_uploads(self):
@@ -338,7 +496,7 @@ class PartnerHubWebsite(Controller):
                     })
                 ticket.message_subscribe(partner_ids=[contact.id])
                 ticket.message_post(body=_("Service request submitted through Partner Hub."))
-                return request.redirect("/my?service_submitted=1")
+                return request.redirect("/service-center?submitted=1")
             except (AccessError, UserError, ValidationError) as error:
                 values["error"] = str(error)
         return request.render("b2b_website.service_request_form", values)
