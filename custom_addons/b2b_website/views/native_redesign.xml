@@ -1,27 +1,64 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <template id="portal_layout_figma" inherit_id="portal.portal_layout" name="Partner Hub Portal Layout">
+        <xpath expr="//t[@t-set='is_portal']" position="before"><t t-set="no_header" t-value="True"/><t t-set="no_footer" t-value="True"/><t t-set="no_breadcrumbs" t-value="True"/></xpath>
         <xpath expr="//div[@id='wrap']" position="before"><t t-call="b2b_website.partner_topbar"/></xpath>
         <xpath expr="//div[@id='wrap']" position="attributes"><attribute name="class" add="lt-portal-wrap" separator=" "/></xpath>
         <xpath expr="//div[@id='wrap']/div[hasclass('container')]" position="attributes"><attribute name="class" add="lt-portal-shell" separator=" "/></xpath>
         <xpath expr="//div[@id='wrap']/div[hasclass('container')]" position="inside"><t t-call="b2b_website.partner_portal_sidebar"/></xpath>
+        <xpath expr="//div[@id='wrap']/div[hasclass('container')]/t[@t-else='']" position="replace"><t t-else=""><main class="lt-portal-main"><t t-out="0"/></main></t></xpath>
     </template>
 
     <template id="portal_home_figma" inherit_id="portal.portal_my_home" name="Partner Hub Account Dashboard" priority="90">
-        <xpath expr="//div[hasclass('o_portal_docs')]" position="before">
-            <section class="lt-dashboard-intro"><span class="lt-kicker">ACCOUNT</span><h1>Welcome back, <t t-out="request.env.user.name"/></h1><p>Orders, samples, service and company access at a glance.</p></section>
-            <section class="lt-dashboard-metrics" aria-label="Account metrics">
-                <a href="/my/orders"><span>Orders</span><strong t-out="order_count or 0"/><small>Sales orders</small></a>
-                <a href="/my/sample-requests"><span>Samples</span><strong t-out="sample_count or 0"/><small>Requests</small></a>
-                <a href="/my/tickets"><span>Service</span><strong t-out="ticket_count or 0"/><small>Tickets</small></a>
-                <a href="/my/company"><span>Account</span><strong t-out="'Active' if request.env.user.partner_id.commercial_partner_id.b2b_approved else 'Review'"/><small>Partner status</small></a>
-            </section>
-            <div class="lt-account-section-title"><h2>Workspaces</h2><span>Secure company data from Odoo</span></div>
+        <xpath expr="//div[hasclass('o_portal_my_home')]" position="replace">
+            <t t-set="company" t-value="request.env.user.partner_id.commercial_partner_id"/>
+            <div class="o_portal_my_home lt-portal-dashboard">
+                <nav class="lt-portal-breadcrumb" aria-label="Breadcrumb">Overview</nav>
+                <header class="lt-portal-heading">
+                    <h1>Welcome back, <t t-out="request.env.user.name"/></h1>
+                    <p><t t-out="company.name"/> · Orders, samples, service and company access at a glance.</p>
+                </header>
+                <section class="lt-dashboard-metrics" aria-label="Account metrics">
+                    <a href="/my/orders"><span class="lt-metric-icon lt-metric-icon--blue"><i class="fa fa-clipboard"/></span><strong t-out="order_count or 0"/><b>Orders</b><small>Confirmed sales orders</small></a>
+                    <a href="/my/sample-requests"><span class="lt-metric-icon lt-metric-icon--green"><i class="fa fa-flask"/></span><strong t-out="sample_count or 0"/><b>Samples</b><small>Sample requests submitted</small></a>
+                    <a href="/my/tickets"><span class="lt-metric-icon lt-metric-icon--orange"><i class="fa fa-comment-o"/></span><strong t-out="ticket_count or 0"/><b>Service</b><small>Support tickets</small></a>
+                    <a href="/my/company"><span class="lt-metric-icon lt-metric-icon--green"><i class="fa fa-building-o"/></span><strong t-out="'Active' if company.b2b_approved else 'Review'"/><b>Account</b><small t-out="'Partner Hub Approved' if company.b2b_approved else 'Approval pending'"/></a>
+                </section>
+                <section class="lt-quick-actions" aria-label="Quick actions">
+                    <span>Quick Actions</span><div><a href="/products"><i class="fa fa-cube"/>Browse Products</a><a href="/products"><i class="fa fa-flask"/>Request a Sample</a><a href="/service"><i class="fa fa-ticket"/>New Service Request</a><a href="/contact"><i class="fa fa-commenting-o"/>Contact Support</a></div>
+                </section>
+                <div class="lt-dashboard-activity">
+                    <section class="lt-portal-card lt-recent-orders"><header><h2>Recent Orders</h2><a href="/my/orders">View all</a></header><div t-if="recent_orders" class="lt-compact-list"><a t-foreach="recent_orders" t-as="order" t-att-href="order.get_portal_url()"><div><strong t-out="order.name"/><small t-field="order.date_order" t-options="{'widget':'date'}"/></div><span t-att-class="'lt-status-badge lt-status-badge--' + ('approved' if order.state == 'sale' else 'synced')" t-out="'Confirmed' if order.state == 'sale' else 'Locked'"/><b t-field="order.amount_total"/></a></div><div t-else="" class="lt-empty lt-empty--compact">No confirmed orders yet.</div></section>
+                    <div class="lt-dashboard-activity__side">
+                        <section class="lt-portal-card"><header><h2>Recent Samples</h2><a href="/my/sample-requests">View all</a></header><div t-if="recent_samples" class="lt-compact-list lt-compact-list--small"><a t-foreach="recent_samples" t-as="sample" t-att-href="'/my/sample-requests/%s' % sample.id"><div><strong t-out="sample.name"/><small t-out="', '.join(sample.line_ids.product_id.mapped('display_name'))"/></div><span t-att-class="'lt-status-badge lt-status-badge--%s' % sample.state" t-out="dict(sample._fields['state'].selection).get(sample.state)"/></a></div><div t-else="" class="lt-empty lt-empty--compact">No sample requests yet.</div></section>
+                        <section class="lt-portal-card"><header><h2>Open Tickets</h2><a href="/my/tickets">View all</a></header><div t-if="recent_tickets" class="lt-compact-list lt-compact-list--small"><a t-foreach="recent_tickets" t-as="ticket" t-att-href="'/helpdesk/ticket/%s' % ticket.id"><div><strong t-out="ticket.ticket_ref"/><small t-out="ticket.name"/></div><span class="lt-status-badge lt-status-badge--under_review" t-out="ticket.stage_id.name"/></a></div><div t-else="" class="lt-empty lt-empty--compact">No service tickets yet.</div></section>
+                    </div>
+                </div>
+                <section class="lt-workspace"><h2>My Workspace</h2><div><article><i class="fa fa-shopping-bag"/><h3>Orders</h3><p>View and manage your confirmed sales orders.</p><a href="/my/orders">View Orders →</a></article><article><i class="fa fa-file-text-o"/><h3>Quotations</h3><p>Review and accept open quotations from Lucky Tone.</p><a href="/my/quotes">View Quotations →</a></article><article><i class="fa fa-flask"/><h3>Sample Requests</h3><p>Track your product sample requests and statuses.</p><a href="/my/sample-requests">View Samples →</a></article><article><i class="fa fa-life-ring"/><h3>After-Sales Service</h3><p>Submit and track technical support tickets.</p><a href="/my/tickets">View Tickets →</a></article><article><i class="fa fa-building-o"/><h3>Company Profile</h3><p>Your company's registered information and approval status.</p><a href="/my/company">View Profile →</a></article><article><i class="fa fa-users"/><h3>Company Users</h3><p>Contacts associated with your company account.</p><a href="/my/company/users">View Users →</a></article><article><i class="fa fa-user-o"/><h3>Personal Profile</h3><p>Update your personal contact details and address.</p><a href="/my/account">Edit Profile →</a></article></div></section>
+                <div class="o_portal_docs d-none" aria-hidden="true"><div class="o_portal_doc_spinner spinner-border"/></div>
+            </div>
         </xpath>
     </template>
 
     <template id="portal_orders_figma" inherit_id="sale.portal_my_orders" name="Partner Orders Layout">
-        <xpath expr="//t[@t-call='portal.portal_searchbar']" position="after"><div class="lt-list-intro"><span class="lt-kicker">PROCUREMENT</span><h1>Orders</h1><p>Review confirmed orders, totals and fulfilment status.</p></div></xpath>
+        <xpath expr="//t[@t-call='portal.portal_searchbar']" position="replace"><section class="lt-portal-list"><nav class="lt-portal-breadcrumb"><a href="/my">Overview</a><span>/</span>Orders</nav><header class="lt-portal-heading"><h1>Orders</h1><p>View your sales orders and quotations.</p></header><div class="lt-portal-tabs"><a class="is-active" href="/my/orders">Sales Orders</a><a href="/my/quotes">Quotations</a></div><t t-call="portal.portal_searchbar"><t t-set="title" t-value="''"/></t></section></xpath>
+        <xpath expr="//t[@t-if='orders'][@t-call='portal.portal_table']" position="replace">
+            <div t-if="orders" class="lt-portal-card lt-table-card"><div class="table-responsive"><table class="lt-data-table"><thead><tr><th>Order No.</th><th>Date</th><th>Amount</th><th>Status</th><th/></tr></thead><tbody><tr t-foreach="orders" t-as="order"><td><a t-att-href="order.get_portal_url()"><strong t-out="order.name"/></a></td><td><span t-field="order.date_order" t-options="{'widget':'date'}"/></td><td><strong t-field="order.amount_total"/></td><td><span t-att-class="'lt-status-badge lt-status-badge--' + ('approved' if order.state == 'sale' else 'synced')" t-out="'Confirmed' if order.state == 'sale' else 'Locked'"/></td><td class="text-end"><a class="lt-table-link" t-att-href="order.get_portal_url()">View →</a></td></tr></tbody></table></div></div>
+        </xpath>
+    </template>
+
+    <template id="portal_quotes_figma" inherit_id="sale.portal_my_quotations" name="Partner Quotations Layout">
+        <xpath expr="//t[@t-call='portal.portal_searchbar']" position="replace"><section class="lt-portal-list"><nav class="lt-portal-breadcrumb"><a href="/my">Overview</a><span>/</span>Orders</nav><header class="lt-portal-heading"><h1>Orders</h1><p>View your sales orders and quotations.</p></header><div class="lt-portal-tabs"><a href="/my/orders">Sales Orders</a><a class="is-active" href="/my/quotes">Quotations</a></div><t t-call="portal.portal_searchbar"><t t-set="title" t-value="''"/></t></section></xpath>
+    </template>
+
+    <template id="portal_personal_profile_figma" inherit_id="portal.portal_my_details" name="Partner Personal Profile" priority="90">
+        <xpath expr="//div[hasclass('o_customer_address_fill')]" position="attributes"><attribute name="class" add="lt-profile-page" separator=" "/></xpath>
+        <xpath expr="//div[hasclass('o_customer_address_fill')]" position="before"><nav class="lt-portal-breadcrumb"><a href="/my">Overview</a><span>/</span>Personal Profile</nav><header class="lt-portal-heading"><h1>Personal Profile</h1><p>Update your personal contact details and primary address.</p></header></xpath>
+    </template>
+
+    <template id="portal_addresses_figma" inherit_id="portal.my_addresses" name="Partner Addresses" priority="90">
+        <xpath expr="//section[hasclass('o_portal_addresses')]" position="attributes"><attribute name="class" add="lt-addresses-page" separator=" "/></xpath>
+        <xpath expr="//section[hasclass('o_portal_addresses')]" position="before"><nav class="lt-portal-breadcrumb"><a href="/my">Overview</a><span>/</span>Addresses</nav><header class="lt-portal-heading"><h1>Addresses</h1><p>Billing and delivery addresses used for orders and shipments.</p></header></xpath>
     </template>
 
     <template id="sale_order_figma" inherit_id="sale.sale_order_portal_template" name="Partner Order Detail Layout" priority="90">
@@ -30,7 +67,7 @@
     </template>
 
     <template id="helpdesk_list_figma" inherit_id="helpdesk.portal_helpdesk_ticket" name="Partner Service Ticket List">
-        <xpath expr="//t[@t-call='portal.portal_searchbar']" position="after"><div class="lt-list-intro"><span class="lt-kicker">AFTER-SALES</span><h1>Service requests</h1><p>Assign, reply and follow customer support tickets.</p><a class="lt-btn lt-btn--blue" href="/service">New service request</a></div></xpath>
+        <xpath expr="//t[@t-call='portal.portal_searchbar']" position="replace"><section class="lt-portal-list"><nav class="lt-portal-breadcrumb"><a href="/my">Overview</a><span>/</span>Service Tickets</nav><header class="lt-portal-heading lt-portal-heading--action"><div><h1>Service Tickets</h1><p>Track your after-sales support and technical helpdesk requests.</p></div><a class="lt-btn lt-btn--blue" href="/service">+ New Request</a></header><t t-call="portal.portal_searchbar"><t t-set="title" t-value="''"/></t></section></xpath>
     </template>
 
     <template id="helpdesk_detail_figma" inherit_id="helpdesk.tickets_followup" name="Partner Service Ticket Detail">
@@ -39,7 +76,7 @@
     </template>
 
     <template id="checkout_layout_figma_shell" inherit_id="website_sale.checkout_layout" name="Partner Checkout Shell" priority="90">
-        <xpath expr="//div[@id='wrap']" position="before"><t t-call="b2b_website.partner_topbar"/></xpath>
+        <xpath expr="//div[@id='wrap']" position="before"><t t-set="no_header" t-value="True"/><t t-set="no_footer" t-value="True"/><t t-call="b2b_website.partner_topbar"/></xpath>
         <xpath expr="//div[@id='wrap']" position="attributes"><attribute name="class" add="lt-native-checkout" separator=" "/></xpath>
     </template>
 
@@ -50,6 +87,11 @@
 
     <template id="checkout_figma" inherit_id="website_sale.checkout" name="Partner Checkout">
         <xpath expr="//div[@id='shop_checkout']" position="attributes"><attribute name="class" add="lt-checkout-page" separator=" "/></xpath>
+        <xpath expr="//div[@id='shop_checkout']/*[1]" position="before">
+            <div class="lt-checkout-progress" aria-label="Checkout progress">
+                <span class="is-active"><b>1</b>Customer</span><span><b>2</b>Billing</span><span><b>3</b>Shipping</span><span><b>4</b>Delivery</span><span><b>5</b>Payment</span><span><b>6</b>Review</span>
+            </div>
+        </xpath>
     </template>
 
     <template id="confirmation_figma" inherit_id="website_sale.confirmation" name="Partner Order Confirmation">
@@ -58,13 +100,39 @@
     </template>
 
     <template id="contactus_figma" inherit_id="website.contactus" name="Partner Contact Page" priority="90">
-        <xpath expr="//div[@id='wrap']" position="before"><t t-call="b2b_website.partner_topbar"/></xpath>
-        <xpath expr="//div[@id='wrap']" position="attributes"><attribute name="class" add="lt-contact-page" separator=" "/></xpath>
-        <xpath expr="//form[@id='contactus_form']" position="attributes"><attribute name="class" add="lt-contact-form" separator=" "/></xpath>
+        <xpath expr="//div[@id='wrap']" position="before"><t t-set="no_header" t-value="True"/><t t-set="no_footer" t-value="True"/><t t-call="b2b_website.partner_topbar"/></xpath>
+        <xpath expr="//div[@id='wrap']" position="replace">
+            <div id="wrap" class="oe_structure oe_empty lt-contact-page">
+                <section class="lt-page-hero lt-page-hero--compact"><div class="container"><nav class="lt-breadcrumb lt-breadcrumb--dark" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><span>Contact</span></nav><h1>Contact Us</h1><p>Get in touch with our sales and technical teams.</p></div></section>
+                <section class="lt-section lt-section--soft"><div class="container lt-contact-layout">
+                    <div class="lt-contact-card"><h2>Send a Message</h2><form action="/website/form/" method="post" class="s_website_form o_mark_required lt-contact-form" data-mark="*" data-model_name="mail.mail" data-success-mode="redirect" data-success-page="/contactus-thank-you">
+                        <input type="hidden" name="email_to" t-att-value="request.env.company.email"/>
+                        <div class="lt-form-grid"><div class="lt-field"><label for="contact-name">Full Name *</label><input id="contact-name" class="s_website_form_input" name="name" placeholder="Your name" required="required"/></div><div class="lt-field"><label for="contact-email">Business Email *</label><input id="contact-email" class="s_website_form_input" name="email_from" type="email" placeholder="name@company.com" required="required"/></div><div class="lt-field"><label for="contact-company">Company</label><input id="contact-company" class="s_website_form_input" name="company" placeholder="Company name"/></div><div class="lt-field"><label for="contact-subject">Inquiry Type</label><select id="contact-subject" class="s_website_form_input" name="subject"><option value="Sales inquiry">Select inquiry type...</option><option>Sales Inquiry</option><option>Technical Support</option><option>Sample Request</option><option>Partnership</option><option>Other</option></select></div><div class="lt-field lt-field--wide"><label for="contact-message">Message *</label><textarea id="contact-message" class="s_website_form_input" name="description" placeholder="Describe your inquiry, including product names, quantities, application requirements..." required="required"/></div></div>
+                        <a href="#" role="button" class="lt-btn lt-btn--blue s_website_form_send">Send Message <i class="fa fa-arrow-right"/></a><span class="s_website_form_result"/>
+                    </form></div>
+                    <aside class="lt-contact-aside"><section><h3>Contact Channels</h3><article><i class="fa fa-envelope-o"/><div><strong>Sales Inquiry</strong><p>Product pricing, bulk orders and partnerships</p><a t-att-href="'mailto:%s' % (request.env.company.email or 'sales@luckytone.com')" t-out="request.env.company.email or 'sales@luckytone.com'"/></div></article><article><i class="fa fa-wrench"/><div><strong>Technical Support</strong><p>Technical specifications, installation and troubleshooting</p><a t-att-href="'/service-center' if not request.env.user._is_public() else '/web/login?redirect=/service-center'">Open Service Center</a></div></article><article><i class="fa fa-flask"/><div><strong>Sample Requests</strong><p>Request product samples for evaluation</p><a t-att-href="'/samples' if not request.env.user._is_public() else '/web/login?redirect=/samples'">Open Sample Center</a></div></article><article><i class="fa fa-handshake-o"/><div><strong>Partner Program</strong><p>Distributor and reseller partnerships</p><a href="/partner-application">Apply for Partnership</a></div></article></section><section><h3>Headquarters</h3><strong t-out="request.env.company.name"/><p t-out="request.env.company.partner_id.contact_address or 'Contact us for our current office address.'"/><p t-if="request.env.company.phone"><i class="fa fa-phone"/> <t t-out="request.env.company.phone"/></p></section></aside>
+                </div></section>
+                <t t-call="b2b_website.partner_footer"/>
+            </div>
+        </xpath>
     </template>
 
     <template id="login_layout_figma" inherit_id="web.login" name="Partner Hub Login">
         <xpath expr="//form" position="attributes"><attribute name="class" add="lt-login-card" separator=" "/></xpath>
         <xpath expr="//form" position="before"><div class="lt-login-heading"><span class="lt-kicker">PARTNER HUB</span><h1>Sign in to your account</h1><p>Access pricing, orders, samples and support.</p></div></xpath>
+    </template>
+
+    <template id="website_login_shell_figma" inherit_id="website.login_layout" name="Partner Hub Authentication Shell" priority="90">
+        <xpath expr="//t[@t-call='website.layout']" position="replace"><t t-call="b2b_website.partner_auth_layout"><div class="oe_website_login_container" t-out="0"/></t></xpath>
+    </template>
+
+    <template id="signup_figma" inherit_id="auth_signup.signup" name="Partner Hub Registration">
+        <xpath expr="//form" position="attributes"><attribute name="class" add="lt-login-card" separator=" "/></xpath>
+        <xpath expr="//form" position="before"><div class="lt-login-heading"><span class="lt-kicker">PARTNER HUB</span><h1>Create your partner account</h1><p>Register your contact details to begin the partner approval process.</p></div></xpath>
+    </template>
+
+    <template id="reset_password_figma" inherit_id="auth_signup.reset_password" name="Partner Hub Password Reset">
+        <xpath expr="//form" position="attributes"><attribute name="class" add="lt-login-card" separator=" "/></xpath>
+        <xpath expr="//form" position="before"><div class="lt-login-heading"><span class="lt-kicker">PARTNER HUB</span><h1>Reset your password</h1><p>We will send recovery instructions to your registered email.</p></div></xpath>
     </template>
 </odoo>

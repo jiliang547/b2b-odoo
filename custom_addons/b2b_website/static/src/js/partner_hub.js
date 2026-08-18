@@ -22,6 +22,34 @@ function initializeFilters() {
     });
 }
 
+function initializeCatalogView() {
+    document.querySelectorAll("[data-lt-auto-submit]").forEach((select) => {
+        select.addEventListener("change", () => select.form?.requestSubmit());
+    });
+    document.querySelectorAll("[data-lt-view]").forEach((button) => {
+        button.addEventListener("click", () => {
+            const grid = document.querySelector("[data-lt-product-grid]");
+            const mode = button.dataset.ltView;
+            grid?.classList.toggle("is-list", mode === "list");
+            button.parentElement?.querySelectorAll("button").forEach(
+                (item) => item.classList.toggle("is-active", item === button)
+            );
+            try {
+                window.localStorage.setItem("lt-product-view", mode);
+            } catch (_error) {
+                // Storage may be blocked; the view toggle still works for this page.
+            }
+        });
+    });
+    let preferred = "grid";
+    try {
+        preferred = window.localStorage.getItem("lt-product-view") || "grid";
+    } catch (_error) {
+        // Keep the accessible grid default.
+    }
+    document.querySelector(`[data-lt-view="${preferred}"]`)?.click();
+}
+
 function initializeGalleries() {
     document.querySelectorAll("[data-lt-gallery]").forEach((gallery) => {
         const image = gallery.querySelector("[data-lt-gallery-image]");
@@ -78,6 +106,7 @@ function initializeCartForms() {
 function initializePartnerHub() {
     initializeNavigation();
     initializeFilters();
+    initializeCatalogView();
     initializeGalleries();
     initializeCartForms();
 }

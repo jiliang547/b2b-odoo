@@ -30,6 +30,15 @@ class PartnerHubWebsite(Controller):
     def _service(self):
         return request.env["b2b.product.service"]
 
+    def _sample_allowed(self):
+        if request.env.user._is_public():
+            return False
+        company = request.env.user.partner_id.commercial_partner_id
+        return (
+            not request.website.b2b_require_approved_sample
+            or company.b2b_approved
+        )
+
     def _safe_int(self, value):
         try:
             value = int(value or 0)
@@ -68,6 +77,7 @@ class PartnerHubWebsite(Controller):
         values = {
             "products": products,
             "prices": self._service().price_payload(products, website=self._website()),
+            "price_state": self._service().price_state(website=self._website()),
             "categories": request.env["product.public.category"].search(
                 [("product_tmpl_ids", "any", visible)], order="name"
             ),
@@ -96,6 +106,24 @@ class PartnerHubWebsite(Controller):
     def about(self, **kwargs):
         return request.render("b2b_website.partner_about", {"page_name": "partner_about"})
 
+    @route("/solutions", type="http", auth="public", website=True, sitemap=True)
+    def solutions(self, **kwargs):
+        return request.render(
+            "b2b_website.partner_solutions",
+            {"page_name": "partner_solutions"},
+        )
+
+    @route("/privacy", type="http", auth="public", website=True, sitemap=True)
+    def privacy(self, **kwargs):
+        return request.render(
+            "b2b_website.partner_privacy",
+            {"page_name": "partner_privacy"},
+        )
+
+    @route("/contact", type="http", auth="public", website=True, sitemap=True)
+    def contact_alias(self, **kwargs):
+        return request.redirect("/contactus", code=302)
+
     @route("/partner-application", type="http", auth="public", website=True, sitemap=True)
     def partner_application(self, **kwargs):
         return request.render(
@@ -123,32 +151,81 @@ class PartnerHubWebsite(Controller):
             ),
         )
 
-    def _resource_rows(self, search=""):
+    def _resource_format(self, document):
+        if document.type == "url":
+            path = urlparse(document.url or "").path
+            extension = path.rsplit(".", 1)[-1] if "." in path else "LINK"
+        else:
+            extension = (document.mimetype or "").split("/")[-1]
+        aliases = {
+            "application/pdf": "PDF",
+            "pdf": "PDF",
+            "zip": "ZIP",
+            "x-zip-compressed": "ZIP",
+            "step": "STEP",
+            "stp": "STEP",
+        }
+        return aliases.get(extension.casefold(), extension.upper() or "FILE")
+
+    def _resource_rows(self, search="", category=False, file_type=""):
         rows = []
         needle = search.casefold().strip()[:120]
         for product in self._visible_products(limit=200):
             for document in self._service().allowed_documents(
                 product, website=self._website()
             ):
+                resource_format = self._resource_format(document)
+                primary_category = product.public_categ_ids[:1]
                 haystack = " ".join(filter(None, [
                     document.name,
                     document.b2b_version,
                     document.b2b_language,
                     product.name,
                     product.b2b_model_number,
+                    primary_category.name,
+                    resource_format,
                 ])).casefold()
-                if not needle or needle in haystack:
-                    rows.append({"document": document, "product": product})
+                category_matches = not category or category in product.public_categ_ids.ids
+                type_matches = not file_type or resource_format == file_type
+                if (not needle or needle in haystack) and category_matches and type_matches:
+                    rows.append({
+                        "document": document,
+                        "product": product,
+                        "category": primary_category,
+                        "format": resource_format,
+                    })
         return rows
 
     @route("/resources", type="http", auth="public", website=True, sitemap=True)
     def resources(self, **query):
-        search = (query.get("search") or "").strip()
+        search = (query.get("search") or "").strip()[:120]
+        category = self._safe_int(query.get("category"))
+        file_type = (query.get("file_type") or "").strip().upper()[:12]
+        if file_type not in {"", "PDF", "ZIP", "STEP", "LINK", "FILE"}:
+            file_type = ""
+        all_rows = self._resource_rows()
+        rows = self._resource_rows(
+            search=search,
+            category=category,
+            file_type=file_type,
+        )
+        resource_categories = request.env["product.public.category"].browse(
+            sorted({item.id for row in all_rows for item in row["product"].public_categ_ids})
+        ).sorted("name")
+        resource_formats = sorted({row["format"] for row in all_rows})
         return request.render(
             "b2b_website.resource_center",
             {
-                "resources": self._resource_rows(search=search),
+                "resources": rows,
                 "search": search,
+                "resource_category": category,
+                "resource_type": file_type,
+                "resource_categories": resource_categories,
+                "resource_formats": resource_formats,
+                "resource_total": len(all_rows),
+                "resource_pdf_total": sum(row["format"] == "PDF" for row in all_rows),
+                "resource_category_total": len(resource_categories),
+                "resource_product_total": len({row["product"].id for row in all_rows}),
                 "page_name": "partner_resources",
             },
         )
@@ -182,6 +259,9 @@ class PartnerHubWebsite(Controller):
                 "samples": samples,
                 "sample_total": Sample.search_count(domain),
                 "sample_open": Sample.search_count(Domain.AND([domain, [("state", "in", ("submitted", "under_review", "approved"))]])),
+                "sample_approved": Sample.search_count(Domain.AND([domain, [("state", "in", ("approved", "erp_pending"))]])),
+                "sample_completed": Sample.search_count(Domain.AND([domain, [("state", "=", "erp_synced")]])),
+                "sample_pending": Sample.search_count(Domain.AND([domain, [("state", "in", ("draft", "submitted", "under_review"))]])),
                 "page_name": "sample_center",
                 "no_index": True,
             },
@@ -193,11 +273,17 @@ class PartnerHubWebsite(Controller):
         Ticket = request.env["helpdesk.ticket"]
         domain = [("partner_id", "child_of", company.id)]
         tickets = Ticket.search(domain, limit=8, order="create_date desc")
+        open_domain = Domain.AND([domain, [("stage_id.fold", "=", False)]])
+        closed_domain = Domain.AND([domain, [("stage_id.fold", "=", True)]])
         return request.render(
             "b2b_website.service_center",
             {
                 "tickets": tickets,
                 "ticket_total": Ticket.search_count(domain),
+                "ticket_open": Ticket.search_count(open_domain),
+                "ticket_in_progress": Ticket.search_count(Domain.AND([open_domain, [("user_id", "!=", False)]])),
+                "ticket_resolved": Ticket.search_count(closed_domain),
+                "ticket_unassigned": Ticket.search_count(Domain.AND([open_domain, [("user_id", "=", False)]])),
                 "page_name": "service_center",
                 "no_index": True,
             },
@@ -254,17 +340,26 @@ class PartnerHubWebsite(Controller):
         step = 24
         url_args = {
             key: query.get(key)
-            for key in ("search", "category", "brand", "tag", "application")
+            for key in ("search", "category", "brand", "tag", "application", "sort")
             if query.get(key)
         }
         pager = portal_pager(
             url="/products", total=total, page=page, step=step, url_args=url_args
         )
+        sort = query.get("sort") if query.get("sort") in {
+            "featured", "name", "name_desc", "newest"
+        } else "featured"
+        sort_orders = {
+            "featured": "website_sequence, name",
+            "name": "name",
+            "name_desc": "name desc",
+            "newest": "create_date desc, name",
+        }
         products = Product.search(
             domain,
             limit=step,
             offset=pager["offset"],
-            order="website_sequence, name",
+            order=sort_orders[sort],
         )
         return request.render(
             "b2b_website.product_catalog",
@@ -277,6 +372,7 @@ class PartnerHubWebsite(Controller):
                 pager=pager,
                 total=total,
                 query=query,
+                sort=sort,
                 page_name="partner_products",
             ),
         )
@@ -302,6 +398,7 @@ class PartnerHubWebsite(Controller):
             "price": service.price_payload(product, website=self._website())[product.id],
             "related": related,
             "related_prices": service.price_payload(related, website=self._website()),
+            "sample_allowed": self._sample_allowed(),
             "no_index": product.b2b_visibility_mode != "all",
             "page_name": "partner_product_detail",
         }
@@ -350,14 +447,10 @@ class PartnerHubWebsite(Controller):
         if product and not self._service().is_visible(product.product_tmpl_id):
             raise NotFound()
         values = self._sample_defaults(product)
-        company = request.env.user.partner_id.commercial_partner_id
-        sample_allowed = (
-            not request.website.b2b_require_approved_sample or company.b2b_approved
-        )
         values.update({
             "post": post,
             "error": False,
-            "sample_allowed": sample_allowed,
+            "sample_allowed": self._sample_allowed(),
             "page_name": "sample_request",
         })
         if request.httprequest.method == "POST":

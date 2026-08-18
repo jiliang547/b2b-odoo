@@ -65,3 +65,10 @@ class TestB2BProductPolicy(TransactionCase):
         payload = service.price_payload(self.allowed, website=self.website)
         self.assertEqual(payload[self.allowed.id]["state"], "quote")
         self.assertNotIn("price", payload[self.allowed.id])
+
+    def test_website_administrator_can_view_price_without_customer_approval(self):
+        self.website.b2b_price_display_mode = "never"
+        administrator = self.env.ref("base.user_admin")
+        service = self.env["b2b.product.service"].with_user(administrator)
+        self.assertTrue(service.can_view_price(website=self.website))
+        self.assertEqual(service.price_state(website=self.website), "visible")
