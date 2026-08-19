@@ -15,6 +15,18 @@ class TestSampleSecurity(SampleCase):
         self.assertEqual(sample.commercial_partner_id, self.company)
         self.assertEqual(sample.contact_id, self.contact)
         self.assertEqual(sample.state, "submitted")
+        self.assertIn(self.contact, sample.sudo().message_partner_ids)
+
+    def test_portal_can_post_public_message_on_own_sample(self):
+        sample = self.env["b2b.sample.request"].with_user(self.portal_user).create(
+            self.sample_values()
+        )
+        message = sample.with_user(self.portal_user).message_post(
+            body="Please confirm the requested delivery date.",
+            message_type="comment",
+            subtype_xmlid="mail.mt_comment",
+        )
+        self.assertEqual(message.author_id, self.contact)
 
     def test_portal_cannot_create_detached_line_through_rpc_model(self):
         sample = self.env["b2b.sample.request"].with_user(self.portal_user).create(

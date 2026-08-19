@@ -5,7 +5,97 @@
     </template>
     <template id="ordering_unavailable" name="Partner Ordering Unavailable">
         <t t-call="b2b_website.partner_layout"><t t-set="no_index" t-value="True"/>
-            <section class="lt-section"><div class="container lt-narrow"><div class="lt-state-card"><i class="fa fa-lock"/><span class="lt-kicker">ACCOUNT ACCESS</span><h1>Ordering is not enabled yet</h1><p>Your account may need approval or price access before products can be added to an order.</p><div class="lt-actions"><a class="lt-btn lt-btn--primary" href="/my">Open my account</a><a class="lt-btn lt-btn--ghost-dark" href="/contactus">Contact us</a></div></div></div></section>
+            <section class="lt-section"><div class="container lt-narrow"><div class="lt-state-card"><i class="fa fa-lock"/><span class="lt-kicker">ACCOUNT ACCESS</span><h1>Ordering is not enabled yet</h1><p>Your account may need approval or price access before products can be added to an order.</p><div class="lt-actions"><a class="lt-btn lt-btn--primary" href="/my">Open my account</a><a class="lt-btn lt-btn--ghost-dark" href="/contact">Contact us</a></div></div></div></section>
         </t>
+    </template>
+
+    <template id="payment_status_partner_hub" inherit_id="payment.payment_status" name="Partner Hub Payment Status" priority="90">
+        <xpath expr="//t[@t-call='portal.frontend_layout']" position="replace">
+            <t t-call="b2b_website.partner_layout">
+                <t t-set="no_index" t-value="True"/>
+                <section class="lt-page-head lt-page-head--compact">
+                    <div class="container">
+                        <span class="lt-kicker">SECURE CHECKOUT</span>
+                        <h1>Confirming your order</h1>
+                        <p>We are validating the payment and creating your Lucky Tone sales order.</p>
+                    </div>
+                </section>
+                <section class="lt-section">
+                    <div class="container lt-narrow">
+                        <div t-if="payment_not_found" class="lt-state-card lt-state-card--error">
+                            <i class="fa fa-exclamation-circle"/>
+                            <h2>Payment status unavailable</h2>
+                            <p>We could not find the payment in this browser session. Check My Orders or contact the support team.</p>
+                            <div class="lt-actions">
+                                <a class="lt-btn lt-btn--primary" href="/my/orders">View my orders</a>
+                                <a class="lt-btn lt-btn--ghost-dark" href="/contact">Contact support</a>
+                            </div>
+                        </div>
+                        <div t-else="" name="o_payment_status" class="lt-state-card lt-payment-status" data-lt-payment-status="" t-att-data-provider-code="tx.provider_code" t-att-data-payment-state="tx.state">
+                            <div data-lt-payment-processing="">
+                                <i class="fa fa-circle-notch fa-spin lt-payment-status__spinner"/>
+                                <span class="lt-kicker">PAYMENT PROCESSING</span>
+                                <h2>Confirming your payment<span class="lt-payment-dots" aria-hidden="true"><span>.</span><span>.</span><span>.</span></span></h2>
+                                <p>Your payment provider is still responding. We will redirect you automatically as soon as the order is confirmed.</p>
+                                <p class="lt-payment-status__live" data-lt-payment-live="" aria-live="polite">Automatic payment checks are continuing.</p>
+                            </div>
+                            <div data-lt-payment-pending="" hidden="hidden">
+                                <i class="fa fa-clock-o lt-payment-status__pending-icon"/>
+                                <span class="lt-kicker" t-out="'PAYMENT PENDING' if tx.state == 'pending' else 'CONFIRMATION DELAYED'"/>
+                                <h2>Your payment is taking longer than expected</h2>
+                                <p t-if="tx.state == 'pending'">The transaction is still awaiting confirmation. You can safely leave this page; the order will update automatically when the payment provider responds.</p>
+                                <p t-else="">The payment response was received, but order confirmation is taking longer than expected. You can safely leave this page while automatic processing continues.</p>
+                                <div class="lt-actions">
+                                    <a class="lt-btn lt-btn--primary" href="/my/orders">View my orders</a>
+                                    <button class="lt-btn lt-btn--ghost-dark" type="button" data-lt-payment-recheck="">Check again</button>
+                                    <a class="lt-btn lt-btn--ghost-dark" href="/contact">Contact support</a>
+                                </div>
+                            </div>
+                            <dl class="lt-payment-summary">
+                                <div><dt>Reference</dt><dd t-out="tx.reference"/></div>
+                                <div><dt>Amount</dt><dd><span t-field="tx.amount" t-options="{'widget': 'monetary', 'display_currency': tx.currency_id}"/></dd></div>
+                                <div><dt>Current state</dt><dd t-out="{'draft': 'Draft', 'pending': 'Pending', 'authorized': 'Authorized', 'done': 'Paid', 'cancel': 'Cancelled', 'error': 'Error'}.get(tx.state, tx.state)"/></div>
+                                <div><dt>Waiting time</dt><dd data-lt-payment-elapsed="">0s</dd></div>
+                            </dl>
+                            <p class="lt-help">Do not submit another payment while this transaction is pending.</p>
+                        </div>
+                    </div>
+                </section>
+            </t>
+        </xpath>
+    </template>
+
+    <template id="confirmation_partner_hub" inherit_id="website_sale.confirmation" name="Partner Hub Order Confirmation" priority="90">
+        <xpath expr="//t[@t-call='website_sale.checkout_layout']" position="replace">
+            <t t-call="b2b_website.partner_layout">
+                <t t-set="no_index" t-value="True"/>
+                <section class="lt-page-head lt-page-head--compact">
+                    <div class="container">
+                        <span class="lt-kicker">ORDER CONFIRMED</span>
+                        <h1>Thank you for your order</h1>
+                        <p>Your order <strong t-out="order.name"/> has been received and is now visible in My Orders.</p>
+                    </div>
+                </section>
+                <section class="lt-section">
+                    <div class="container lt-narrow">
+                        <div class="lt-state-card lt-state-card--success">
+                            <div class="lt-confirmation-mark"><i class="fa fa-check"/></div>
+                            <h2 t-out="order.name"/>
+                            <p>Our team will process the order using the shipping and contact information confirmed during checkout.</p>
+                            <dl class="lt-payment-summary">
+                                <div><dt>Customer</dt><dd t-out="order.partner_id.name"/></div>
+                                <div><dt>Order total</dt><dd><span t-field="order.amount_total" t-options="{'widget': 'monetary', 'display_currency': order.currency_id}"/></dd></div>
+                                <div><dt>Ship to</dt><dd t-out="order.partner_shipping_id.contact_address or order.partner_shipping_id.name"/></div>
+                                <div><dt>Status</dt><dd>Confirmed</dd></div>
+                            </dl>
+                            <div class="lt-actions">
+                                <a class="lt-btn lt-btn--primary" t-att-href="'/my/orders/%s' % order.id">View order details</a>
+                                <a class="lt-btn lt-btn--ghost-dark" href="/products">Continue shopping</a>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </t>
+        </xpath>
     </template>
 </odoo>

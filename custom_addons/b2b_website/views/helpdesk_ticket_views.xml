@@ -7,7 +7,7 @@
         <field name="arch" type="xml">
             <xpath expr="//sheet" position="inside">
                 <group string="Partner Hub" invisible="not b2b_request_type">
-                    <field name="b2b_request_type"/><field name="b2b_product_id"/><field name="b2b_serial_number"/><field name="b2b_sale_order_id"/><field name="b2b_contact_name"/><field name="b2b_company_name"/><field name="b2b_contact_phone"/><field name="b2b_contact_email"/><field name="b2b_submitted_at"/>
+                    <field name="b2b_request_type"/><field name="b2b_product_id"/><field name="b2b_model_number"/><field name="b2b_serial_number"/><field name="b2b_sale_order_id"/><field name="sale_order_id"/><field name="b2b_contact_name"/><field name="b2b_company_name"/><field name="b2b_contact_phone"/><field name="b2b_contact_email"/><field name="b2b_submitted_at"/>
                 </group>
             </xpath>
         </field>

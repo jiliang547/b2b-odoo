@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_b2b_contact_request_portal,b2b.contact.request portal,model_b2b_contact_request,base.group_portal,1,0,0,0
+access_b2b_contact_request_operator,b2b.contact.request operator,model_b2b_contact_request,b2b_core.group_b2b_operator,1,1,1,0
+access_b2b_contact_request_manager,b2b.contact.request manager,model_b2b_contact_request,b2b_core.group_b2b_manager,1,1,1,1
+access_b2b_web_submission_system,b2b.web.submission system,model_b2b_web_submission,base.group_system,1,0,0,0

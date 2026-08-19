@@ -13,6 +13,7 @@ class HelpdeskTicket(models.Model):
         "product.product", string="Partner Product", ondelete="restrict", index=True
     )
     b2b_serial_number = fields.Char(string="Serial Number", index=True)
+    b2b_model_number = fields.Char(string="Model Number", index=True)
     b2b_sale_order_id = fields.Many2one(
         "sale.order", string="Original Sales Order", ondelete="set null", index=True
     )

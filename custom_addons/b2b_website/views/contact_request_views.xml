@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_b2b_contact_request_list" model="ir.ui.view">
+        <field name="name">b2b.contact.request.list</field>
+        <field name="model">b2b.contact.request</field>
+        <field name="arch" type="xml">
+            <list decoration-warning="state == 'new'" decoration-success="state == 'resolved'">
+                <field name="name"/>
+                <field name="request_type"/>
+                <field name="subject"/>
+                <field name="company_name"/>
+                <field name="contact_name"/>
+                <field name="state" widget="badge"/>
+                <field name="assigned_user_id"/>
+                <field name="create_date"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_b2b_contact_request_form" model="ir.ui.view">
+        <field name="name">b2b.contact.request.form</field>
+        <field name="model">b2b.contact.request</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_start" type="object" string="Start" class="btn-primary" invisible="state != 'new'"/>
+                    <button name="action_resolve" type="object" string="Resolve" class="btn-primary" invisible="state not in ('new', 'in_progress')"/>
+                    <button name="action_close" type="object" string="Close" invisible="state == 'closed'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="new,in_progress,resolved,closed"/>
+                </header>
+                <sheet>
+                    <h1><field name="name" readonly="1"/></h1>
+                    <group>
+                        <group><field name="request_type"/><field name="subject"/><field name="assigned_user_id"/><field name="website_id"/></group>
+                        <group><field name="contact_name"/><field name="email" widget="email"/><field name="phone" widget="phone"/><field name="company_name"/></group>
+                    </group>
+                    <group><field name="partner_id"/><field name="commercial_partner_id"/><field name="source_url" widget="url"/></group>
+                    <notebook>
+                        <page string="Request"><field name="message"/></page>
+                        <page string="Requested Company Data" invisible="request_type not in ('company_change', 'user_change')">
+                            <group>
+                                <group><field name="requested_company_name"/><field name="requested_vat"/><field name="requested_email"/><field name="requested_phone"/></group>
+                                <group><field name="requested_street"/><field name="requested_street2"/><field name="requested_city"/><field name="requested_zip"/><field name="requested_country_id"/></group>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_b2b_contact_request_search" model="ir.ui.view">
+        <field name="name">b2b.contact.request.search</field>
+        <field name="model">b2b.contact.request</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/><field name="subject"/><field name="company_name"/><field name="email"/>
+                <filter name="open" string="Open" domain="[('state', 'in', ('new', 'in_progress'))]"/>
+                <group><filter name="group_type" string="Type" context="{'group_by': 'request_type'}"/><filter name="group_state" string="State" context="{'group_by': 'state'}"/></group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_b2b_contact_requests" model="ir.actions.act_window">
+        <field name="name">Contact Requests</field>
+        <field name="res_model">b2b.contact.request</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_b2b_contact_request_search"/>
+        <field name="context">{'search_default_open': 1}</field>
+    </record>
+</odoo>
