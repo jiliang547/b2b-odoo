@@ -23,6 +23,13 @@
                             <label class="visually-hidden" for="lt-header-search">Search products</label>
                             <i class="fa fa-search" aria-hidden="true"/><input id="lt-header-search" type="search" name="search" placeholder="Search products…"/><kbd>⌘K</kbd>
                         </form>
+                        <t t-if="not request.env.user._is_public()">
+                            <t t-set="lt_unread_inquiry_count" t-value="request.env['b2b.contact.request'].get_portal_unread_message_count()"/>
+                            <a class="lt-icon-link lt-notification-link" href="/my/inquiries" t-att-aria-label="'My Inquiries, %s unread messages' % lt_unread_inquiry_count" title="My Inquiries">
+                                <i class="fa fa-bell-o" aria-hidden="true"/>
+                                <sup t-if="lt_unread_inquiry_count" class="lt-notification-count" t-out="'9+' if lt_unread_inquiry_count &gt; 9 else lt_unread_inquiry_count"/>
+                            </a>
+                        </t>
                         <t t-set="website_sale_cart_quantity" t-value="request.session.get('website_sale_cart_quantity', request.cart.cart_quantity) or 0"/>
                         <li class="o_wsale_my_cart lt-header-cart-item">
                             <a class="lt-icon-link" href="/shop/cart" aria-label="Shopping cart">
@@ -33,7 +40,7 @@
                         <a t-if="request.env.user._is_public()" class="lt-btn lt-btn--outline-dark lt-btn--nav" href="/web/login?redirect=/my">Sign in</a>
                         <t t-else="">
                             <details class="lt-account-menu"><summary><span class="lt-account-menu__avatar" t-out="(request.env.user.name or 'U')[:1].upper()"/><span><strong t-out="request.env.user.name"/><small>My Account</small></span><i class="fa fa-angle-down"/></summary>
-                                <div class="lt-account-menu__panel"><div><strong t-out="request.env.user.partner_id.commercial_partner_id.name"/><small t-out="request.env.user.email or request.env.user.login"/></div><a href="/my"><i class="fa fa-th-large"/> Dashboard</a><a href="/my/account"><i class="fa fa-user"/> Profile</a><a href="/my/orders"><i class="fa fa-shopping-bag"/> Orders</a><a href="/samples"><i class="fa fa-flask"/> Samples</a><a href="/service-center"><i class="fa fa-life-ring"/> Service</a><a class="lt-logout-link" href="/web/session/logout?redirect=/"><i class="fa fa-sign-out"/> Sign Out</a></div>
+                                <div class="lt-account-menu__panel"><div><strong t-out="request.env.user.partner_id.commercial_partner_id.name"/><small t-out="request.env.user.email or request.env.user.login"/></div><a href="/my"><i class="fa fa-th-large"/> Dashboard</a><a href="/my/account"><i class="fa fa-user"/> Profile</a><a href="/my/orders"><i class="fa fa-shopping-bag"/> Orders</a><a href="/my/inquiries"><i class="fa fa-comments-o"/> Inquiries</a><a href="/samples"><i class="fa fa-flask"/> Samples</a><a href="/service-center"><i class="fa fa-life-ring"/> Service</a><a class="lt-logout-link" href="/web/session/logout?redirect=/"><i class="fa fa-sign-out"/> Sign Out</a></div>
                             </details>
                         </t>
                     </div>
@@ -49,6 +56,7 @@
                 <a t-att-class="'is-active' if page_name in ('order', 'quote') else ''" href="/my/orders"><i class="fa fa-shopping-bag"/>Orders</a>
                 <a t-att-class="'is-active' if page_name in ('sample_requests', 'sample_request_detail') else ''" href="/my/sample-requests"><i class="fa fa-flask"/>Samples</a>
                 <a t-att-class="'is-active' if page_name in ('ticket', 'service_center') else ''" href="/my/tickets"><i class="fa fa-life-ring"/>Service</a>
+                <a t-att-class="'is-active' if page_name in ('inquiries', 'inquiry_detail') else ''" href="/my/inquiries"><i class="fa fa-comments-o"/>My inquiries</a>
                 <span class="lt-account-sidebar__divider"/>
                 <a t-att-class="'is-active' if page_name == 'company_profile' else ''" href="/my/company"><i class="fa fa-building"/>Company profile</a>
                 <a t-att-class="'is-active' if page_name == 'company_users' else ''" href="/my/company/users"><i class="fa fa-users"/>Company users</a>
@@ -233,7 +241,7 @@
             <div t-if="request.params.get('change_submitted')" class="lt-alert lt-alert--success">Change request <strong t-out="request.params.get('change_submitted')"/> was submitted for review.</div>
             <section t-att-class="'lt-company-status ' + ('is-approved' if company.b2b_approved else 'is-pending')"><span><i t-att-class="'fa ' + ('fa-check-circle' if company.b2b_approved else 'fa-clock-o')"/></span><div><strong t-out="'Partner Hub Approved' if company.b2b_approved else 'Partner Approval Pending'"/><p t-out="'Your company has access to approved partner pricing and services.' if company.b2b_approved else 'Lucky Tone staff are reviewing your company account.'"/></div></section>
             <div class="lt-company-layout"><section class="lt-portal-card lt-company-card"><header><h2>Company Information</h2><span class="lt-readonly-badge"><i class="fa fa-lock"/> Read only</span></header><div class="lt-company-grid"><div><label>Company name</label><strong t-out="company.name"/></div><div><label>Tax ID</label><strong t-out="company.vat or '—'"/></div><div><label>Business Email</label><strong t-out="company.email or '—'"/></div><div><label>Telephone</label><strong t-out="company.phone or '—'"/></div><div class="lt-company-grid__wide"><label>Registered Address</label><strong t-out="company.contact_address or '—'"/></div></div></section><aside class="lt-portal-card lt-company-help"><header><h2>Need to update this?</h2></header><p>Company information is maintained by Lucky Tone to protect account access and pricing permissions.</p><a class="lt-btn lt-btn--outline lt-btn--wide" href="/my/company/change">Request a Company Change</a><a href="/my/account">Edit my personal profile →</a></aside></div>
-            <section t-if="change_requests" class="lt-portal-card lt-company-requests"><header><h2>Recent Change Requests</h2></header><div class="lt-request-list"><article t-foreach="change_requests" t-as="change"><div><strong t-out="change.name"/><span t-att-class="'lt-status-badge lt-status-badge--%s' % change.state" t-out="dict(change._fields['state'].selection).get(change.state)"/></div><p t-out="change.subject"/><small t-field="change.create_date" t-options="{'widget': 'date'}"/></article></div></section>
+            <section t-if="change_requests" class="lt-portal-card lt-company-requests"><header><h2>Recent Change Requests</h2><a href="/my/inquiries">View all inquiries</a></header><div class="lt-request-list"><a t-foreach="change_requests" t-as="change" t-att-href="'/my/inquiries/%s' % change.id"><div><strong t-out="change.name"/><span t-att-class="'lt-status-badge lt-status-badge--%s' % change.state" t-out="dict(change._fields['state'].selection).get(change.state)"/></div><p t-out="change.subject"/><small t-field="change.create_date" t-options="{'widget': 'date'}"/></a></div></section>
         </t>
     </template>
 

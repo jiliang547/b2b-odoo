@@ -196,6 +196,8 @@
 .lt-icon-link { position: relative; display: grid; place-items: center; width: 39px; height: 39px; border: 1px solid var(--lt-line); border-radius: 9px; color: var(--lt-slate); }
 .lt-header-cart-item { display: block; list-style: none; }
 .lt-icon-link .my_cart_quantity { position: absolute; right: -5px; top: -6px; min-width: 18px; height: 18px; padding: 0 4px; border: 0; border-radius: 10px; background: var(--lt-blue) !important; color: #fff; font-size: 10px; font-weight: 700; text-align: center; line-height: 18px; }
+.lt-notification-link { flex: 0 0 auto; text-decoration: none; }
+.lt-notification-count { position: absolute; right: -5px; top: -6px; min-width: 18px; height: 18px; padding: 0 4px; border: 2px solid #111827; border-radius: 10px; background: var(--lt-red); color: #fff; font-size: 9px; font-weight: 800; text-align: center; line-height: 14px; }
 .lt-account-menu { position: relative; }
 .lt-account-menu summary { display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; color: var(--lt-ink); }
 .lt-account-menu summary::-webkit-details-marker { display: none; }
