@@ -50,6 +50,10 @@ class PartnerHubPortal(CustomerPortal):
         company = request.env.user.partner_id.commercial_partner_id
         return [("commercial_partner_id", "=", company.id)]
 
+    def _inquiry_domain(self):
+        company = request.env.user.partner_id.commercial_partner_id
+        return [("commercial_partner_id", "=", company.id)]
+
     def _prepare_home_portal_values(self, counters):
         values = super()._prepare_home_portal_values(counters)
         company = request.env.user.partner_id.commercial_partner_id
@@ -59,6 +63,7 @@ class PartnerHubPortal(CustomerPortal):
         Sample = request.env["b2b.sample.request"]
         Order = request.env["sale.order"]
         Ticket = request.env["helpdesk.ticket"]
+        Inquiry = request.env["b2b.contact.request"]
         can_read_orders = Order.has_access("read")
         can_read_tickets = Ticket.has_access("read")
         recent_orders = (
@@ -74,6 +79,7 @@ class PartnerHubPortal(CustomerPortal):
         # current portal user; no demo counters or sudoed records are exposed.
         values.update({
             "sample_count": Sample.search_count(self._sample_domain()),
+            "inquiry_count": Inquiry.search_count(self._inquiry_domain()),
             "order_count": Order.search_count(sale_domain) if can_read_orders else 0,
             "quotation_count": (
                 Order.search_count(quotation_domain) if can_read_orders else 0
@@ -83,9 +89,83 @@ class PartnerHubPortal(CustomerPortal):
             "recent_samples": Sample.search(
                 self._sample_domain(), order="create_date desc", limit=2
             ),
+            "recent_inquiries": Inquiry.search(
+                self._inquiry_domain(), order="create_date desc", limit=2
+            ),
             "recent_tickets": recent_tickets,
         })
         return values
+
+    @route(
+        ["/my/inquiries", "/my/inquiries/page/<int:page>"],
+        type="http", auth="user", website=True,
+    )
+    def portal_inquiries(self, page=1, **kwargs):
+        Inquiry = request.env["b2b.contact.request"]
+        domain = self._inquiry_domain()
+        search = (kwargs.get("search") or "").strip()[:120]
+        state = (kwargs.get("state") or "").strip()
+        if search:
+            domain += [
+                "|", "|",
+                ("name", "ilike", search),
+                ("subject", "ilike", search),
+                ("message", "ilike", search),
+            ]
+        allowed_states = dict(Inquiry._fields["state"].selection)
+        if state in allowed_states:
+            domain.append(("state", "=", state))
+        total = Inquiry.search_count(domain)
+        pager = portal_pager(
+            url="/my/inquiries",
+            url_args={"search": search, "state": state},
+            total=total,
+            page=max(page, 1),
+            step=20,
+        )
+        inquiries = Inquiry.search(
+            domain, order="create_date desc", limit=20, offset=pager["offset"]
+        )
+        request.session["my_inquiries_history"] = inquiries.ids[:100]
+        values = self._prepare_portal_layout_values()
+        values.update({
+            "inquiries": inquiries,
+            "pager": pager,
+            "page_name": "inquiries",
+            "default_url": "/my/inquiries",
+            "search": search,
+            "selected_state": state,
+            "inquiry_states": allowed_states,
+            "inquiry_total": total,
+        })
+        return request.render("b2b_website.portal_my_inquiries", values)
+
+    @route("/my/inquiries/<int:inquiry_id>", type="http", auth="user", website=True)
+    def portal_inquiry(self, inquiry_id, **kwargs):
+        company = request.env.user.partner_id.commercial_partner_id
+        inquiry_sudo = request.env["b2b.contact.request"].sudo().browse(
+            inquiry_id
+        ).exists()
+        if not inquiry_sudo or inquiry_sudo.commercial_partner_id != company:
+            raise NotFound()
+        inquiry = request.env["b2b.contact.request"].browse(inquiry_id)
+        # Mark this conversation read before rendering so the shared header
+        # badge immediately reflects the Odoo notification state.
+        inquiry.message_ids.set_message_done()
+        values = self._prepare_portal_layout_values()
+        values.update({
+            "inquiry": inquiry,
+            "page_name": "inquiry_detail",
+        })
+        values = self._get_page_view_values(
+            inquiry,
+            access_token=None,
+            values=values,
+            session_history="my_inquiries_history",
+            no_breadcrumbs=False,
+            **kwargs,
+        )
+        return request.render("b2b_website.portal_inquiry", values)
 
     @route(
         ["/my/sample-requests", "/my/sample-requests/page/<int:page>"],

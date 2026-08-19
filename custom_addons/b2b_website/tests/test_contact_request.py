@@ -9,6 +9,12 @@ class TestContactRequestSecurity(TransactionCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.website = cls.env["website"].search([], limit=1)
+        cls.salesperson = mail_new_test_user(
+            cls.env,
+            login="contact-request-salesperson",
+            groups="base.group_user,b2b_core.group_b2b_operator",
+        )
+        cls.website.salesperson_id = cls.salesperson
         cls.company = cls.env["res.partner"].create({
             "name": "Contact Request Company", "is_company": True,
         })
@@ -38,6 +44,100 @@ class TestContactRequestSecurity(TransactionCase):
         values = self.contact_request.with_user(self.portal_user).read(["name"])
         self.assertEqual(values[0]["name"], self.contact_request.name)
         self.assertIn(self.contact, self.contact_request.message_partner_ids)
+
+    def test_new_request_is_assigned_and_schedules_sales_activity(self):
+        self.assertEqual(self.contact_request.assigned_user_id, self.salesperson)
+        self.assertIn(
+            self.salesperson.partner_id,
+            self.contact_request.message_partner_ids,
+        )
+        self.assertTrue(
+            self.contact_request.activity_ids.filtered(
+                lambda activity: activity.user_id == self.salesperson
+            )
+        )
+
+    def test_salesperson_without_b2b_access_is_not_assigned(self):
+        non_operator = mail_new_test_user(
+            self.env,
+            login="contact-request-non-operator",
+            groups="base.group_user",
+        )
+        self.website.salesperson_id = non_operator
+        contact_request = self.env["b2b.contact.request"].create({
+            "request_type": "sales",
+            "subject": "Access-safe assignment",
+            "contact_name": self.contact.name,
+            "email": self.contact.email,
+            "message": "Please assign this to an operator.",
+            "partner_id": self.contact.id,
+            "website_id": self.website.id,
+        })
+        self.assertNotEqual(contact_request.assigned_user_id, non_operator)
+        self.assertTrue(
+            contact_request.assigned_user_id.has_group(
+                "b2b_core.group_b2b_operator"
+            )
+        )
+
+    def test_portal_customer_can_reply_on_own_request(self):
+        message = self.contact_request.with_user(self.portal_user).message_post(
+            body="Customer follow-up",
+            message_type="comment",
+            subtype_xmlid="mail.mt_comment",
+        )
+        self.assertEqual(message.author_id, self.contact)
+        self.assertFalse(message.is_internal)
+
+    def test_staff_reply_uses_native_unread_notification_until_opened(self):
+        self.assertEqual(
+            self.env["b2b.contact.request"]
+            .with_user(self.portal_user)
+            .get_portal_unread_message_count(),
+            0,
+        )
+        reply = self.contact_request.with_user(self.salesperson).message_post(
+            body="Your pricing request has been reviewed.",
+            message_type="comment",
+            subtype_xmlid="mail.mt_comment",
+        )
+        notification = self.env["mail.notification"].sudo().search([
+            ("mail_message_id", "=", reply.id),
+            ("res_partner_id", "=", self.contact.id),
+        ])
+        self.assertTrue(notification)
+        self.assertFalse(notification.is_read)
+        self.assertEqual(
+            self.env["b2b.contact.request"]
+            .with_user(self.portal_user)
+            .get_portal_unread_message_count(),
+            1,
+        )
+
+        reply.with_user(self.portal_user).set_message_done()
+        self.assertTrue(notification.is_read)
+        self.assertEqual(
+            self.env["b2b.contact.request"]
+            .with_user(self.portal_user)
+            .get_portal_unread_message_count(),
+            0,
+        )
+
+    def test_guest_acknowledgement_targets_submitted_email(self):
+        guest_request = self.env["b2b.contact.request"].create({
+            "request_type": "sales",
+            "subject": "Guest pricing inquiry",
+            "contact_name": "Guest Buyer",
+            "email": "guest-buyer@example.test",
+            "message": "Please provide pricing.",
+            "website_id": self.website.id,
+        })
+        acknowledgement = guest_request.message_ids.filtered(
+            lambda message: message.outgoing_email_to
+            == "guest-buyer@example.test"
+        )[:1]
+        self.assertTrue(acknowledgement)
+        self.assertFalse(guest_request.partner_id)
 
     def test_portal_cannot_read_another_company_request(self):
         other_company = self.env["res.partner"].create({

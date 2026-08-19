@@ -8,6 +8,9 @@ class B2BContactRequest(models.Model):
     _description = "B2B Contact Request"
     _inherit = ["mail.thread", "mail.activity.mixin"]
     _order = "create_date desc, id desc"
+    # Portal customers can reply through the native portal chatter while the
+    # company record rule remains the ownership boundary.
+    _mail_post_access = "read"
 
     name = fields.Char(default=lambda self: _("New"), readonly=True, copy=False, index=True)
     access_token = fields.Char(default=lambda self: str(uuid.uuid4()), readonly=True, copy=False, index=True)
@@ -62,6 +65,28 @@ class B2BContactRequest(models.Model):
         "UNIQUE (access_token)", "Contact request access tokens must be unique."
     )
 
+    @api.model
+    def _default_assigned_user(self, website):
+        operator_group = self.env.ref("b2b_core.group_b2b_operator")
+        salesperson = website.salesperson_id.filtered(
+            lambda user: (
+                user.active
+                and not user.share
+                and operator_group in user.all_group_ids
+            )
+        )
+        if salesperson:
+            return salesperson
+        return self.env["res.users"].sudo().search(
+            [
+                ("active", "=", True),
+                ("share", "=", False),
+                ("all_group_ids", "in", operator_group.ids),
+            ],
+            order="id",
+            limit=1,
+        )
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
@@ -72,17 +97,136 @@ class B2BContactRequest(models.Model):
             partner = self.env["res.partner"].browse(vals.get("partner_id")).exists()
             if partner:
                 vals["commercial_partner_id"] = partner.commercial_partner_id.id
+            if not vals.get("assigned_user_id"):
+                website = self.env["website"].browse(vals.get("website_id")).exists()
+                assigned_user = self._default_assigned_user(website)
+                if assigned_user:
+                    vals["assigned_user_id"] = assigned_user.id
         records = super().create(vals_list)
         for record in records:
-            if record.partner_id:
-                record.message_subscribe(partner_ids=record.partner_id.ids)
+            followers = record.partner_id | record.assigned_user_id.partner_id
+            if followers:
+                record.message_subscribe(partner_ids=followers.ids)
+            # The acknowledgement is part of the submission response, not a
+            # new staff reply that should light up the portal notification.
+            record.with_context(b2b_skip_portal_unread=True)._post_customer_message(
+                _(
+                    "Your inquiry %(request)s has been received. Our team will "
+                    "reply in this conversation.",
+                    request=record.name,
+                )
+            )
+            if record.assigned_user_id:
+                record.activity_schedule(
+                    "mail.mail_activity_data_todo",
+                    user_id=record.assigned_user_id.id,
+                    summary=_("Respond to %(request)s", request=record.name),
+                    note=_(
+                        "New %(request_type)s from %(contact)s: %(subject)s",
+                        request_type=dict(record._fields["request_type"].selection).get(
+                            record.request_type
+                        ),
+                        contact=record.contact_name,
+                        subject=record.subject,
+                    ),
+                )
         return records
 
+    def message_post(self, **kwargs):
+        message = super().message_post(**kwargs)
+        if self.env.context.get("b2b_skip_portal_unread"):
+            return message
+
+        # Odoo forces portal users to receive chatter notifications by email.
+        # Email notifications are normally created as already read because the
+        # backend has no portal reading surface. Partner Hub does have one, so
+        # keep the native mail.notification record unread until that customer
+        # opens the inquiry. Email delivery itself remains unchanged.
+        for record in self:
+            customer = record.partner_id
+            if (
+                customer
+                and not message.is_internal
+                and message.message_type != "user_notification"
+                and message.author_id != customer
+            ):
+                notification = self.env["mail.notification"].sudo().search([
+                    ("mail_message_id", "=", message.id),
+                    ("res_partner_id", "=", customer.id),
+                ])
+                notification.write({"is_read": False, "read_date": False})
+        return message
+
+    @api.model
+    def get_portal_unread_message_count(self):
+        """Count native unread notifications on inquiries visible to the user."""
+        if self.env.user._is_public():
+            return 0
+        notifications = self.env["mail.notification"].sudo().search([
+            ("res_partner_id", "=", self.env.user.partner_id.id),
+            ("is_read", "=", False),
+            ("mail_message_id.model", "=", self._name),
+            ("mail_message_id.message_type", "!=", "user_notification"),
+        ])
+        if not notifications:
+            return 0
+        candidate_ids = notifications.mail_message_id.mapped("res_id")
+        visible_request_ids = set(self.search([("id", "in", candidate_ids)]).ids)
+        return sum(
+            notification.mail_message_id.res_id in visible_request_ids
+            for notification in notifications
+        )
+
+    def write(self, vals):
+        result = super().write(vals)
+        if "assigned_user_id" in vals:
+            for record in self.filtered("assigned_user_id"):
+                record.message_subscribe(
+                    partner_ids=record.assigned_user_id.partner_id.ids
+                )
+        return result
+
+    def _post_customer_message(self, body):
+        """Post a public reply and deliver it to portal users or guest email.
+
+        Registered contacts receive follower notifications. Public inquiries
+        deliberately stay partner-less, so Odoo 19's native outgoing-email
+        recipient is used without creating spam contacts in master data.
+        """
+        for record in self:
+            record.message_post(
+                body=body,
+                message_type="comment",
+                subtype_xmlid="mail.mt_comment",
+                outgoing_email_to=record.email if not record.partner_id else False,
+            )
+
+    def _complete_assignment_activities(self, feedback):
+        todo_type = self.env.ref("mail.mail_activity_data_todo")
+        for record in self:
+            activities = record.activity_ids.filtered(
+                lambda activity: activity.activity_type_id == todo_type
+            )
+            if activities:
+                activities.action_feedback(feedback=feedback)
+
     def action_start(self):
+        self._complete_assignment_activities(
+            _("Contact request processing started.")
+        )
         self.write({"state": "in_progress", "assigned_user_id": self.env.user.id})
+        self._post_customer_message(
+            _("Your inquiry is now being reviewed by our team.")
+        )
 
     def action_resolve(self):
         self.write({"state": "resolved"})
+        self._complete_assignment_activities(_("Contact request resolved."))
+        self._post_customer_message(
+            _("Your inquiry has been marked as resolved. Reply here if you need more help.")
+        )
 
     def action_close(self):
         self.write({"state": "closed"})
+        self._complete_assignment_activities(_("Contact request closed."))
+        self._post_customer_message(_("Your inquiry has been closed."))
