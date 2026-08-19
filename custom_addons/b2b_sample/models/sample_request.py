@@ -13,6 +13,10 @@ class B2BSampleRequest(models.Model):
     _description = "B2B Sample Request"
     _inherit = ["mail.thread", "mail.activity.mixin"]
     _order = "create_date desc, id desc"
+    # Portal customers may post public replies on requests they can read. The
+    # company record rule remains the access boundary; internal notes are
+    # filtered by Odoo's portal chatter implementation.
+    _mail_post_access = "read"
 
     name = fields.Char(default=lambda self: _("New"), readonly=True, copy=False, index=True)
     request_uuid = fields.Char(default=lambda self: str(uuid.uuid4()), readonly=True, copy=False, index=True)
@@ -114,6 +118,9 @@ class B2BSampleRequest(models.Model):
         records = super(B2BSampleRequest, create_self).create(vals_list)
         if any(not record.line_ids for record in records):
             raise ValidationError(_("A sample request requires at least one product."))
+        for record in records:
+            if record.contact_id:
+                record.message_subscribe(partner_ids=record.contact_id.ids)
         return records.with_user(self.env.user) if portal_request else records
 
     @api.model

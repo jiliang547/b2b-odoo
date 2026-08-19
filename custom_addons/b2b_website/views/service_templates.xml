@@ -7,12 +7,14 @@
             <section class="lt-section"><div class="container lt-form-shell">
                 <div t-if="error" class="lt-alert lt-alert--error" role="alert"><strong>We could not submit your request.</strong><span t-out="error"/></div>
                 <div t-if="not orders" class="lt-empty"><h2>No eligible orders</h2><p>A confirmed or completed order is required before creating an after-sales request.</p><a class="lt-btn lt-btn--ghost-dark" href="/my/orders">View my orders</a></div>
-                <form t-else="" class="lt-form-card" action="/service" method="post" enctype="multipart/form-data">
+                <form t-else="" class="lt-form-card" action="/service" method="post" enctype="multipart/form-data" data-lt-submit-once="">
                     <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                    <input type="hidden" name="submission_token" t-att-value="submission_token"/>
                     <div class="lt-form-section"><div><span>01</span><h2>Issue</h2></div><div class="lt-form-grid">
                         <fieldset class="lt-field lt-field--wide"><legend>Request type</legend><div class="lt-choice-row"><label><input type="radio" name="request_type" value="repair" required="required"/> Repair</label><label><input type="radio" name="request_type" value="replacement" required="required"/> Replacement</label></div></fieldset>
                         <div class="lt-field"><label for="service-order">Order number</label><select id="service-order" name="order_id" required="required"><option value="">Select an order</option><option t-foreach="orders" t-as="order" t-att-value="order.id" t-out="order.name"/></select></div>
                         <div class="lt-field"><label for="service-product">Product</label><select id="service-product" name="product_id" required="required"><option value="">Select an ordered product</option><option t-foreach="products" t-as="item" t-att-value="item.id" t-out="item.display_name"/></select></div>
+                        <div class="lt-field"><label for="service-model">Model number</label><input id="service-model" name="model_number" maxlength="160" required="required" t-att-value="post.get('model_number', '')" placeholder="Model or part number"/></div>
                         <div class="lt-field"><label for="service-serial">Serial number</label><input id="service-serial" name="serial_number" maxlength="160" t-att-value="post.get('serial_number', '')"/></div>
                         <div class="lt-field lt-field--wide"><label for="service-description">Problem description</label><textarea id="service-description" name="description" maxlength="8000" required="required" t-out="post.get('description', '')"/></div>
                         <div class="lt-field lt-field--wide"><label for="service-files">Attachments</label><input id="service-files" name="attachments" type="file" multiple="multiple" accept=".pdf,.png,.jpg,.jpeg,.zip"/><p class="lt-help">Up to 5 files, 10 MB each. PDF, PNG, JPEG or ZIP.</p></div>
@@ -23,7 +25,7 @@
                         <div class="lt-field"><label for="service-email">Email</label><input id="service-email" name="email" type="email" maxlength="254" required="required" t-att-value="post.get('email', email)"/></div>
                         <div class="lt-field"><label for="service-phone">Phone</label><input id="service-phone" name="phone" maxlength="64" required="required" t-att-value="post.get('phone', phone)"/></div>
                     </div></div>
-                    <div class="lt-form-submit"><p>Your request will create a Helpdesk ticket visible in My Account.</p><button class="lt-btn lt-btn--primary" type="submit">Submit service request</button></div>
+                    <div class="lt-form-submit"><p>Your request will create a Helpdesk ticket visible in My Account.</p><button class="lt-btn lt-btn--primary" type="submit" data-lt-submitting-label="Submitting…">Submit service request</button><span class="lt-submit-status" data-lt-submit-status="" aria-live="polite"/></div>
                 </form>
             </div></section>
         </t>

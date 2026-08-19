@@ -23,7 +23,13 @@
                             <label class="visually-hidden" for="lt-header-search">Search products</label>
                             <i class="fa fa-search" aria-hidden="true"/><input id="lt-header-search" type="search" name="search" placeholder="Search products…"/><kbd>⌘K</kbd>
                         </form>
-                        <a class="lt-icon-link" href="/shop/cart" aria-label="Shopping cart"><i class="fa fa-shopping-cart"/><span t-if="request.session.get('website_sale_cart_quantity')" t-out="request.session.get('website_sale_cart_quantity')"/></a>
+                        <t t-set="website_sale_cart_quantity" t-value="request.session.get('website_sale_cart_quantity', request.cart.cart_quantity) or 0"/>
+                        <li class="o_wsale_my_cart lt-header-cart-item">
+                            <a class="lt-icon-link" href="/shop/cart" aria-label="Shopping cart">
+                                <i class="fa fa-shopping-cart"/>
+                                <sup t-attf-class="my_cart_quantity badge bg-primary #{'d-none' if website_sale_cart_quantity == 0 else ''}" t-out="website_sale_cart_quantity" t-att-data-order-id="request.session.get('sale_order_id', None) if website_sale_cart_quantity else None"/>
+                            </a>
+                        </li>
                         <a t-if="request.env.user._is_public()" class="lt-btn lt-btn--outline-dark lt-btn--nav" href="/web/login?redirect=/my">Sign in</a>
                         <t t-else="">
                             <details class="lt-account-menu"><summary><span class="lt-account-menu__avatar" t-out="(request.env.user.name or 'U')[:1].upper()"/><span><strong t-out="request.env.user.name"/><small>My Account</small></span><i class="fa fa-angle-down"/></summary>
@@ -143,26 +149,27 @@
         <t t-call="b2b_website.partner_layout"><t t-set="no_index" t-value="True"/>
             <section class="lt-page-head lt-page-head--compact"><div class="container"><span class="lt-kicker">PARTNER NETWORK</span><h1>Apply for Partner Hub access</h1><p>Tell us about your company and the markets you serve.</p></div></section>
             <section class="lt-section"><div class="container lt-form-shell">
-                <form action="/website/form/" method="post" enctype="multipart/form-data" class="lt-form-card s_website_form o_mark_required" data-mark="*" data-model_name="mail.mail" data-success-mode="redirect" data-success-page="/contactus-thank-you">
-                    <input type="hidden" name="email_to" t-att-value="request.env.company.email"/>
-                    <input type="hidden" name="subject" value="New Partner Hub application"/>
+                <div t-if="error" class="lt-alert lt-alert--warning" role="alert" t-out="error"/>
+                <form action="/partner-application/submit" method="post" class="lt-form-card" data-lt-submit-once="">
+                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                    <input type="hidden" name="submission_token" t-att-value="submission_token"/>
                     <div class="lt-form-section"><div><span>01</span><h2>Company</h2></div><div class="lt-form-grid">
-                        <div class="lt-field"><label for="pa-company">Legal company name</label><input id="pa-company" class="s_website_form_input" name="company" required="required"/></div>
-                        <div class="lt-field"><label for="pa-country">Country / region</label><input id="pa-country" class="s_website_form_input" name="country_region" required="required"/></div>
-                        <div class="lt-field"><label for="pa-website">Company website</label><input id="pa-website" class="s_website_form_input" name="company_website" type="url"/></div>
-                        <div class="lt-field"><label for="pa-type">Business type</label><select id="pa-type" class="s_website_form_input" name="business_type" required="required"><option value="">Select</option><option>Distributor</option><option>System integrator</option><option>Installer</option><option>Retailer</option><option>Consultant</option></select></div>
+                        <div class="lt-field"><label for="pa-company">Legal company name</label><input id="pa-company" name="company_name" required="required" maxlength="200" t-att-value="form.get('company_name', '')"/></div>
+                        <div class="lt-field"><label for="pa-country">Country / region</label><input id="pa-country" name="country_region" required="required" maxlength="160" t-att-value="form.get('country_region', '')"/></div>
+                        <div class="lt-field"><label for="pa-website">Company website</label><input id="pa-website" name="company_website" type="url" maxlength="500" t-att-value="form.get('company_website', '')"/></div>
+                        <div class="lt-field"><label for="pa-type">Business type</label><select id="pa-type" name="business_type" required="required"><option value="">Select</option><option t-att-selected="form.get('business_type') == 'Distributor'">Distributor</option><option t-att-selected="form.get('business_type') == 'System integrator'">System integrator</option><option t-att-selected="form.get('business_type') == 'Installer'">Installer</option><option t-att-selected="form.get('business_type') == 'Retailer'">Retailer</option><option t-att-selected="form.get('business_type') == 'Consultant'">Consultant</option></select></div>
                     </div></div>
                     <div class="lt-form-section"><div><span>02</span><h2>Primary contact</h2></div><div class="lt-form-grid">
-                        <div class="lt-field"><label for="pa-name">Full name</label><input id="pa-name" class="s_website_form_input" name="name" required="required"/></div>
-                        <div class="lt-field"><label for="pa-role">Role / title</label><input id="pa-role" class="s_website_form_input" name="job_title"/></div>
-                        <div class="lt-field"><label for="pa-email">Business email</label><input id="pa-email" class="s_website_form_input" name="email_from" type="email" required="required"/></div>
-                        <div class="lt-field"><label for="pa-phone">Phone</label><input id="pa-phone" class="s_website_form_input" name="phone" type="tel" required="required"/></div>
+                        <div class="lt-field"><label for="pa-name">Full name</label><input id="pa-name" name="contact_name" required="required" maxlength="160" t-att-value="form.get('contact_name', '')"/></div>
+                        <div class="lt-field"><label for="pa-role">Role / title</label><input id="pa-role" name="job_title" maxlength="160" t-att-value="form.get('job_title', '')"/></div>
+                        <div class="lt-field"><label for="pa-email">Business email</label><input id="pa-email" name="email" type="email" required="required" maxlength="254" t-att-value="form.get('email', '')"/></div>
+                        <div class="lt-field"><label for="pa-phone">Phone</label><input id="pa-phone" name="phone" type="tel" required="required" maxlength="64" t-att-value="form.get('phone', '')"/></div>
                     </div></div>
                     <div class="lt-form-section"><div><span>03</span><h2>Partnership</h2></div><div class="lt-form-grid">
-                        <div class="lt-field lt-field--wide"><label for="pa-markets">Markets, channels and project types</label><textarea id="pa-markets" class="s_website_form_input" name="description" required="required"/></div>
-                        <div class="lt-field lt-field--wide"><label><input type="checkbox" required="required"/> I confirm that the information is accurate and may be reviewed by Lucky Tone.</label></div>
+                        <div class="lt-field lt-field--wide"><label for="pa-markets">Markets, channels and project types</label><textarea id="pa-markets" name="description" required="required" maxlength="5000" t-out="form.get('description', '')"/></div>
+                        <div class="lt-field lt-field--wide"><label><input type="checkbox" name="consent" value="1" required="required" t-att-checked="form.get('consent') == '1'"/> I confirm that the information is accurate and may be reviewed by Lucky Tone.</label></div>
                     </div></div>
-                    <div class="lt-form-submit"><p>Submission sends a review request; access is activated only after staff approval.</p><a href="#" role="button" class="lt-btn lt-btn--blue s_website_form_send">Submit application</a><span class="s_website_form_result"/></div>
+                    <div class="lt-form-submit"><p>Submission sends a review request; access is activated only after staff approval.</p><button type="submit" class="lt-btn lt-btn--blue" data-lt-submitting-label="Submitting…">Submit application</button><span class="lt-submit-status" data-lt-submit-status="" aria-live="polite"/></div>
                 </form>
             </div></section>
         </t>
@@ -223,13 +230,15 @@
 
     <template id="company_profile" name="Company Profile">
         <t t-call="portal.portal_layout"><nav class="lt-portal-breadcrumb"><a href="/my">Overview</a><span>/</span>Company Profile</nav><header class="lt-portal-heading"><h1>Company Profile</h1><p>Your company's registered information and partner approval status.</p></header>
+            <div t-if="request.params.get('change_submitted')" class="lt-alert lt-alert--success">Change request <strong t-out="request.params.get('change_submitted')"/> was submitted for review.</div>
             <section t-att-class="'lt-company-status ' + ('is-approved' if company.b2b_approved else 'is-pending')"><span><i t-att-class="'fa ' + ('fa-check-circle' if company.b2b_approved else 'fa-clock-o')"/></span><div><strong t-out="'Partner Hub Approved' if company.b2b_approved else 'Partner Approval Pending'"/><p t-out="'Your company has access to approved partner pricing and services.' if company.b2b_approved else 'Lucky Tone staff are reviewing your company account.'"/></div></section>
-            <div class="lt-company-layout"><section class="lt-portal-card lt-company-card"><header><h2>Company Information</h2><span class="lt-readonly-badge"><i class="fa fa-lock"/> Read only</span></header><div class="lt-company-grid"><div><label>Company name</label><strong t-out="company.name"/></div><div><label>Tax ID</label><strong t-out="company.vat or '—'"/></div><div><label>Business Email</label><strong t-out="company.email or '—'"/></div><div><label>Telephone</label><strong t-out="company.phone or '—'"/></div><div class="lt-company-grid__wide"><label>Registered Address</label><strong t-out="company.contact_address or '—'"/></div></div></section><aside class="lt-portal-card lt-company-help"><header><h2>Need to update this?</h2></header><p>Company information is maintained by Lucky Tone to protect account access and pricing permissions.</p><a class="lt-btn lt-btn--outline lt-btn--wide" href="/contact">Request a Company Change</a><a href="/my/account">Edit my personal profile →</a></aside></div>
+            <div class="lt-company-layout"><section class="lt-portal-card lt-company-card"><header><h2>Company Information</h2><span class="lt-readonly-badge"><i class="fa fa-lock"/> Read only</span></header><div class="lt-company-grid"><div><label>Company name</label><strong t-out="company.name"/></div><div><label>Tax ID</label><strong t-out="company.vat or '—'"/></div><div><label>Business Email</label><strong t-out="company.email or '—'"/></div><div><label>Telephone</label><strong t-out="company.phone or '—'"/></div><div class="lt-company-grid__wide"><label>Registered Address</label><strong t-out="company.contact_address or '—'"/></div></div></section><aside class="lt-portal-card lt-company-help"><header><h2>Need to update this?</h2></header><p>Company information is maintained by Lucky Tone to protect account access and pricing permissions.</p><a class="lt-btn lt-btn--outline lt-btn--wide" href="/my/company/change">Request a Company Change</a><a href="/my/account">Edit my personal profile →</a></aside></div>
+            <section t-if="change_requests" class="lt-portal-card lt-company-requests"><header><h2>Recent Change Requests</h2></header><div class="lt-request-list"><article t-foreach="change_requests" t-as="change"><div><strong t-out="change.name"/><span t-att-class="'lt-status-badge lt-status-badge--%s' % change.state" t-out="dict(change._fields['state'].selection).get(change.state)"/></div><p t-out="change.subject"/><small t-field="change.create_date" t-options="{'widget': 'date'}"/></article></div></section>
         </t>
     </template>
 
     <template id="company_users" name="Company Users">
-        <t t-call="portal.portal_layout"><nav class="lt-portal-breadcrumb"><a href="/my">Overview</a><span>/</span>Company Users</nav><header class="lt-portal-heading lt-portal-heading--action"><div><h1>Company Users</h1><p>Contacts currently associated with <t t-out="company.name"/>.</p></div><a class="lt-btn lt-btn--outline" href="/contact">Request a User Change</a></header>
+        <t t-call="portal.portal_layout"><nav class="lt-portal-breadcrumb"><a href="/my">Overview</a><span>/</span>Company Users</nav><header class="lt-portal-heading lt-portal-heading--action"><div><h1>Company Users</h1><p>Contacts currently associated with <t t-out="company.name"/>.</p></div><a class="lt-btn lt-btn--outline" href="/my/company/change?type=user_change">Request a User Change</a></header>
             <div class="lt-portal-card lt-table-card"><header><h2>Company Contacts</h2><span><t t-out="len(contacts)"/> contacts</span></header><div t-if="contacts" class="table-responsive"><table class="lt-data-table"><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Portal Access</th></tr></thead><tbody><tr t-foreach="contacts" t-as="contact"><td><strong t-out="contact.name"/></td><td t-out="contact.email or '—'"/><td t-out="contact.phone or '—'"/><td><span t-att-class="'lt-status-badge ' + ('lt-status-badge--approved' if contact.user_ids else 'lt-status-badge--neutral')" t-out="'Active' if contact.user_ids else 'Contact only'"/></td></tr></tbody></table></div><div t-else="" class="lt-empty lt-empty--compact"><p>No additional company contacts are visible.</p></div></div><p class="lt-portal-note"><i class="fa fa-info-circle"/> User access changes are reviewed by Lucky Tone. Submit a request rather than sharing login credentials.</p>
         </t>
     </template>

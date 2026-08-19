@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="partner_contact" name="Partner Contact">
+        <t t-call="b2b_website.partner_layout">
+            <section class="lt-page-hero lt-page-hero--compact"><div class="container"><nav class="lt-breadcrumb lt-breadcrumb--dark" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><span>Contact</span></nav><h1>Contact Us</h1><p>Send a tracked inquiry to our sales and technical teams.</p></div></section>
+            <section class="lt-section lt-section--soft"><div class="container lt-contact-layout">
+                <div class="lt-contact-card"><h2>Send a Message</h2>
+                    <div t-if="error" class="lt-alert lt-alert--warning" role="alert" t-out="error"/>
+                    <form action="/contact/submit" method="post" class="lt-contact-form" data-lt-submit-once="">
+                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/><input type="hidden" name="submission_token" t-att-value="submission_token"/><input class="d-none" tabindex="-1" autocomplete="off" name="website" aria-hidden="true"/>
+                        <div class="lt-form-grid">
+                            <div class="lt-field"><label for="contact-name">Full Name *</label><input id="contact-name" name="contact_name" required="required" maxlength="160" t-att-value="form.get('contact_name', '')"/></div>
+                            <div class="lt-field"><label for="contact-email">Business Email *</label><input id="contact-email" name="email" type="email" required="required" maxlength="254" t-att-value="form.get('email', '')"/></div>
+                            <div class="lt-field"><label for="contact-company">Company</label><input id="contact-company" name="company_name" maxlength="200" t-att-value="form.get('company_name', '')"/></div>
+                            <div class="lt-field"><label for="contact-phone">Telephone</label><input id="contact-phone" name="phone" maxlength="64" t-att-value="form.get('phone', '')"/></div>
+                            <div class="lt-field"><label for="contact-type">Inquiry Type *</label><select id="contact-type" name="request_type" required="required"><option t-foreach="request_types" t-as="item" t-att-value="item[0]" t-att-selected="form.get('request_type', 'sales') == item[0]" t-out="item[1]"/></select></div>
+                            <div class="lt-field"><label for="contact-subject">Subject *</label><input id="contact-subject" name="subject" required="required" maxlength="200" t-att-value="form.get('subject', '')"/></div>
+                            <div class="lt-field lt-field--wide"><label for="contact-message">Message *</label><textarea id="contact-message" name="message" required="required" maxlength="5000" placeholder="Include product names, quantities and project requirements." t-out="form.get('message', '')"/></div>
+                        </div>
+                        <button type="submit" class="lt-btn lt-btn--blue" data-lt-submitting-label="Sending…">Send Message <i class="fa fa-arrow-right"/></button><span class="lt-submit-status" data-lt-submit-status="" aria-live="polite"/>
+                    </form>
+                </div>
+                <aside class="lt-contact-aside"><section><h3>Contact Channels</h3><article><i class="fa fa-envelope-o"/><div><strong>Sales Inquiry</strong><p>Pricing, bulk orders and partnerships</p><a t-att-href="'mailto:%s' % company_contact.get('email')" t-out="company_contact.get('email')"/></div></article><article><i class="fa fa-wrench"/><div><strong>Technical Support</strong><p>Installation and troubleshooting</p><a t-att-href="'/service-center' if not request.env.user._is_public() else '/web/login?redirect=/service-center'">Open Service Center</a></div></article><article><i class="fa fa-flask"/><div><strong>Sample Requests</strong><p>Request evaluation units from a product page</p><a t-att-href="'/samples' if not request.env.user._is_public() else '/web/login?redirect=/samples'">Open Sample Center</a></div></article></section><section><h3>Headquarters</h3><strong t-out="company_contact.get('name')"/><p t-out="company_contact.get('address')"/><p t-if="company_contact.get('phone')"><i class="fa fa-phone"/> <t t-out="company_contact.get('phone')"/></p></section></aside>
+            </div></section>
+        </t>
+    </template>
+
+    <template id="contact_request_thanks" name="Contact Request Submitted">
+        <t t-call="b2b_website.partner_layout"><section class="lt-section lt-section--soft"><div class="container lt-success-panel"><i class="fa fa-check-circle"/><h1>Request received</h1><p>Your request has been recorded as <strong t-out="contact_request.name"/>. Our team will follow up using the email you provided.</p><div class="lt-actions"><a class="lt-btn lt-btn--blue" href="/products">Browse Products</a><a class="lt-btn lt-btn--outline" href="/contact">Send Another Request</a></div></div></section></t>
+    </template>
+
+    <template id="company_change_form" name="Company Change Request">
+        <t t-call="portal.portal_layout"><nav class="lt-portal-breadcrumb"><a href="/my">Overview</a><span>/</span><a href="/my/company">Company Profile</a><span>/</span>Change Request</nav><header class="lt-portal-heading"><h1 t-out="'Request a Company User Change' if request_kind == 'user_change' else 'Request a Company Change'"/><p>Your current company record remains unchanged until Lucky Tone approves this request.</p></header>
+            <div t-if="error" class="lt-alert lt-alert--warning" role="alert" t-out="error"/>
+            <form action="/my/company/change" method="post" class="lt-form-card lt-company-change-form" data-lt-submit-once=""><input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/><input type="hidden" name="submission_token" t-att-value="submission_token"/><input type="hidden" name="request_type" t-att-value="request_kind"/>
+                <div class="lt-form-section"><div><span>01</span><h2>Requested details</h2><p>Enter the information that should replace or supplement the current record.</p></div><div class="lt-form-grid">
+                    <div class="lt-field lt-field--wide"><label for="change-company">Company name</label><input id="change-company" name="requested_company_name" maxlength="200" t-att-value="form.get('requested_company_name', company.name)"/></div>
+                    <div class="lt-field"><label for="change-vat">Tax ID</label><input id="change-vat" name="requested_vat" maxlength="128" t-att-value="form.get('requested_vat', company.vat or '')"/></div><div class="lt-field"><label for="change-email">Business email</label><input id="change-email" name="requested_email" type="email" maxlength="254" t-att-value="form.get('requested_email', company.email or '')"/></div>
+                    <div class="lt-field"><label for="change-phone">Telephone</label><input id="change-phone" name="requested_phone" maxlength="64" t-att-value="form.get('requested_phone', company.phone or '')"/></div><div class="lt-field"><label for="change-country">Country</label><select id="change-country" name="requested_country_id"><option value="">Select country</option><option t-foreach="countries" t-as="country" t-att-value="country.id" t-att-selected="str(country.id) == str(form.get('requested_country_id') or company.country_id.id or '')" t-out="country.name"/></select></div>
+                    <div class="lt-field lt-field--wide"><label for="change-street">Address line 1</label><input id="change-street" name="requested_street" maxlength="200" t-att-value="form.get('requested_street', company.street or '')"/></div><div class="lt-field lt-field--wide"><label for="change-street2">Address line 2</label><input id="change-street2" name="requested_street2" maxlength="200" t-att-value="form.get('requested_street2', company.street2 or '')"/></div><div class="lt-field"><label for="change-city">City</label><input id="change-city" name="requested_city" maxlength="128" t-att-value="form.get('requested_city', company.city or '')"/></div><div class="lt-field"><label for="change-zip">Postal code</label><input id="change-zip" name="requested_zip" maxlength="32" t-att-value="form.get('requested_zip', company.zip or '')"/></div>
+                </div></div>
+                <div class="lt-form-section"><div><span>02</span><h2>Reason for change</h2><p>Explain the requested update so the account team can verify it.</p></div><div class="lt-field"><label for="change-reason">Change details *</label><textarea id="change-reason" name="message" required="required" maxlength="5000" t-out="form.get('message', '')"/></div></div>
+                <div class="lt-form-submit"><p>Submitting this form does not immediately modify company master data.</p><button class="lt-btn lt-btn--blue" type="submit" data-lt-submitting-label="Submitting…">Submit for Review</button><span class="lt-submit-status" data-lt-submit-status="" aria-live="polite"/></div>
+            </form>
+        </t>
+    </template>
+</odoo>

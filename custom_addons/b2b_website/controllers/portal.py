@@ -6,6 +6,46 @@ from odoo.addons.portal.controllers.portal import CustomerPortal, pager as porta
 
 
 class PartnerHubPortal(CustomerPortal):
+    def _website_payment_order_ids(self, partner):
+        """Return attempted website orders within the current portal company.
+
+        Portal users deliberately cannot read ``sale.order.transaction_ids``.
+        Resolve that native relation in sudo within the commercial partner and
+        website boundary, then let the normal portal record rules filter the
+        resulting order IDs in the actual list query.
+        """
+        return request.env["sale.order"].sudo().search([
+            ("partner_id", "child_of", [partner.commercial_partner_id.id]),
+            ("website_id", "!=", False),
+            ("transaction_ids", "!=", False),
+        ]).ids
+
+    def _prepare_orders_domain(self, partner):
+        """Include website checkout attempts in the customer's order history.
+
+        Odoo normally separates quotations (``sent``) from confirmed orders
+        (``sale``).  A failed website payment can leave the linked order in
+        ``draft`` though, which makes the still-valid checkout disappear from
+        both native lists.  Keep the native sale and payment states and only
+        broaden the portal domain for website orders that have a transaction.
+        """
+        attempted_order_ids = self._website_payment_order_ids(partner)
+        return [
+            ("partner_id", "child_of", [partner.commercial_partner_id.id]),
+            "|",
+            ("state", "=", "sale"),
+            ("id", "in", attempted_order_ids),
+        ]
+
+    def _prepare_quotations_domain(self, partner):
+        """Keep unattempted quotations in Quotes and avoid duplicate rows."""
+        attempted_order_ids = self._website_payment_order_ids(partner)
+        return [
+            ("partner_id", "child_of", [partner.commercial_partner_id.id]),
+            ("state", "=", "sent"),
+            ("id", "not in", attempted_order_ids),
+        ]
+
     def _sample_domain(self):
         company = request.env.user.partner_id.commercial_partner_id
         return [("commercial_partner_id", "=", company.id)]
@@ -13,14 +53,8 @@ class PartnerHubPortal(CustomerPortal):
     def _prepare_home_portal_values(self, counters):
         values = super()._prepare_home_portal_values(counters)
         company = request.env.user.partner_id.commercial_partner_id
-        sale_domain = [
-            ("partner_id", "child_of", company.id),
-            ("state", "in", ("sale", "done")),
-        ]
-        quotation_domain = [
-            ("partner_id", "child_of", company.id),
-            ("state", "in", ("draft", "sent")),
-        ]
+        sale_domain = self._prepare_orders_domain(request.env.user.partner_id)
+        quotation_domain = self._prepare_quotations_domain(request.env.user.partner_id)
         ticket_domain = [("partner_id", "child_of", company.id)]
         Sample = request.env["b2b.sample.request"]
         Order = request.env["sale.order"]
@@ -108,4 +142,12 @@ class PartnerHubPortal(CustomerPortal):
             "page_name": "sample_request_detail",
             "submitted": kwargs.get("submitted"),
         })
+        values = self._get_page_view_values(
+            sample,
+            access_token=None,
+            values=values,
+            session_history="my_sample_requests_history",
+            no_breadcrumbs=False,
+            **kwargs,
+        )
         return request.render("b2b_website.portal_sample_request", values)

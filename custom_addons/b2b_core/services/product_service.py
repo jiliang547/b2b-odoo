@@ -1,4 +1,4 @@
-from odoo import api, models
+from odoo import api, fields, models
 from odoo.fields import Domain
 
 
@@ -108,6 +108,95 @@ class B2BProductService(models.AbstractModel):
                 "currency": website.currency_id,
             }
             for product in products
+        }
+
+    @api.model
+    def procurement_info(self, product, pricelist=None, website=None, combination_info=None):
+        """Return website purchasing facts backed by native Odoo fields.
+
+        ``product.pricelist.item.min_quantity`` is used as the customer-specific
+        minimum quantity, the product UoM supplies the step/unit, and installed
+        stock modules supply website-warehouse availability and sales lead time.
+        The method deliberately degrades to neutral availability when Inventory
+        is not installed so the website module remains portable to Odoo.sh.
+        """
+        variant = product
+        if product and product._name == "product.template":
+            variant = product.product_variant_id
+        if not variant:
+            return {}
+
+        website = website or self.env["website"].get_current_website()
+        pricelist = pricelist or (
+            website
+            and "pricelist_id" in website._fields
+            and website.pricelist_id
+        )
+        minimum_quantity = max(variant.uom_id.rounding, 1.0)
+
+        if pricelist:
+            rules = pricelist.sudo()._get_applicable_rules(variant, fields.Datetime.now())
+            quantity_rules = rules.filtered(lambda rule: rule.min_quantity > 0)
+            if quantity_rules:
+                specificity = {
+                    "0_product_variant": 4,
+                    "1_product": 3,
+                    "2_product_category": 2,
+                    "3_global": 1,
+                }
+                best_rank = max(specificity.get(rule.applied_on, 0) for rule in quantity_rules)
+                best_rules = quantity_rules.filtered(
+                    lambda rule: specificity.get(rule.applied_on, 0) == best_rank
+                )
+                minimum_quantity = max(
+                    variant.uom_id.rounding,
+                    min(best_rules.mapped("min_quantity")),
+                )
+
+        stock = combination_info or {}
+        is_storable = bool(stock.get("is_storable"))
+        free_quantity = stock.get("free_qty")
+        allow_out_of_stock = bool(stock.get("allow_out_of_stock_order"))
+        if free_quantity is None and "free_qty" in variant._fields:
+            is_storable = bool(getattr(variant, "is_storable", False))
+            if website and hasattr(website, "_get_product_available_qty"):
+                free_quantity = website._get_product_available_qty(variant.sudo())
+            else:
+                free_quantity = variant.sudo().free_qty
+            allow_out_of_stock = bool(getattr(variant, "allow_out_of_stock_order", False))
+
+        if is_storable and (free_quantity or 0) > 0:
+            stock_state = "in_stock"
+            stock_label = "In Stock"
+        elif is_storable and not allow_out_of_stock:
+            stock_state = "out_of_stock"
+            stock_label = "Out of Stock"
+        elif is_storable:
+            stock_state = "available_order"
+            stock_label = "Available to Order"
+        else:
+            stock_state = "available"
+            stock_label = "Available"
+
+        show_stock_quantity = bool(
+            is_storable
+            and free_quantity is not None
+            and stock.get("show_availability", getattr(variant, "show_availability", False))
+        )
+        lead_time_days = (
+            max(0, int(round(variant.sale_delay)))
+            if "sale_delay" in variant._fields
+            else None
+        )
+        return {
+            "minimum_quantity": minimum_quantity,
+            "quantity_step": variant.uom_id.rounding,
+            "uom_name": variant.uom_id.name,
+            "stock_state": stock_state,
+            "stock_label": stock_label,
+            "stock_quantity": max(0, free_quantity or 0),
+            "show_stock_quantity": show_stock_quantity,
+            "lead_time_days": lead_time_days,
         }
 
     @api.model

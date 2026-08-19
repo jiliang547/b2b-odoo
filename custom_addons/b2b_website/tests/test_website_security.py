@@ -36,7 +36,6 @@ class TestWebsiteOrderSecurity(TransactionCase):
                 self.product.id, 1, self.product.uom_id.id
             )
 
-
 @tagged("post_install", "-at_install")
 class TestWebsiteIDOR(HttpCase):
     @classmethod

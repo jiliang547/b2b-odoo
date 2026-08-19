@@ -46,6 +46,83 @@ class PartnerHubWebsite(Controller):
         except (TypeError, ValueError):
             return False
 
+    def _submission_token(self, form=None):
+        token = (form or {}).get("submission_token")
+        return token or request.env["b2b.web.submission"].sudo().new_token()
+
+    def _claim_submission(self, form, operation):
+        return request.env["b2b.web.submission"].sudo().claim(
+            self._submission_token(form),
+            operation,
+            request.env.user,
+            request.website,
+        )
+
+    def _completed_submission_redirect(self, submission):
+        if submission.state != "completed" or not submission.response_url:
+            raise ValidationError(
+                _("This request is already being processed. Please check your account shortly.")
+            )
+        return request.redirect(submission.response_url, code=303)
+
+    def _contact_values(self, form=None, error=None):
+        company = request.env.company.sudo()
+        partner = company.partner_id
+        form = dict(form or {})
+        if not request.env.user._is_public():
+            contact = request.env.user.partner_id
+            commercial = contact.commercial_partner_id
+            form.setdefault("contact_name", contact.name or "")
+            form.setdefault("email", contact.email or commercial.email or "")
+            form.setdefault("phone", contact.phone or commercial.phone or "")
+            form.setdefault("company_name", commercial.name or "")
+        return {
+            "form": form,
+            "submission_token": self._submission_token(form),
+            "error": error,
+            "request_types": request.env["b2b.contact.request"]._fields[
+                "request_type"
+            ].selection,
+            "company_contact": {
+                "name": company.name,
+                "email": company.email or "sales@luckytone.com",
+                "phone": company.phone or "",
+                "address": partner.contact_address
+                or "Contact us for our current office address.",
+            },
+            "page_name": "partner_contact",
+        }
+
+    def _clean_contact_form(self, form, allowed_types=None):
+        limits = {
+            "contact_name": 160,
+            "email": 254,
+            "phone": 64,
+            "company_name": 200,
+            "subject": 200,
+            "message": 5000,
+        }
+        values = {
+            key: (form.get(key) or "").strip()[:maximum]
+            for key, maximum in limits.items()
+        }
+        required = ("contact_name", "email", "subject", "message")
+        if any(not values[key] for key in required):
+            raise ValidationError(_("Please complete all required fields."))
+        if not tools.single_email_re.match(values["email"]):
+            raise ValidationError(_("Please enter a valid email address."))
+        request_type = (form.get("request_type") or "sales").strip()
+        allowed_types = allowed_types or {
+            item[0]
+            for item in request.env["b2b.contact.request"]._fields[
+                "request_type"
+            ].selection
+        }
+        if request_type not in allowed_types:
+            raise ValidationError(_("Please select a valid request type."))
+        values["request_type"] = request_type
+        return values
+
     def _catalog_domain(self, query):
         domain = self._service().visible_domain(website=self._website())
         search = (query.get("search") or "").strip()[:120]
@@ -121,15 +198,125 @@ class PartnerHubWebsite(Controller):
         )
 
     @route("/contact", type="http", auth="public", website=True, sitemap=True)
-    def contact_alias(self, **kwargs):
-        return request.redirect("/contactus", code=302)
+    def contact(self, **kwargs):
+        return request.render("b2b_website.partner_contact", self._contact_values())
+
+    @route("/contactus", type="http", auth="public", website=True, sitemap=False)
+    def contactus_alias(self, **kwargs):
+        return request.redirect("/contact", code=301)
+
+    @route(
+        "/contact/submit", type="http", auth="public", website=True,
+        methods=["POST"], csrf=True,
+    )
+    def contact_submit(self, **form):
+        if form.get("website"):
+            raise NotFound()
+        try:
+            values = self._clean_contact_form(form)
+            submission, is_new = self._claim_submission(form, "contact_request")
+            if not is_new:
+                return self._completed_submission_redirect(submission)
+            partner = (
+                request.env.user.partner_id
+                if not request.env.user._is_public()
+                else request.env["res.partner"]
+            )
+            values.update({
+                "partner_id": partner.id,
+                "website_id": request.website.id,
+                "source_url": request.httprequest.referrer or "/contact",
+            })
+            contact_request = request.env["b2b.contact.request"].sudo().create(values)
+            response_url = "/contact/thanks?token=%s" % contact_request.access_token
+            submission.complete(response_url, contact_request)
+        except ValidationError as error:
+            return request.render(
+                "b2b_website.partner_contact",
+                self._contact_values(form=form, error=error.args[0]),
+            )
+        return request.redirect(response_url, code=303)
+
+    @route("/contact/thanks", type="http", auth="public", website=True, sitemap=False)
+    def contact_thanks(self, token=None, **kwargs):
+        contact_request = request.env["b2b.contact.request"].sudo().search(
+            [("access_token", "=", (token or "")[:64])], limit=1
+        )
+        if not contact_request:
+            raise NotFound()
+        return request.render(
+            "b2b_website.contact_request_thanks",
+            {"contact_request": contact_request, "no_index": True},
+        )
 
     @route("/partner-application", type="http", auth="public", website=True, sitemap=True)
     def partner_application(self, **kwargs):
         return request.render(
             "b2b_website.partner_application",
-            {"page_name": "partner_application"},
+            self._partner_application_values(),
         )
+
+    def _partner_application_values(self, form=None, error=None):
+        return {
+            "form": dict(form or {}),
+            "error": error,
+            "submission_token": self._submission_token(form),
+            "page_name": "partner_application",
+        }
+
+    @route(
+        "/partner-application/submit", type="http", auth="public", website=True,
+        methods=["POST"], csrf=True,
+    )
+    def partner_application_submit(self, **form):
+        try:
+            website_url = (form.get("company_website") or "").strip()[:500]
+            if website_url and urlparse(website_url).scheme not in ("http", "https"):
+                raise ValidationError(_("Please enter a complete company website URL."))
+            details = {
+                "Country / region": (form.get("country_region") or "").strip()[:160],
+                "Company website": website_url,
+                "Business type": (form.get("business_type") or "").strip()[:120],
+                "Role / title": (form.get("job_title") or "").strip()[:160],
+                "Markets and project types": (form.get("description") or "").strip()[:5000],
+            }
+            if not details["Country / region"] or not details["Business type"] or not details["Markets and project types"]:
+                raise ValidationError(_("Please complete all required partnership fields."))
+            if any(not (form.get(field_name) or "").strip() for field_name in (
+                "company_name", "contact_name", "email", "phone"
+            )) or form.get("consent") != "1":
+                raise ValidationError(_("Please complete all required fields and confirm the declaration."))
+            values = self._clean_contact_form({
+                "contact_name": form.get("contact_name"),
+                "email": form.get("email"),
+                "phone": form.get("phone"),
+                "company_name": form.get("company_name"),
+                "subject": _("Partner Hub application"),
+                "message": "\n".join("%s: %s" % item for item in details.items()),
+                "request_type": "partnership",
+            })
+            submission, is_new = self._claim_submission(form, "partner_application")
+            if not is_new:
+                return self._completed_submission_redirect(submission)
+            partner = (
+                request.env.user.partner_id
+                if not request.env.user._is_public()
+                else request.env["res.partner"]
+            )
+            values.update({
+                "partner_id": partner.id,
+                "website_id": request.website.id,
+                "source_url": "/partner-application",
+            })
+            application = request.env["b2b.contact.request"].sudo().create(values)
+            response_url = "/contact/thanks?token=%s" % application.access_token
+            submission.complete(response_url, application)
+        except ValidationError as error:
+            return request.render(
+                "b2b_website.partner_application",
+                self._partner_application_values(form=form, error=error.args[0]),
+            )
+        return request.redirect(response_url, code=303)
 
     @route("/products/compare", type="http", auth="public", website=True, sitemap=False)
     def product_compare(self, **query):
@@ -292,10 +479,97 @@ class PartnerHubWebsite(Controller):
     @route("/my/company", type="http", auth="user", website=True, sitemap=False)
     def company_profile(self, **kwargs):
         company = request.env.user.partner_id.commercial_partner_id
+        change_requests = request.env["b2b.contact.request"].search(
+            [
+                ("commercial_partner_id", "=", company.id),
+                ("request_type", "in", ("company_change", "user_change")),
+            ],
+            order="create_date desc",
+            limit=5,
+        )
         return request.render(
             "b2b_website.company_profile",
-            {"company": company, "page_name": "company_profile", "no_index": True},
+            {
+                "company": company,
+                "change_requests": change_requests,
+                "page_name": "company_profile",
+                "no_index": True,
+            },
         )
+
+    def _company_change_values(self, form=None, error=None):
+        request_kind = (form or {}).get("request_type") or request.params.get(
+            "type", "company_change"
+        )
+        if request_kind not in ("company_change", "user_change"):
+            request_kind = "company_change"
+        return {
+            "company": request.env.user.partner_id.commercial_partner_id,
+            "countries": request.env["res.country"].sudo().search([], order="name"),
+            "request_kind": request_kind,
+            "form": dict(form or {}),
+            "submission_token": self._submission_token(form),
+            "error": error,
+            "page_name": "company_profile",
+            "no_index": True,
+        }
+
+    @route(
+        "/my/company/change", type="http", auth="user", website=True,
+        methods=["GET", "POST"], sitemap=False,
+    )
+    def company_change(self, **form):
+        if request.httprequest.method == "GET":
+            return request.render(
+                "b2b_website.company_change_form",
+                self._company_change_values(form=form),
+            )
+        company = request.env.user.partner_id.commercial_partner_id
+        contact = request.env.user.partner_id
+        try:
+            base_values = self._clean_contact_form(
+                {
+                    **form,
+                    "contact_name": contact.name,
+                    "email": contact.email or company.email,
+                    "phone": contact.phone or company.phone,
+                    "company_name": company.name,
+                    "subject": _("Company account change request"),
+                },
+                allowed_types={"company_change", "user_change"},
+            )
+            country = request.env["res.country"].sudo().browse(
+                self._safe_int(form.get("requested_country_id"))
+            ).exists()
+            requested_email = (form.get("requested_email") or "").strip()[:254]
+            if requested_email and not tools.single_email_re.match(requested_email):
+                raise ValidationError(_("Please enter a valid requested business email."))
+            base_values.update({
+                "partner_id": contact.id,
+                "website_id": request.website.id,
+                "source_url": "/my/company/change",
+                "requested_company_name": (form.get("requested_company_name") or "").strip()[:200],
+                "requested_vat": (form.get("requested_vat") or "").strip()[:128],
+                "requested_email": requested_email,
+                "requested_phone": (form.get("requested_phone") or "").strip()[:64],
+                "requested_street": (form.get("requested_street") or "").strip()[:200],
+                "requested_street2": (form.get("requested_street2") or "").strip()[:200],
+                "requested_city": (form.get("requested_city") or "").strip()[:128],
+                "requested_zip": (form.get("requested_zip") or "").strip()[:32],
+                "requested_country_id": country.id,
+            })
+            submission, is_new = self._claim_submission(form, "company_change")
+            if not is_new:
+                return self._completed_submission_redirect(submission)
+            change_request = request.env["b2b.contact.request"].sudo().create(base_values)
+            response_url = "/my/company?change_submitted=%s" % change_request.name
+            submission.complete(response_url, change_request)
+        except ValidationError as error:
+            return request.render(
+                "b2b_website.company_change_form",
+                self._company_change_values(form=form, error=error.args[0]),
+            )
+        return request.redirect(response_url, code=303)
 
     @route("/my/company/users", type="http", auth="user", website=True, sitemap=False)
     def company_users(self, **kwargs):
@@ -386,16 +660,46 @@ class PartnerHubWebsite(Controller):
         service = self._service()
         if not service.is_visible(product, website=self._website()):
             raise NotFound()
+        variant = product.product_variant_id
+        price_state = service.price_state(website=self._website())
+        procurement = service.procurement_info(
+            variant,
+            pricelist=request.pricelist,
+            website=self._website(),
+        )
+        if price_state == "visible":
+            combination_info = product.with_context(
+                website_sale_stock_get_quantity=True
+            )._get_combination_info(
+                product_id=variant.id,
+                add_qty=procurement["minimum_quantity"],
+                uom_id=variant.uom_id.id,
+            )
+            procurement = service.procurement_info(
+                variant,
+                pricelist=request.pricelist,
+                website=self._website(),
+                combination_info=combination_info,
+            )
+            price = {
+                "state": "visible",
+                "price": combination_info["price"],
+                "currency": combination_info["currency"],
+                "uom_name": procurement["uom_name"],
+            }
+        else:
+            price = {"state": price_state}
         media = product.product_template_image_ids
         related = product.alternative_product_ids.filtered_domain(
             service.visible_domain(website=self._website())
         )[:4]
         values = {
             "product": product,
-            "variant": product.product_variant_id,
+            "variant": variant,
             "media": media,
             "resources": service.allowed_documents(product, website=self._website()),
-            "price": service.price_payload(product, website=self._website())[product.id],
+            "price": price,
+            "procurement": procurement,
             "related": related,
             "related_prices": service.price_payload(related, website=self._website()),
             "sample_allowed": self._sample_allowed(),
@@ -438,6 +742,7 @@ class PartnerHubWebsite(Controller):
             "shipping_partners": request.env["res.partner"].search([
                 ("id", "child_of", company.id), ("type", "=", "delivery")
             ]),
+            "submission_token": self._submission_token(request.params),
         }
 
     @route("/sample/request", type="http", auth="user", website=True, methods=["GET", "POST"])
@@ -458,6 +763,9 @@ class PartnerHubWebsite(Controller):
                 quantity = float(post.get("quantity") or 0)
                 if not math.isfinite(quantity) or not 0 < quantity <= 10000:
                     raise ValidationError(_("Sample quantity must be between 0 and 10,000."))
+                submission, is_new = self._claim_submission(post, "sample_request")
+                if not is_new:
+                    return self._completed_submission_redirect(submission)
                 sample = request.env["b2b.sample.request"].create({
                     "contact_name": (post.get("contact_name") or "").strip(),
                     "company_name": (post.get("company_name") or "").strip(),
@@ -473,7 +781,9 @@ class PartnerHubWebsite(Controller):
                         "uom_id": product.uom_id.id if product else False,
                     })],
                 })
-                return request.redirect("/my/sample-requests/%s?submitted=1" % sample.id)
+                response_url = "/my/sample-requests/%s?submitted=1" % sample.id
+                submission.complete(response_url, sample.sudo())
+                return request.redirect(response_url, code=303)
             except (AccessError, UserError, ValidationError, ValueError) as error:
                 values["error"] = str(error)
         return request.render("b2b_website.sample_request_form", values)
@@ -495,9 +805,14 @@ class PartnerHubWebsite(Controller):
         contact = request.env.user.partner_id
         company = contact.commercial_partner_id
         orders = self._owned_orders()
-        products = orders.order_line.product_id.filtered(
-            lambda item: self._service().is_visible(item.product_tmpl_id)
+        # Orders were selected through the portal rule above.  Read their historic
+        # lines with elevation so a product that was later unpublished or removed
+        # from the customer's segment cannot make the entire service form fail.
+        # Only products actually bought on those owned orders are returned.
+        order_lines = orders.sudo().order_line.filtered(
+            lambda line: not line.display_type and line.product_id
         )
+        products = order_lines.product_id
         return {
             "orders": orders,
             "products": products,
@@ -505,6 +820,7 @@ class PartnerHubWebsite(Controller):
             "company_name": company.name or "",
             "email": contact.email or company.email or "",
             "phone": contact.phone or company.phone or "",
+            "submission_token": self._submission_token(request.params),
         }
 
     def _validated_uploads(self):
@@ -535,19 +851,26 @@ class PartnerHubWebsite(Controller):
                 product = request.env["product.product"].browse(self._safe_int(post.get("product_id"))).exists()
                 request_type = post.get("request_type")
                 description = (post.get("description") or "").strip()
-                if order not in values["orders"] or product not in order.order_line.product_id:
+                if order not in values["orders"]:
                     raise AccessError(_("Select a product from one of your completed or confirmed orders."))
+                historical_products = order.sudo().order_line.filtered(
+                    lambda line: not line.display_type and line.product_id
+                ).product_id
+                if product.id not in historical_products.ids:
+                    raise AccessError(_("Select a product from one of your completed or confirmed orders."))
+                product = historical_products.filtered(lambda item: item.id == product.id)[:1]
                 if request_type not in ("repair", "replacement") or not description:
                     raise ValidationError(_("Complete the request type and problem description."))
                 fields_to_limit = {
                     "contact_name": 160, "company_name": 200, "email": 254,
-                    "phone": 64, "serial_number": 160, "description": 8000,
+                    "phone": 64, "model_number": 160, "serial_number": 160,
+                    "description": 8000,
                 }
                 for key, limit in fields_to_limit.items():
                     if len(post.get(key) or "") > limit:
                         raise ValidationError(_("A service request field exceeds the allowed length."))
                 if any(not (post.get(key) or "").strip() for key in (
-                    "contact_name", "company_name", "email", "phone"
+                    "contact_name", "company_name", "email", "phone", "model_number"
                 )):
                     raise ValidationError(_("Complete all required contact fields."))
                 if not tools.single_email_re.match((post.get("email") or "").strip()):
@@ -559,6 +882,9 @@ class PartnerHubWebsite(Controller):
                 team = request.env["helpdesk.team"].sudo().browse(team_id).exists()
                 if not team:
                     raise UserError(_("Partner service is not configured yet. Please contact us."))
+                submission, is_new = self._claim_submission(post, "service_request")
+                if not is_new:
+                    return self._completed_submission_redirect(submission)
                 safe_description = Markup("<p>%s</p><p>%s</p>") % (
                     escape(_("Submitted from Partner Hub at %s", fields.Datetime.now())),
                     escape(description).replace("\n", Markup("<br/>")),
@@ -571,8 +897,10 @@ class PartnerHubWebsite(Controller):
                     "description": safe_description,
                     "b2b_request_type": request_type,
                     "b2b_product_id": product.id,
+                    "b2b_model_number": (post.get("model_number") or "").strip(),
                     "b2b_serial_number": (post.get("serial_number") or "").strip(),
                     "b2b_sale_order_id": order.id,
+                    "sale_order_id": order.id,
                     "b2b_contact_name": (post.get("contact_name") or "").strip(),
                     "b2b_company_name": (post.get("company_name") or "").strip(),
                     "b2b_contact_phone": (post.get("phone") or "").strip(),
@@ -589,7 +917,9 @@ class PartnerHubWebsite(Controller):
                     })
                 ticket.message_subscribe(partner_ids=[contact.id])
                 ticket.message_post(body=_("Service request submitted through Partner Hub."))
-                return request.redirect("/service-center?submitted=1")
+                response_url = "/service-center?submitted=1"
+                submission.complete(response_url, ticket)
+                return request.redirect(response_url, code=303)
             except (AccessError, UserError, ValidationError) as error:
                 values["error"] = str(error)
         return request.render("b2b_website.service_request_form", values)

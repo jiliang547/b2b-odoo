@@ -6,9 +6,10 @@
             <section class="lt-page-head lt-page-head--compact"><div class="container"><span class="lt-kicker">SAMPLE PROGRAM</span><h1>Request a product sample</h1><p>Tell our team what you need for your evaluation or project.</p></div></section>
             <section class="lt-section"><div class="container lt-form-shell">
                 <div t-if="error" class="lt-alert lt-alert--error" role="alert"><strong>We could not submit your request.</strong><span t-out="error"/></div>
-                <div t-if="not sample_allowed" class="lt-state-card"><i class="fa fa-lock"/><h2>Sample requests are not enabled yet</h2><p>Your Partner Hub company must be approved before requesting samples.</p><a class="lt-btn lt-btn--primary" href="/contactus">Contact us</a></div>
-                <form t-else="" class="lt-form-card" action="/sample/request" method="post">
+                <div t-if="not sample_allowed" class="lt-state-card"><i class="fa fa-lock"/><h2>Sample requests are not enabled yet</h2><p>Your Partner Hub company must be approved before requesting samples.</p><a class="lt-btn lt-btn--primary" href="/contact">Contact us</a></div>
+                <form t-else="" class="lt-form-card" action="/sample/request" method="post" data-lt-submit-once="">
                     <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                    <input type="hidden" name="submission_token" t-att-value="submission_token"/>
                     <div class="lt-form-section"><div><span>01</span><h2>Sample</h2></div><div class="lt-form-grid">
                         <div class="lt-field lt-field--wide"><label for="sample-product">Product</label><select id="sample-product" name="product_id" required="required"><option value="">Choose a product</option><option t-foreach="sample_products" t-as="item" t-att-value="item.id" t-att-selected="product and item.id == product.id" t-out="item.display_name"/></select><p class="lt-help">Up to 200 currently available product variants are shown.</p></div>
                         <div class="lt-field"><label for="sample-quantity">Quantity</label><input id="sample-quantity" name="quantity" type="number" min="1" step="1" required="required" t-att-value="post.get('quantity', '1')"/></div>
@@ -25,7 +26,7 @@
                         <div class="lt-field lt-field--wide"><label for="shipping-address">Shipping address</label><textarea id="shipping-address" name="shipping_address" maxlength="2000" required="required" t-out="post.get('shipping_address', shipping_address)"/></div>
                         <div class="lt-field lt-field--wide"><label for="sample-notes">Additional notes <span>(optional)</span></label><textarea id="sample-notes" name="notes" maxlength="4000" t-out="post.get('notes', '')"/></div>
                     </div></div>
-                    <div class="lt-form-submit"><p>Submitting creates a review request for the Lucky Tone team.</p><button class="lt-btn lt-btn--primary" type="submit">Submit sample request</button></div>
+                    <div class="lt-form-submit"><p>Submitting creates a review request for the Lucky Tone team.</p><button class="lt-btn lt-btn--primary" type="submit" data-lt-submitting-label="Submitting…">Submit sample request</button><span class="lt-submit-status" data-lt-submit-status="" aria-live="polite"/></div>
                 </form>
             </div></section>
         </t>
