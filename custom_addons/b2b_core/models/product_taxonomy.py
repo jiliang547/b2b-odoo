@@ -10,6 +10,19 @@ class B2BProductBrand(models.Model):
     active = fields.Boolean(default=True)
     sequence = fields.Integer(default=10)
     description = fields.Text(translate=True)
+    logo = fields.Image(max_width=512, max_height=512)
+    cover_image = fields.Image(max_width=1920, max_height=1080)
+    tagline = fields.Char(translate=True)
+    website_description = fields.Html(translate=True, sanitize=True)
+    product_focus = fields.Text(
+        translate=True,
+        help="One item per line. Displayed as product-focus badges on the brand page.",
+    )
+    advantages = fields.Text(
+        translate=True,
+        help="One item per line. Displayed as the brand advantages list.",
+    )
+    website_published = fields.Boolean(default=True, index=True)
     product_ids = fields.One2many(
         "product.template", "b2b_brand_id", string="Products", groups="base.group_user"
     )

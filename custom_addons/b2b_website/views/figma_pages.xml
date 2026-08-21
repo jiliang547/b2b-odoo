@@ -3,22 +3,24 @@
     <template id="partner_topbar" name="Partner Hub Topbar">
         <nav class="lt-subnav" aria-label="Partner Hub navigation">
             <div class="container lt-subnav__inner">
-                <a class="lt-brand" href="/" aria-label="Lucky Tone home">
-                    <span class="lt-brand__mark" aria-hidden="true">LT</span>
-                    <span><strong>LUCKY TONE</strong><small>PARTNER HUB</small></span>
+                <a class="lt-brand" href="/" aria-label="Power and Grace home">
+                    <span class="lt-brand__mark" aria-hidden="true"><img src="/b2b_website/static/src/img/power_grace_logo.png" alt=""/></span>
+                    <span><strong>POWER &amp; GRACE</strong><small>PARTNER HUB</small></span>
                 </a>
                 <button class="lt-nav-toggle" type="button" aria-expanded="false" aria-controls="lt-native-navigation">
                     <span class="visually-hidden">Toggle navigation</span><i class="fa fa-bars" aria-hidden="true"/>
                 </button>
                 <div id="lt-native-navigation" class="lt-nav-shell">
-                    <div class="lt-nav-links">
-                        <a t-att-class="'is-active' if request.httprequest.path.startswith('/products') else ''" href="/products">Products</a>
-                        <a t-att-class="'is-active' if request.httprequest.path.startswith('/solutions') else ''" href="/solutions">Solutions</a>
-                        <a t-att-class="'is-active' if request.httprequest.path.startswith('/resources') else ''" href="/resources">Resources</a>
-                        <a t-att-class="'is-active' if request.httprequest.path.startswith('/about') else ''" href="/about">About</a>
-                        <a t-att-class="'is-active' if request.httprequest.path.startswith('/contact') else ''" href="/contact">Contact</a>
-                    </div>
+                    <div class="lt-nav-links"/>
                     <div class="lt-nav-actions">
+                        <t t-set="lt_pricelists" t-value="website.b2b_currency_pricelists()"/>
+                        <details class="lt-locale-menu">
+                            <summary><i class="fa fa-globe"/><strong t-out="(request.lang.url_code or 'en').split('_')[0].upper()"/><span>/</span><strong t-out="request.pricelist.currency_id.name"/><i class="fa fa-angle-down"/></summary>
+                            <div class="lt-locale-menu__panel">
+                                <section><p>Currency</p><div class="lt-locale-options"><a t-foreach="lt_pricelists" t-as="pl" t-att-class="'is-active' if pl == request.pricelist else ''" t-att-href="'/shop/change_pricelist/%s' % pl.id" t-att-title="pl.name" t-out="pl.currency_id.name"/></div></section>
+                                <section t-if="len(frontend_languages) &gt; 1"><p>Language</p><div class="lt-language-options"><a t-foreach="website.b2b_frontend_languages(frontend_languages)" t-as="lg" t-att-class="'js_change_lang is-active' if lg.code == lang else 'js_change_lang'" t-att-href="url_localized(lang_code=lg.code, prefetch_langs=True, force_default_lang=True)" t-att-data-url_code="lg.url_code" t-out="website.b2b_language_label(lg)"/></div></section>
+                            </div>
+                        </details>
                         <form class="lt-header-search" action="/products" method="get" role="search">
                             <label class="visually-hidden" for="lt-header-search">Search products</label>
                             <i class="fa fa-search" aria-hidden="true"/><input id="lt-header-search" type="search" name="search" placeholder="Search products…"/><kbd>⌘K</kbd>

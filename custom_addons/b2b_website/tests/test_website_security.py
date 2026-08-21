@@ -1,6 +1,6 @@
 from odoo import Command
 from odoo.addons.mail.tests.common import mail_new_test_user
-from odoo.exceptions import AccessError
+from odoo.exceptions import AccessError, ValidationError
 from odoo.tests import HttpCase, TransactionCase, tagged
 
 
@@ -34,6 +34,65 @@ class TestWebsiteOrderSecurity(TransactionCase):
         with self.assertRaises(AccessError):
             self.order.with_user(self.portal_user)._prepare_order_line_values(
                 self.product.id, 1, self.product.uom_id.id
+            )
+
+
+@tagged("post_install", "-at_install")
+class TestWebsiteSaleQuantity(TransactionCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.website = cls.env["website"].search([], limit=1)
+        cls.website.b2b_price_display_mode = "approved"
+        cls.company = cls.env["res.partner"].create({
+            "name": "Approved Quantity Company", "is_company": True, "b2b_approved": True,
+        })
+        cls.contact = cls.env["res.partner"].create({
+            "name": "Approved Quantity Contact",
+            "parent_id": cls.company.id,
+            "email": "quantity@example.com",
+        })
+        cls.portal_user = mail_new_test_user(
+            cls.env,
+            login="website-quantity",
+            groups="base.group_portal",
+            partner_id=cls.contact.id,
+        )
+        cls.product = cls.env["product.product"].create({
+            "name": "Whole Unit Product",
+            "sale_ok": True,
+            "is_published": True,
+            "b2b_visibility_mode": "all",
+        })
+        cls.pricelist = cls.env["product.pricelist"].search([], limit=1)
+        cls.order = cls.env["sale.order"].create({
+            "partner_id": cls.company.id,
+            "website_id": cls.website.id,
+            "pricelist_id": cls.pricelist.id,
+        })
+
+    def test_product_unit_precision_is_not_the_purchase_step(self):
+        procurement = self.env["b2b.product.service"].procurement_info(
+            self.product,
+            pricelist=self.order.pricelist_id,
+            website=self.website,
+        )
+        self.assertEqual(procurement["quantity_step"], 1.0)
+
+    def test_fractional_website_quantity_is_rejected(self):
+        order = self.order.with_user(self.portal_user)
+        order._verify_updated_quantity(
+            self.env["sale.order.line"],
+            self.product.id,
+            1,
+            self.product.uom_id.id,
+        )
+        with self.assertRaises(ValidationError):
+            order._verify_updated_quantity(
+                self.env["sale.order.line"],
+                self.product.id,
+                1.01,
+                self.product.uom_id.id,
             )
 
 @tagged("post_install", "-at_install")

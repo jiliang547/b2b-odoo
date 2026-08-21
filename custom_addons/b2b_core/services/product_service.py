@@ -1,5 +1,9 @@
-from odoo import api, fields, models
+import math
+
+from odoo import _, api, fields, models
+from odoo.exceptions import ValidationError
 from odoo.fields import Domain
+from odoo.http import request
 
 
 class B2BProductService(models.AbstractModel):
@@ -100,11 +104,23 @@ class B2BProductService(models.AbstractModel):
         state = self.price_state(partner=partner, website=website)
         if state != "visible":
             return {product.id: {"state": state} for product in products}
-        prices = products._get_sales_prices(website)
+        pricelist = request.pricelist
+        quantities = {
+            product.id: self.procurement_info(
+                product,
+                pricelist=pricelist,
+                website=website,
+            )["minimum_quantity"]
+            for product in products
+        }
+        prices = products.with_context(
+            b2b_sale_quantities=quantities
+        )._get_sales_prices(website)
         return {
             product.id: {
                 "state": "visible",
                 "price": prices[product.id]["price_reduce"],
+                "base_price": prices[product.id].get("base_price"),
                 "currency": website.currency_id,
             }
             for product in products
@@ -115,7 +131,7 @@ class B2BProductService(models.AbstractModel):
         """Return website purchasing facts backed by native Odoo fields.
 
         ``product.pricelist.item.min_quantity`` is used as the customer-specific
-        minimum quantity, the product UoM supplies the step/unit, and installed
+        minimum quantity, the product UoM supplies the display unit, and installed
         stock modules supply website-warehouse availability and sales lead time.
         The method deliberately degrades to neutral availability when Inventory
         is not installed so the website module remains portable to Odoo.sh.
@@ -190,7 +206,12 @@ class B2BProductService(models.AbstractModel):
         )
         return {
             "minimum_quantity": minimum_quantity,
-            "quantity_step": variant.uom_id.rounding,
+            # Odoo's uom.rounding is a calculation precision (0.01 with the
+            # usual Product Unit precision), not a website purchase increment.
+            # Match the native website_sale behaviour and sell one selected UoM
+            # at a time. Product packaging can be exposed explicitly in a future
+            # selector without changing this default contract.
+            "quantity_step": 1.0,
             "uom_name": variant.uom_id.name,
             "stock_state": stock_state,
             "stock_label": stock_label,
@@ -198,6 +219,38 @@ class B2BProductService(models.AbstractModel):
             "show_stock_quantity": show_stock_quantity,
             "lead_time_days": lead_time_days,
         }
+
+    @api.model
+    def validate_sale_quantity(self, product, quantity, pricelist=None, website=None):
+        """Validate website quantities against the same MOQ/step shown in the UI."""
+        try:
+            quantity = float(quantity)
+        except (TypeError, ValueError):
+            raise ValidationError(_("Please enter a valid quantity.")) from None
+        if not math.isfinite(quantity):
+            raise ValidationError(_("Please enter a valid quantity."))
+
+        procurement = self.procurement_info(
+            product, pricelist=pricelist, website=website
+        )
+        minimum = float(procurement.get("minimum_quantity") or 1.0)
+        step = float(procurement.get("quantity_step") or 1.0)
+        tolerance = max(1e-9, step * 1e-9)
+        if quantity < minimum - tolerance:
+            raise ValidationError(
+                _("The minimum order quantity for this product is %(minimum)g.", minimum=minimum)
+            )
+
+        increments = (quantity - minimum) / step
+        if not math.isclose(increments, round(increments), abs_tol=tolerance):
+            raise ValidationError(
+                _(
+                    "Quantity must start at %(minimum)g and increase in steps of %(step)g.",
+                    minimum=minimum,
+                    step=step,
+                )
+            )
+        return quantity
 
     @api.model
     def product_from_document(self, document):

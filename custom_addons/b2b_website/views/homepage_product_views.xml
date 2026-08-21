@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_b2b_homepage_product_list" model="ir.ui.view">
+        <field name="name">b2b.homepage.product.list</field>
+        <field name="model">b2b.homepage.product</field>
+        <field name="arch" type="xml">
+            <list editable="bottom" default_order="section,sequence,id">
+                <field name="sequence" widget="handle"/>
+                <field name="section"/>
+                <field name="product_tmpl_id"/>
+                <field name="website_id" groups="website.group_multi_website"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_b2b_homepage_product_form" model="ir.ui.view">
+        <field name="name">b2b.homepage.product.form</field>
+        <field name="model">b2b.homepage.product</field>
+        <field name="arch" type="xml">
+            <form><sheet><group><field name="section"/><field name="product_tmpl_id"/><field name="sequence"/><field name="website_id" groups="website.group_multi_website"/><field name="active"/></group></sheet></form>
+        </field>
+    </record>
+    <record id="action_b2b_homepage_products" model="ir.actions.act_window">
+        <field name="name">Homepage Featured Products</field>
+        <field name="res_model">b2b.homepage.product</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'group_by': 'section'}</field>
+    </record>
+</odoo>

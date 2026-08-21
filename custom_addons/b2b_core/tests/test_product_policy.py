@@ -1,5 +1,6 @@
 from odoo import Command
 from odoo.addons.mail.tests.common import mail_new_test_user
+from odoo.addons.website_sale.tests.common import MockRequest
 from odoo.tests import TransactionCase, tagged
 
 
@@ -72,3 +73,38 @@ class TestB2BProductPolicy(TransactionCase):
         service = self.env["b2b.product.service"].with_user(administrator)
         self.assertTrue(service.can_view_price(website=self.website))
         self.assertEqual(service.price_state(website=self.website), "visible")
+
+    def test_catalog_price_uses_customer_moq_tier(self):
+        self.allowed.list_price = 750
+        pricelist = self.env["product.pricelist"].create({
+            "name": "MOQ Catalog Test",
+            "item_ids": [
+                Command.create({
+                    "compute_price": "percentage",
+                    "percent_price": 10,
+                }),
+                Command.create({
+                    "applied_on": "1_product",
+                    "product_tmpl_id": self.allowed.id,
+                    "min_quantity": 200,
+                    "compute_price": "fixed",
+                    "fixed_price": 999,
+                }),
+            ],
+        })
+        self.contact.property_product_pricelist = pricelist
+        portal_env = self.env(user=self.portal_user)
+        with MockRequest(
+            portal_env,
+            website=self.website,
+            website_sale_current_pl=pricelist.id,
+        ) as http_request:
+            quantity_one_price = http_request.pricelist._compute_price_rule(
+                self.allowed, 1
+            )[self.allowed.id][0]
+            payload = portal_env["b2b.product.service"].price_payload(
+                self.allowed, website=self.website
+            )
+
+        self.assertEqual(quantity_one_price, 675)
+        self.assertEqual(payload[self.allowed.id]["price"], 999)
