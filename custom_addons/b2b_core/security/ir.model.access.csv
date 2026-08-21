@@ -3,9 +3,11 @@ access_b2b_customer_segment_operator,b2b.customer.segment operator,model_b2b_cus
 access_b2b_customer_segment_manager,b2b.customer.segment manager,model_b2b_customer_segment,b2b_core.group_b2b_manager,1,1,1,1
 access_b2b_product_brand_operator,b2b.product.brand operator,model_b2b_product_brand,b2b_core.group_b2b_operator,1,0,0,0
 access_b2b_product_brand_manager,b2b.product.brand manager,model_b2b_product_brand,b2b_core.group_b2b_product_manager,1,1,1,1
+access_b2b_product_brand_b2b_manager,b2b.product.brand b2b manager,model_b2b_product_brand,b2b_core.group_b2b_manager,1,1,1,1
 access_b2b_product_brand_public,b2b.product.brand public,model_b2b_product_brand,base.group_public,1,0,0,0
 access_b2b_product_brand_portal,b2b.product.brand portal,model_b2b_product_brand,base.group_portal,1,0,0,0
 access_b2b_product_application_operator,b2b.product.application operator,model_b2b_product_application,b2b_core.group_b2b_operator,1,0,0,0
 access_b2b_product_application_manager,b2b.product.application manager,model_b2b_product_application,b2b_core.group_b2b_product_manager,1,1,1,1
+access_b2b_product_application_b2b_manager,b2b.product.application b2b manager,model_b2b_product_application,b2b_core.group_b2b_manager,1,1,1,1
 access_b2b_product_application_public,b2b.product.application public,model_b2b_product_application,base.group_public,1,0,0,0
 access_b2b_product_application_portal,b2b.product.application portal,model_b2b_product_application,base.group_portal,1,0,0,0

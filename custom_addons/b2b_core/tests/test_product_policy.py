@@ -1,6 +1,7 @@
 from odoo import Command
 from odoo.addons.mail.tests.common import mail_new_test_user
 from odoo.addons.website_sale.tests.common import MockRequest
+from odoo.exceptions import AccessError
 from odoo.tests import TransactionCase, tagged
 
 
@@ -108,3 +109,29 @@ class TestB2BProductPolicy(TransactionCase):
 
         self.assertEqual(quantity_one_price, 675)
         self.assertEqual(payload[self.allowed.id]["price"], 999)
+
+    def test_b2b_manager_can_maintain_product_taxonomy(self):
+        manager = mail_new_test_user(
+            self.env,
+            login="b2b-taxonomy-manager",
+            groups="b2b_core.group_b2b_manager",
+        )
+        brand = self.env["b2b.product.brand"].with_user(manager).create({
+            "name": "Manager Brand",
+        })
+        application = self.env["b2b.product.application"].with_user(manager).create({
+            "name": "Manager Application",
+        })
+        self.assertTrue(brand.exists())
+        self.assertTrue(application.exists())
+
+    def test_b2b_operator_cannot_create_product_taxonomy(self):
+        operator = mail_new_test_user(
+            self.env,
+            login="b2b-taxonomy-operator",
+            groups="b2b_core.group_b2b_operator",
+        )
+        with self.assertRaises(AccessError):
+            self.env["b2b.product.brand"].with_user(operator).create({
+                "name": "Forbidden Brand",
+            })
