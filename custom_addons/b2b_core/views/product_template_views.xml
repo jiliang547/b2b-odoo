@@ -10,8 +10,20 @@
                     <group>
                         <group string="Catalog">
                             <field name="b2b_brand_id"/>
+                            <field name="public_categ_ids"
+                                   string="Website Categories"
+                                   widget="many2many_tags"
+                                   placeholder="Select the most specific eCommerce category"
+                                   required="is_published"/>
                             <field name="b2b_application_ids" widget="many2many_tags"/>
                             <field name="b2b_model_number"/>
+                            <field name="is_published" invisible="1"/>
+                            <div class="alert alert-warning" role="alert" invisible="public_categ_ids">
+                                Select the most specific Website Category before publishing. Parent categories are included automatically in website navigation.
+                            </div>
+                            <div class="text-muted">
+                                Website Categories control the Partner Hub category navigation. The Product Category field at the top of the form remains the internal inventory and accounting category.
+                            </div>
                         </group>
                         <group string="Visibility">
                             <field name="b2b_visibility_mode"/>
