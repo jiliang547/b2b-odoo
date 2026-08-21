@@ -7,7 +7,9 @@
             <list editable="bottom">
                 <field name="sequence" widget="handle"/>
                 <field name="name"/>
+                <field name="tagline" optional="show"/>
                 <field name="product_count"/>
+                <field name="website_published" widget="boolean_toggle"/>
                 <field name="active" widget="boolean_toggle"/>
             </list>
         </field>
@@ -16,7 +18,7 @@
         <field name="name">b2b.product.brand.form</field>
         <field name="model">b2b.product.brand</field>
         <field name="arch" type="xml">
-            <form><sheet><group><field name="name"/><field name="sequence"/><field name="active"/></group><field name="description"/></sheet></form>
+            <form><sheet><widget name="web_ribbon" title="Not Published" bg_color="text-bg-danger" invisible="website_published"/><group><group><field name="name"/><field name="tagline"/><field name="sequence"/><field name="active"/><field name="website_published"/></group><group><field name="logo" widget="image" class="oe_avatar"/><field name="cover_image" widget="image"/></group></group><notebook><page string="Website Content"><field name="website_description" widget="html"/><group><field name="product_focus" placeholder="One item per line"/><field name="advantages" placeholder="One item per line"/></group></page><page string="Internal Notes"><field name="description"/></page></notebook></sheet></form>
         </field>
     </record>
     <record id="action_b2b_product_brands" model="ir.actions.act_window">

@@ -8,8 +8,9 @@ from werkzeug.utils import secure_filename
 from odoo import Command, _, fields, tools
 from odoo.exceptions import AccessError, UserError, ValidationError
 from odoo.fields import Domain
-from odoo.http import Controller, request, route
+from odoo.http import request, route
 from odoo.addons.portal.controllers.portal import pager as portal_pager
+from odoo.addons.website.controllers.main import Website as WebsiteController
 
 
 MAX_UPLOAD_SIZE = 10 * 1024 * 1024
@@ -23,7 +24,7 @@ ALLOWED_UPLOADS = {
 }
 
 
-class PartnerHubWebsite(Controller):
+class PartnerHubWebsite(WebsiteController):
     def _website(self):
         return request.website
 
@@ -137,11 +138,13 @@ class PartnerHubWebsite(Controller):
                 ]),
             ])
         filters = {
-            "category": "public_categ_ids",
             "brand": "b2b_brand_id",
             "tag": "product_tag_ids",
             "application": "b2b_application_ids",
         }
+        category = self._safe_int(query.get("category"))
+        if category:
+            domain = Domain.AND([domain, [("public_categ_ids", "child_of", category)]])
         for parameter, field_name in filters.items():
             value = self._safe_int(query.get(parameter))
             if value:
@@ -149,19 +152,19 @@ class PartnerHubWebsite(Controller):
         return domain
 
     def _catalog_values(self, products, **extra):
-        Product = request.env["product.template"]
+        Product = request.env["product.template"].sudo()
         visible = self._service().visible_domain(website=self._website())
         values = {
             "products": products,
             "prices": self._service().price_payload(products, website=self._website()),
             "price_state": self._service().price_state(website=self._website()),
-            "categories": request.env["product.public.category"].search(
+            "categories": request.env["product.public.category"].sudo().search(
                 [("product_tmpl_ids", "any", visible)], order="name"
             ),
             "brands": request.env["b2b.product.brand"].sudo().search([
                 ("active", "=", True), ("product_ids", "any", visible)
             ], order="sequence, name"),
-            "tags": request.env["product.tag"].search([
+            "tags": request.env["product.tag"].sudo().search([
                 ("product_template_ids", "any", visible)
             ], order="name"),
             "applications": request.env["b2b.product.application"].sudo().search([
@@ -173,11 +176,153 @@ class PartnerHubWebsite(Controller):
         return values
 
     def _visible_products(self, limit=200):
-        return request.env["product.template"].search(
+        return request.env["product.template"].sudo().search(
             self._service().visible_domain(website=self._website()),
             limit=limit,
             order="website_sequence, name",
         )
+
+    def _category_rows(self, parent_id=False, brand=False):
+        """Return only branches that contain products visible to this visitor."""
+        visible = self._service().visible_domain(website=self._website())
+        if brand:
+            visible = Domain.AND([visible, [("b2b_brand_id", "=", brand.id)]])
+        categories = request.env["product.public.category"].sudo().search(
+            [
+                ("parent_id", "=", parent_id or False),
+                ("website_id", "in", [False, request.website.id]),
+            ],
+            order="sequence, name, id",
+        )
+        Product = request.env["product.template"].sudo()
+        rows = []
+        for category in categories:
+            category_domain = Domain.AND([
+                visible,
+                [("public_categ_ids", "child_of", category.id)],
+            ])
+            representative = Product.search(
+                category_domain, limit=1, order="website_sequence, name, id"
+            )
+            if not representative:
+                continue
+            child_domain = Domain.AND([
+                visible,
+                [("public_categ_ids", "child_of", category.child_id.ids)],
+            ]) if category.child_id else Domain("id", "=", 0)
+            rows.append({
+                "record": category,
+                "id": category.id,
+                "name": category.name,
+                "has_children": bool(
+                    category.child_id
+                    and Product.search_count(child_domain, limit=1)
+                ),
+                "image_url": (
+                    f"/web/image/product.public.category/{category.id}/cover_image"
+                    if category.cover_image
+                    else f"/web/image/product.template/{representative.id}/image_512"
+                ),
+            })
+        return rows
+
+    def _configured_home_products(self, section, limit=10):
+        lines = request.env["b2b.homepage.product"].sudo().search([
+            ("website_id", "=", request.website.id),
+            ("section", "=", section),
+            ("active", "=", True),
+        ], order="sequence, id")
+        visible_ids = set(request.env["product.template"].sudo().search(
+            Domain.AND([
+                self._service().visible_domain(website=self._website()),
+                [("id", "in", lines.product_tmpl_id.ids)],
+            ])
+        ).ids)
+        ordered = request.env["product.template"].sudo()
+        for line in lines:
+            if line.product_tmpl_id.id in visible_ids:
+                ordered |= line.product_tmpl_id
+            if len(ordered) >= limit:
+                break
+        return ordered
+
+    def _recommended_products(self, defaults, limit=10):
+        if request.env.user._is_public():
+            return defaults[:limit]
+        company = request.env.user.partner_id.commercial_partner_id
+        seeds = request.env["product.template"].sudo()
+        recent_orders = request.env["sale.order"].sudo().search([
+            ("partner_id", "child_of", company.id),
+            ("state", "=", "sale"),
+        ], order="date_order desc, id desc", limit=10)
+        for order in recent_orders:
+            for line in order.order_line:
+                if line.display_type or not line.product_id:
+                    continue
+                template = line.product_id.product_tmpl_id
+                if template not in seeds:
+                    seeds |= template
+                if len(seeds) >= 10:
+                    break
+            if len(seeds) >= 10:
+                break
+
+        visitor_ids = request.env["website.visitor"].sudo().search([
+            ("partner_id", "child_of", company.id),
+        ]).ids
+        if visitor_ids:
+            tracks = request.env["website.track"].sudo().search([
+                ("visitor_id", "in", visitor_ids),
+                ("b2b_product_tmpl_id", "!=", False),
+            ], order="visit_datetime desc, id desc", limit=10)
+            for template in tracks.b2b_product_tmpl_id:
+                if template not in seeds:
+                    seeds |= template
+
+        candidates = request.env["product.template"].sudo()
+        for seed in seeds[:10]:
+            for optional in seed.optional_product_ids:
+                if optional != seed and optional not in candidates:
+                    candidates |= optional
+
+        visible_ids = set(request.env["product.template"].sudo().search(
+            Domain.AND([
+                self._service().visible_domain(website=self._website()),
+                [("id", "in", candidates.ids)],
+            ]),
+            order="website_sequence, name, id",
+        ).ids)
+        result = request.env["product.template"].sudo()
+        for product in candidates:
+            if product.id in visible_ids:
+                result |= product
+            if len(result) >= limit:
+                return result
+        for product in defaults:
+            if product not in result:
+                result |= product
+            if len(result) >= limit:
+                break
+        return result
+
+    def _track_product_view(self, product):
+        visitor = request.env["website.visitor"].sudo()._get_visitor_from_request(
+            force_create=True
+        )
+        if not visitor:
+            return
+        Track = request.env["website.track"].sudo()
+        recent = Track.search_count([
+            ("visitor_id", "=", visitor.id),
+            ("b2b_product_tmpl_id", "=", product.id),
+            ("visit_datetime", ">=", fields.Datetime.subtract(fields.Datetime.now(), minutes=30)),
+        ], limit=1)
+        if not recent:
+            Track.create({
+                "visitor_id": visitor.id,
+                "url": request.httprequest.url,
+                "b2b_product_tmpl_id": product.id,
+            })
 
     @route("/about", type="http", auth="public", website=True, sitemap=True)
     def about(self, **kwargs):
@@ -326,7 +471,7 @@ class PartnerHubWebsite(Controller):
             self._service().visible_domain(website=self._website()),
             [("id", "in", ids)],
         ])
-        products = request.env["product.template"].search(domain)
+        products = request.env["product.template"].sudo().search(domain)
         products = products.sorted(key=lambda item: ids.index(item.id) if item.id in ids else 99)
         if not products:
             products = self._visible_products(limit=3)
@@ -588,28 +733,107 @@ class PartnerHubWebsite(Controller):
             },
         )
 
-    @route("/", type="http", auth="public", website=True, sitemap=True)
-    def homepage(self, **kwargs):
+    @route(["/", "/partner-home"], type="http", auth="public", website=True, sitemap=True)
+    def index(self, **kwargs):
         domain = self._service().visible_domain(website=self._website())
-        products = request.env["product.template"].search(
-            domain,
-            limit=6,
-            order="website_sequence, name",
+        fallback = request.env["product.template"].sudo().search(
+            domain, limit=10, order="website_sequence, name, id"
         )
+        default_recommended = self._configured_home_products("recommended") or fallback
+        recommended = self._recommended_products(default_recommended)
+        special = self._configured_home_products("special")
+        best_sellers = self._configured_home_products("best_seller")
+        all_featured = recommended | special | best_sellers
         return request.render(
             "b2b_website.partner_hub_homepage",
             self._catalog_values(
-                products,
-                catalog_total=request.env["product.template"].search_count(domain),
+                all_featured,
+                recommended_products=recommended,
+                special_products=special,
+                best_seller_products=best_sellers,
+                featured_prices=self._service().price_payload(
+                    all_featured, website=self._website()
+                ),
+                featured_procurement={
+                    product.id: self._service().procurement_info(
+                        product.product_variant_id,
+                        pricelist=request.pricelist,
+                        website=self._website(),
+                    )
+                    for product in all_featured
+                },
+                root_categories=self._category_rows(),
+                homepage_brands=request.env["b2b.product.brand"].sudo().search([
+                    ("active", "=", True),
+                    ("website_published", "=", True),
+                    ("product_ids", "any", domain),
+                ], order="sequence, name, id"),
+                catalog_total=request.env["product.template"].sudo().search_count(domain),
                 page_name="partner_home",
             ),
         )
+
+    @route("/b2b/categories", type="jsonrpc", auth="public", website=True)
+    def category_children(self, parent_id=False, brand_id=False):
+        parent_id = self._safe_int(parent_id)
+        brand_id = self._safe_int(brand_id)
+        brand = request.env["b2b.product.brand"].sudo().browse(brand_id).exists()
+        if brand and (not brand.active or not brand.website_published):
+            brand = request.env["b2b.product.brand"]
+        rows = self._category_rows(parent_id=parent_id, brand=brand)
+        parent = request.env["product.public.category"].sudo().browse(parent_id).exists()
+        breadcrumbs = []
+        if parent:
+            breadcrumbs = [
+                {"id": category.id, "name": category.name}
+                for category in parent.parents_and_self
+            ]
+        return {
+            "categories": [{key: row[key] for key in ("id", "name", "has_children", "image_url")} for row in rows],
+            "breadcrumbs": breadcrumbs,
+        }
+
+    @route(
+        '/brands/<model("b2b.product.brand"):brand>',
+        type="http", auth="public", website=True, sitemap=True,
+    )
+    def brand_detail(self, brand, **kwargs):
+        if not brand.active or not brand.website_published:
+            raise NotFound()
+        domain = Domain.AND([
+            self._service().visible_domain(website=self._website()),
+            [("b2b_brand_id", "=", brand.id)],
+        ])
+        products = request.env["product.template"].sudo().search(
+            domain, limit=4, order="website_sequence, name, id"
+        )
+        return request.render("b2b_website.brand_detail", {
+            "brand": brand,
+            "brand_categories": self._category_rows(brand=brand),
+            "brand_products": products,
+            "brand_prices": self._service().price_payload(products, website=self._website()),
+            "brand_focus": [item.strip() for item in (brand.product_focus or "").splitlines() if item.strip()],
+            "brand_advantages": [item.strip() for item in (brand.advantages or "").splitlines() if item.strip()],
+            "page_name": "partner_brand",
+        })
+
+    @route("/repair-service", type="http", auth="public", website=True, sitemap=True)
+    def repair_service_page(self, **kwargs):
+        return request.render("b2b_website.repair_service_page", {
+            "page_name": "repair_service",
+        })
+
+    @route("/warranty", type="http", auth="public", website=True, sitemap=True)
+    def warranty_page(self, **kwargs):
+        return request.render("b2b_website.warranty_page", {
+            "page_name": "warranty",
+        })
 
     @route(["/products", "/products/page/<int:page>"], type="http", auth="public", website=True, sitemap=True)
     def products(self, page=1, **query):
         page = max(page, 1)
         domain = self._catalog_domain(query)
-        Product = request.env["product.template"]
+        Product = request.env["product.template"].sudo()
         total = Product.search_count(domain)
         step = 24
         url_args = {
@@ -660,6 +884,7 @@ class PartnerHubWebsite(Controller):
         service = self._service()
         if not service.is_visible(product, website=self._website()):
             raise NotFound()
+        self._track_product_view(product)
         variant = product.product_variant_id
         price_state = service.price_state(website=self._website())
         procurement = service.procurement_info(
@@ -726,7 +951,7 @@ class PartnerHubWebsite(Controller):
     def _sample_defaults(self, product=False):
         contact = request.env.user.partner_id
         company = contact.commercial_partner_id
-        templates = request.env["product.template"].search(
+        templates = request.env["product.template"].sudo().search(
             self._service().visible_domain(website=self._website()),
             limit=200,
             order="name",

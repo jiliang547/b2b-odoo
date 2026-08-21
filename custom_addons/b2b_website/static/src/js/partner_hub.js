@@ -106,6 +106,14 @@ function formatQuantity(quantity) {
     });
 }
 
+function isQuantityAligned(quantity, minimum, step) {
+    if (!Number.isFinite(quantity) || !Number.isFinite(minimum) || !Number.isFinite(step) || step <= 0) {
+        return false;
+    }
+    const increments = (quantity - minimum) / step;
+    return Math.abs(increments - Math.round(increments)) <= Math.max(1e-9, step * 1e-9);
+}
+
 function initializeDetailTabs() {
     document.querySelectorAll("[data-lt-detail-tabs]").forEach((tabs) => {
         const buttons = [...tabs.querySelectorAll("[data-lt-detail-tab]")];
@@ -182,6 +190,11 @@ function initializeCartForms() {
                 status.textContent = `Enter a quantity between ${formatQuantity(minimum)} and ${formatQuantity(maximum)}.`;
                 return;
             }
+            const step = Number(form.elements.add_qty.step || 1);
+            if (!isQuantityAligned(quantity, minimum, step)) {
+                status.textContent = `Start at ${formatQuantity(minimum)} and order in steps of ${formatQuantity(step)}.`;
+                return;
+            }
             button.disabled = true;
             status.textContent = "Adding product…";
             try {
@@ -215,8 +228,6 @@ function initializeVariantPickers() {
                 .map((select) => Number(select.value))
                 .filter(Number.isFinite);
             const quantity = Math.max(1, Number(quantityInput?.value || 1));
-            const status = picker.querySelector("[data-lt-variant-status]");
-            status.textContent = "Checking availability…";
             try {
                 const info = await rpc("/website_sale/get_combination_info", {
                     product_template_id: Number(picker.dataset.templateId),
@@ -229,7 +240,6 @@ function initializeVariantPickers() {
                     return;
                 }
                 const available = Boolean(info.is_combination_possible && info.product_id);
-                status.textContent = available ? "Selected configuration is available." : "This configuration is not available.";
                 picker.dataset.productId = String(info.product_id || 0);
                 if (form) {
                     form.elements.product_id.value = info.product_id || 0;
@@ -300,7 +310,6 @@ function initializeVariantPickers() {
                 }
             } catch (_error) {
                 if (currentRequest === requestNumber) {
-                    status.textContent = "We could not validate this configuration. Please try again.";
                     form?.querySelector("button[type='submit']")?.setAttribute("disabled", "disabled");
                 }
             }
@@ -313,6 +322,151 @@ function initializeVariantPickers() {
     });
 }
 
+function initializeCategoryBrowsers() {
+    document.querySelectorAll("[data-pg-category-browser]").forEach((browser) => {
+        const grid = browser.querySelector("[data-pg-category-grid]");
+        const trail = browser.querySelector("[data-pg-category-trail]");
+        const breadcrumbs = browser.querySelector("[data-pg-category-breadcrumbs]");
+        const back = browser.querySelector("[data-pg-category-back]");
+        const brandId = Number(browser.dataset.brandId || 0);
+        const stack = [false];
+
+        const productUrl = (categoryId) => {
+            const params = new URLSearchParams({category: String(categoryId)});
+            if (brandId) params.set("brand", String(brandId));
+            return `/products?${params.toString()}`;
+        };
+        const load = async (parentId, push = true) => {
+            browser.classList.add("is-loading");
+            const previousHeight = browser.getBoundingClientRect().height;
+            browser.style.height = `${previousHeight}px`;
+            try {
+                const data = await rpc("/b2b/categories", {
+                    parent_id: parentId || false,
+                    brand_id: brandId || false,
+                });
+                if (push && stack.at(-1) !== parentId) stack.push(parentId);
+                grid.replaceChildren();
+                data.categories.forEach((category) => {
+                    const button = document.createElement("button");
+                    button.type = "button";
+                    button.dataset.categoryId = String(category.id);
+                    button.dataset.hasChildren = category.has_children ? "1" : "0";
+                    const visual = document.createElement("span");
+                    const image = document.createElement("img");
+                    image.src = category.image_url;
+                    image.alt = category.name;
+                    image.loading = "lazy";
+                    visual.append(image);
+                    const name = document.createElement("strong");
+                    name.textContent = category.name;
+                    button.append(visual, name);
+                    grid.append(button);
+                });
+                breadcrumbs.replaceChildren();
+                const all = document.createElement("button");
+                all.type = "button";
+                all.textContent = brandId ? "Brand" : "All";
+                all.addEventListener("click", () => load(false, false));
+                breadcrumbs.append(all);
+                data.breadcrumbs.forEach((category, index) => {
+                    const separator = document.createElement("span");
+                    separator.textContent = "/";
+                    breadcrumbs.append(separator);
+                    if (index === data.breadcrumbs.length - 1) {
+                        const current = document.createElement("b");
+                        current.textContent = category.name;
+                        breadcrumbs.append(current);
+                    } else {
+                        const item = document.createElement("button");
+                        item.type = "button";
+                        item.textContent = category.name;
+                        item.addEventListener("click", () => load(category.id, false));
+                        breadcrumbs.append(item);
+                    }
+                });
+                trail.hidden = !parentId;
+            } catch (_error) {
+                const message = document.createElement("p");
+                message.className = "lt-alert lt-alert--error";
+                message.textContent = "Categories could not be loaded. Please try again.";
+                grid.replaceChildren(message);
+            } finally {
+                // Measure the natural content height without letting the browser paint
+                // the intermediate auto-sized state. Using scrollHeight while the old
+                // fixed height is active prevents transitions to a shorter category list.
+                browser.style.height = "auto";
+                const nextHeight = browser.getBoundingClientRect().height;
+                browser.style.height = `${previousHeight}px`;
+                browser.getBoundingClientRect();
+                browser.classList.add("is-animating");
+                browser.classList.remove("is-loading");
+                requestAnimationFrame(() => {
+                    browser.style.height = `${nextHeight}px`;
+                });
+                window.setTimeout(() => {
+                    browser.classList.remove("is-animating");
+                    browser.style.height = "auto";
+                }, 380);
+            }
+        };
+        grid?.addEventListener("click", (event) => {
+            const button = event.target.closest("button[data-category-id]");
+            if (!button) return;
+            const id = Number(button.dataset.categoryId);
+            if (button.dataset.hasChildren === "1") load(id);
+            else window.location.assign(productUrl(id));
+        });
+        back?.addEventListener("click", () => {
+            if (stack.length > 1) stack.pop();
+            load(stack.at(-1) || false, false);
+        });
+    });
+}
+
+function initializeHorizontalCarousels() {
+    document.querySelectorAll("[data-pg-carousel]").forEach((carousel) => {
+        const track = carousel.querySelector("[data-pg-carousel-track]");
+        carousel.querySelectorAll("[data-pg-carousel-scroll]").forEach((button) => {
+            button.addEventListener("click", () => {
+                track?.scrollBy({
+                    left: (button.dataset.pgCarouselScroll === "left" ? -1 : 1)
+                        * Math.max(280, track.clientWidth * 0.75),
+                    behavior: "smooth",
+                });
+            });
+        });
+    });
+}
+
+function initializeFeaturedProducts() {
+    document.querySelectorAll("[data-pg-featured]").forEach((featured) => {
+        const tabs = [...featured.querySelectorAll("[data-pg-featured-tab]")];
+        const panels = [...featured.querySelectorAll("[data-pg-featured-panel]")];
+        tabs.forEach((tab) => tab.addEventListener("click", () => {
+            tabs.forEach((item) => {
+                const selected = item === tab;
+                item.classList.toggle("is-active", selected);
+                item.setAttribute("aria-selected", String(selected));
+            });
+            panels.forEach((panel) => {
+                const selected = panel.dataset.pgFeaturedPanel === tab.dataset.pgFeaturedTab;
+                panel.classList.toggle("is-active", selected);
+                panel.hidden = !selected;
+            });
+        }));
+        featured.querySelectorAll("[data-pg-scroll]").forEach((button) => {
+            button.addEventListener("click", () => {
+                const track = button.parentElement.querySelector("[data-pg-featured-track]");
+                track?.scrollBy({
+                    left: (button.dataset.pgScroll === "left" ? -1 : 1) * Math.max(280, track.clientWidth * 0.8),
+                    behavior: "smooth",
+                });
+            });
+        });
+    });
+}
+
 function initializePartnerHub() {
     initializeNavigation();
     initializeFilters();
@@ -321,6 +475,9 @@ function initializePartnerHub() {
     initializeDetailTabs();
     initializeQuantityControls();
     initializeVariantPickers();
+    initializeCategoryBrowsers();
+    initializeFeaturedProducts();
+    initializeHorizontalCarousels();
     initializeCartForms();
     initializeCartQuantity();
     initializeAccountMenus();
@@ -423,7 +580,7 @@ function initializePaymentStatus() {
 }
 
 function initializeAccountMenus() {
-    const menus = [...document.querySelectorAll("details.lt-account-menu")];
+    const menus = [...document.querySelectorAll("details.lt-account-menu, details.lt-locale-menu")];
     if (!menus.length) {
         return;
     }

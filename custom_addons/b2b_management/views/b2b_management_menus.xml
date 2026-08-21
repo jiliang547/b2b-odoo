@@ -16,5 +16,6 @@
     <menuitem id="menu_b2b_segments" name="Customer Segments" parent="menu_b2b_configuration" action="b2b_core.action_b2b_customer_segments" sequence="10"/>
     <menuitem id="menu_b2b_brands" name="Product Brands" parent="menu_b2b_configuration" action="b2b_core.action_b2b_product_brands" sequence="20"/>
     <menuitem id="menu_b2b_applications" name="Product Applications" parent="menu_b2b_configuration" action="b2b_core.action_b2b_product_applications" sequence="30"/>
+    <menuitem id="menu_b2b_homepage_products" name="Homepage Featured Products" parent="menu_b2b_configuration" action="b2b_website.action_b2b_homepage_products" sequence="40"/>
     <menuitem id="menu_b2b_settings" name="Settings" parent="menu_b2b_configuration" action="base_setup.action_general_configuration" sequence="90"/>
 </odoo>

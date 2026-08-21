@@ -39,10 +39,22 @@ class SaleOrder(models.Model):
         ):
             raise AccessError(_("Ordering is not enabled for your Partner Hub account."))
 
+    def _b2b_validate_sale_quantity(self, product_id, quantity):
+        self.ensure_one()
+        product = self.env["product.product"].browse(product_id).exists()
+        if product:
+            self.env["b2b.product.service"].validate_sale_quantity(
+                product,
+                quantity,
+                pricelist=self.pricelist_id,
+                website=self.website_id,
+            )
+
     def _prepare_order_line_values(self, product_id, quantity, uom_id, **kwargs):
         self.ensure_one()
         if self.website_id and not self.env.user._is_internal():
             self._b2b_check_product_allowed(product_id)
+            self._b2b_validate_sale_quantity(product_id, quantity)
         return super()._prepare_order_line_values(
             product_id, quantity, uom_id, **kwargs
         )
@@ -52,6 +64,7 @@ class SaleOrder(models.Model):
     ):
         if self.website_id and not self.env.user._is_internal() and new_qty > 0:
             self._b2b_check_product_allowed(product_id)
+            self._b2b_validate_sale_quantity(product_id, new_qty)
         return super()._verify_updated_quantity(
             order_line, product_id, new_qty, uom_id, **kwargs
         )

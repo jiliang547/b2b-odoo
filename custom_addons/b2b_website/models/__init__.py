@@ -5,3 +5,5 @@ from . import res_config_settings
 from . import sale_order
 from . import website
 from . import web_submission
+from . import homepage_product
+from . import website_track
