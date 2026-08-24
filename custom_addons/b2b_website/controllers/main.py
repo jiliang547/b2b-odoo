@@ -590,10 +590,10 @@ class PartnerHubWebsite(WebsiteController):
             {
                 "samples": samples,
                 "sample_total": Sample.search_count(domain),
-                "sample_open": Sample.search_count(Domain.AND([domain, [("state", "in", ("submitted", "under_review", "approved"))]])),
-                "sample_approved": Sample.search_count(Domain.AND([domain, [("state", "in", ("approved", "erp_pending"))]])),
+                "sample_open": Sample.search_count(Domain.AND([domain, [("state", "in", ("submitted", "under_review", "approved", "quotation"))]])),
+                "sample_approved": Sample.search_count(Domain.AND([domain, [("state", "in", ("approved", "quotation", "order_confirmed", "erp_pending"))]])),
                 "sample_completed": Sample.search_count(Domain.AND([domain, [("state", "=", "erp_synced")]])),
-                "sample_pending": Sample.search_count(Domain.AND([domain, [("state", "in", ("draft", "submitted", "under_review"))]])),
+                "sample_pending": Sample.search_count(Domain.AND([domain, [("state", "in", ("draft", "submitted", "under_review", "quotation"))]])),
                 "page_name": "sample_center",
                 "no_index": True,
             },
@@ -827,6 +827,33 @@ class PartnerHubWebsite(WebsiteController):
     def warranty_page(self, **kwargs):
         return request.render("b2b_website.warranty_page", {
             "page_name": "warranty",
+        })
+
+    @route("/faq", type="http", auth="public", website=True, sitemap=True)
+    def faq_page(self, **kwargs):
+        website = self._website()
+        categories = request.env["b2b.faq.category"].sudo().search([
+            ("active", "=", True),
+            ("website_id", "in", [False, website.id]),
+            ("item_ids.active", "=", True),
+            ("item_ids.published", "=", True),
+        ], order="sequence, name, id")
+        items = request.env["b2b.faq.item"].sudo().search([
+            ("active", "=", True),
+            ("published", "=", True),
+            ("category_id.active", "=", True),
+            ("website_id", "in", [False, website.id]),
+        ], order="category_id, sequence, id")
+        return request.render("b2b_website.faq_page", {
+            "faq_categories": categories,
+            "faq_items": items,
+            "page_name": "faq",
+        })
+
+    @route("/shipping", type="http", auth="public", website=True, sitemap=True)
+    def shipping_page(self, **kwargs):
+        return request.render("b2b_website.shipping_page", {
+            "page_name": "shipping",
         })
 
     @route(["/products", "/products/page/<int:page>"], type="http", auth="public", website=True, sitemap=True)

@@ -4,7 +4,7 @@
         <nav class="lt-subnav" aria-label="Partner Hub navigation">
             <div class="container lt-subnav__inner">
                 <a class="lt-brand" href="/" aria-label="Power and Grace home">
-                    <span class="lt-brand__mark" aria-hidden="true"><img src="/b2b_website/static/src/img/power_grace_logo.png" alt=""/></span>
+                    <span class="lt-brand__mark" aria-hidden="true"><img t-att-src="'/web/image/website/%s/logo' % request.website.id" alt=""/></span>
                     <span><strong>POWER &amp; GRACE</strong><small>PARTNER HUB</small></span>
                 </a>
                 <button class="lt-nav-toggle" type="button" aria-expanded="false" aria-controls="lt-native-navigation">
@@ -53,19 +53,20 @@
 
     <template id="partner_portal_sidebar" name="Partner Portal Sidebar">
         <aside class="lt-account-sidebar">
+            <button class="lt-account-sidebar__toggle" type="button" data-lt-sidebar-toggle="" aria-expanded="false" aria-label="Expand account navigation"><i class="fa fa-bars"/><span>Menu</span></button>
             <nav aria-label="Account navigation">
-                <a t-att-class="'is-active' if page_name == 'home' else ''" href="/my"><i class="fa fa-th-large"/>Overview</a>
-                <a t-att-class="'is-active' if page_name in ('order', 'quote') else ''" href="/my/orders"><i class="fa fa-shopping-bag"/>Orders</a>
-                <a t-att-class="'is-active' if page_name in ('sample_requests', 'sample_request_detail') else ''" href="/my/sample-requests"><i class="fa fa-flask"/>Samples</a>
-                <a t-att-class="'is-active' if page_name in ('ticket', 'service_center') else ''" href="/my/tickets"><i class="fa fa-life-ring"/>Service</a>
-                <a t-att-class="'is-active' if page_name in ('inquiries', 'inquiry_detail') else ''" href="/my/inquiries"><i class="fa fa-comments-o"/>My inquiries</a>
+                <a t-att-class="'is-active' if page_name == 'home' else ''" href="/my" title="Overview"><i class="fa fa-th-large"/><span>Overview</span></a>
+                <a t-att-class="'is-active' if page_name in ('order', 'quote') else ''" href="/my/orders" title="Orders"><i class="fa fa-shopping-bag"/><span>Orders</span></a>
+                <a t-att-class="'is-active' if page_name in ('sample_requests', 'sample_request_detail') else ''" href="/my/sample-requests" title="Samples"><i class="fa fa-flask"/><span>Samples</span></a>
+                <a t-att-class="'is-active' if page_name in ('ticket', 'service_center') else ''" href="/my/tickets" title="Service"><i class="fa fa-life-ring"/><span>Service</span></a>
+                <a t-att-class="'is-active' if page_name in ('inquiries', 'inquiry_detail') else ''" href="/my/inquiries" title="My inquiries"><i class="fa fa-comments-o"/><span>My inquiries</span></a>
                 <span class="lt-account-sidebar__divider"/>
-                <a t-att-class="'is-active' if page_name == 'company_profile' else ''" href="/my/company"><i class="fa fa-building"/>Company profile</a>
-                <a t-att-class="'is-active' if page_name == 'company_users' else ''" href="/my/company/users"><i class="fa fa-users"/>Company users</a>
-                <a t-att-class="'is-active' if page_name == 'my_details' else ''" href="/my/account"><i class="fa fa-user"/>Personal profile</a>
-                <a t-att-class="'is-active' if page_name == 'addresses' else ''" href="/my/addresses"><i class="fa fa-map-marker"/>Addresses</a>
+                <a t-att-class="'is-active' if page_name == 'company_profile' else ''" href="/my/company" title="Company profile"><i class="fa fa-building"/><span>Company profile</span></a>
+                <a t-att-class="'is-active' if page_name == 'company_users' else ''" href="/my/company/users" title="Company users"><i class="fa fa-users"/><span>Company users</span></a>
+                <a t-att-class="'is-active' if page_name == 'my_details' else ''" href="/my/account" title="Personal profile"><i class="fa fa-user"/><span>Personal profile</span></a>
+                <a t-att-class="'is-active' if page_name == 'addresses' else ''" href="/my/addresses" title="Addresses"><i class="fa fa-map-marker"/><span>Addresses</span></a>
             </nav>
-            <div class="lt-account-sidebar__footer"><div class="lt-account-sidebar__help"><strong>Need Help?</strong><p>Our partner support team is ready to assist.</p><a href="/contact">Contact Support →</a></div><a class="lt-account-sidebar__logout" href="/web/session/logout?redirect=/" aria-label="Log out of the current account"><i class="fa fa-sign-out"/>Sign Out</a></div>
+            <div class="lt-account-sidebar__footer"><div class="lt-account-sidebar__help"><strong>Need Help?</strong><p>Our partner support team is ready to assist.</p><a href="/contact">Contact Support →</a></div><a class="lt-account-sidebar__logout" href="/web/session/logout?redirect=/" aria-label="Log out of the current account" title="Sign Out"><i class="fa fa-sign-out"/><span>Sign Out</span></a></div>
         </aside>
     </template>
 
@@ -157,7 +158,7 @@
 
     <template id="partner_application" name="Partner Application">
         <t t-call="b2b_website.partner_layout"><t t-set="no_index" t-value="True"/>
-            <section class="lt-page-head lt-page-head--compact"><div class="container"><span class="lt-kicker">PARTNER NETWORK</span><h1>Apply for Partner Hub access</h1><p>Tell us about your company and the markets you serve.</p></div></section>
+            <section class="lt-page-head lt-page-head--compact"><div class="container"><span class="lt-kicker">PARTNER NETWORK</span><h1>Partner Application</h1><p>Complete the short form below. Our team will contact you after reviewing your application.</p></div></section>
             <section class="lt-section"><div class="container lt-form-shell">
                 <div t-if="error" class="lt-alert lt-alert--warning" role="alert" t-out="error"/>
                 <form action="/partner-application/submit" method="post" class="lt-form-card" data-lt-submit-once="">
@@ -225,7 +226,7 @@
         <t t-call="b2b_website.partner_layout"><section class="lt-account-page"><div class="container">
             <nav class="lt-breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><span>Sample Center</span></nav><div class="lt-account-heading"><div><h1>Sample Center</h1><p>Request product samples for evaluation before bulk purchase.</p></div><a class="lt-btn lt-btn--blue" href="/sample/request">New Sample Request</a></div>
             <div class="lt-metrics lt-metrics--account lt-metrics--four"><article><strong t-out="sample_total"/><span>Total Requests</span><small>All time</small></article><article><strong t-out="sample_approved"/><span>Approved</span><small>Ready for fulfilment</small></article><article><strong t-out="sample_completed"/><span>ERP Synced</span><small>Completed requests</small></article><article><strong t-out="sample_pending"/><span>Pending</span><small>Under review</small></article></div>
-            <div class="lt-center-layout"><div class="lt-account-card"><div class="lt-account-card__head"><div><h2>My Requests</h2><p><t t-out="sample_total"/> requests</p></div><a class="lt-btn lt-btn--blue lt-btn--small" href="/sample/request">New Request</a></div><div t-if="samples" class="lt-request-list"><a t-foreach="samples" t-as="sample" t-att-href="'/my/sample-requests/%s' % sample.id"><div><strong t-out="sample.name"/><span t-att-class="'lt-status-badge lt-status-badge--%s' % sample.state" t-out="dict(sample._fields['state'].selection).get(sample.state)"/></div><p t-out="', '.join(sample.line_ids.product_id.mapped('display_name'))"/><small><span t-field="sample.create_date" t-options="{'widget':'date'}"/> · <t t-out="sum(sample.line_ids.mapped('quantity'))"/> units</small></a></div><div t-else="" class="lt-empty lt-empty--compact"><p>No sample requests yet.</p></div></div><aside class="lt-program-card"><h3>Sample Program</h3><dl><dt>Product access</dt><dd>Only products visible to your approved partner segment.</dd><dt>Review</dt><dd>Requests are reviewed by the Lucky Tone product team.</dd><dt>Fulfilment</dt><dd>Approved requests are synchronized through the ERP queue.</dd><dt>Tracking</dt><dd>Current status stays available in your secure account.</dd></dl><a class="lt-btn lt-btn--blue lt-btn--wide" href="/sample/request">New Sample Request</a></aside></div>
+            <div class="lt-center-layout"><div class="lt-account-card"><div class="lt-account-card__head"><div><h2>My Requests</h2><p><t t-out="sample_total"/> requests</p></div><a class="lt-btn lt-btn--blue lt-btn--small" href="/sample/request">New Request</a></div><div t-if="samples" class="lt-request-list"><a t-foreach="samples" t-as="sample" t-att-href="'/my/sample-requests/%s' % sample.id"><div><strong t-out="sample.name"/><span t-att-class="'lt-status-badge lt-status-badge--%s' % sample.state" t-out="dict(sample._fields['state'].selection).get(sample.state)"/></div><p t-out="', '.join(sample.line_ids.product_id.mapped('display_name'))"/><small><span t-field="sample.create_date" t-options="{'widget':'date'}"/> · <t t-out="sum(sample.line_ids.mapped('quantity'))"/> units</small></a></div><div t-else="" class="lt-empty lt-empty--compact"><p>No sample requests yet.</p></div></div><aside class="lt-program-card"><h3>Sample Program</h3><dl><dt>Product access</dt><dd>Only products visible to your partner account.</dd><dt>Review</dt><dd>Requests are reviewed by the product team.</dd><dt>Payment</dt><dd>Approved requests become native Odoo quotations and must be paid before fulfilment.</dd><dt>Tracking</dt><dd>Quotation, payment, order and ERP status stay available in your account.</dd></dl><a class="lt-btn lt-btn--blue lt-btn--wide" href="/sample/request">New Sample Request</a></aside></div>
         </div></section></t>
     </template>
 
@@ -239,7 +240,7 @@
     </template>
 
     <template id="company_profile" name="Company Profile">
-        <t t-call="portal.portal_layout"><nav class="lt-portal-breadcrumb"><a href="/my">Overview</a><span>/</span>Company Profile</nav><header class="lt-portal-heading"><h1>Company Profile</h1><p>Your company's registered information and partner approval status.</p></header>
+        <t t-call="portal.portal_layout"><nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span>Company Profile</nav><header class="lt-portal-heading"><h1>Company Profile</h1><p>Your company's registered information and partner approval status.</p></header>
             <div t-if="request.params.get('change_submitted')" class="lt-alert lt-alert--success">Change request <strong t-out="request.params.get('change_submitted')"/> was submitted for review.</div>
             <section t-att-class="'lt-company-status ' + ('is-approved' if company.b2b_approved else 'is-pending')"><span><i t-att-class="'fa ' + ('fa-check-circle' if company.b2b_approved else 'fa-clock-o')"/></span><div><strong t-out="'Partner Hub Approved' if company.b2b_approved else 'Partner Approval Pending'"/><p t-out="'Your company has access to approved partner pricing and services.' if company.b2b_approved else 'Lucky Tone staff are reviewing your company account.'"/></div></section>
             <div class="lt-company-layout"><section class="lt-portal-card lt-company-card"><header><h2>Company Information</h2><span class="lt-readonly-badge"><i class="fa fa-lock"/> Read only</span></header><div class="lt-company-grid"><div><label>Company name</label><strong t-out="company.name"/></div><div><label>Tax ID</label><strong t-out="company.vat or '—'"/></div><div><label>Business Email</label><strong t-out="company.email or '—'"/></div><div><label>Telephone</label><strong t-out="company.phone or '—'"/></div><div class="lt-company-grid__wide"><label>Registered Address</label><strong t-out="company.contact_address or '—'"/></div></div></section><aside class="lt-portal-card lt-company-help"><header><h2>Need to update this?</h2></header><p>Company information is maintained by Lucky Tone to protect account access and pricing permissions.</p><a class="lt-btn lt-btn--outline lt-btn--wide" href="/my/company/change">Request a Company Change</a><a href="/my/account">Edit my personal profile →</a></aside></div>
@@ -248,7 +249,7 @@
     </template>
 
     <template id="company_users" name="Company Users">
-        <t t-call="portal.portal_layout"><nav class="lt-portal-breadcrumb"><a href="/my">Overview</a><span>/</span>Company Users</nav><header class="lt-portal-heading lt-portal-heading--action"><div><h1>Company Users</h1><p>Contacts currently associated with <t t-out="company.name"/>.</p></div><a class="lt-btn lt-btn--outline" href="/my/company/change?type=user_change">Request a User Change</a></header>
+        <t t-call="portal.portal_layout"><nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span>Company Users</nav><header class="lt-portal-heading lt-portal-heading--action"><div><h1>Company Users</h1><p>Contacts currently associated with <t t-out="company.name"/>.</p></div><a class="lt-btn lt-btn--outline" href="/my/company/change?type=user_change">Request a User Change</a></header>
             <div class="lt-portal-card lt-table-card"><header><h2>Company Contacts</h2><span><t t-out="len(contacts)"/> contacts</span></header><div t-if="contacts" class="table-responsive"><table class="lt-data-table"><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Portal Access</th></tr></thead><tbody><tr t-foreach="contacts" t-as="contact"><td><strong t-out="contact.name"/></td><td t-out="contact.email or '—'"/><td t-out="contact.phone or '—'"/><td><span t-att-class="'lt-status-badge ' + ('lt-status-badge--approved' if contact.user_ids else 'lt-status-badge--neutral')" t-out="'Active' if contact.user_ids else 'Contact only'"/></td></tr></tbody></table></div><div t-else="" class="lt-empty lt-empty--compact"><p>No additional company contacts are visible.</p></div></div><p class="lt-portal-note"><i class="fa fa-info-circle"/> User access changes are reviewed by Lucky Tone. Submit a request rather than sharing login credentials.</p>
         </t>
     </template>

@@ -42,6 +42,8 @@ class B2BSampleRequest(models.Model):
             ("submitted", "Submitted"),
             ("under_review", "Under Review"),
             ("approved", "Approved"),
+            ("quotation", "Awaiting Payment"),
+            ("order_confirmed", "Order Confirmed"),
             ("rejected", "Rejected"),
             ("erp_pending", "ERP Pending"),
             ("erp_synced", "ERP Synced"),
@@ -62,6 +64,9 @@ class B2BSampleRequest(models.Model):
         readonly=True, copy=False, groups="b2b_core.group_b2b_operator"
     )
     rejection_reason = fields.Text(copy=False)
+    sale_order_id = fields.Many2one(
+        "sale.order", readonly=True, copy=False, index=True, tracking=True
+    )
     erp_reference = fields.Char(readonly=True, copy=False, index=True)
     erp_last_error = fields.Text(
         readonly=True, copy=False, groups="b2b_core.group_b2b_operator"
@@ -191,24 +196,62 @@ class B2BSampleRequest(models.Model):
         if not self.env.user.has_group("b2b_core.group_b2b_manager"):
             raise AccessError(_("Only a B2B Manager can approve sample requests."))
         for request in self:
+            if request.sale_order_id:
+                raise UserError(_("A quotation already exists for this sample request."))
             request._transition(
                 {"submitted", "under_review"},
                 "approved",
                 {"reviewer_id": self.env.user.id, "review_date": fields.Datetime.now()},
             )
-            job = self.env["b2b.integration.job"].enqueue(
-                "sample_request",
-                request,
-                "sample_request:%s" % request.request_uuid,
-                request_summary={
-                    "request": request.name,
-                    "customer": request.commercial_partner_id.display_name,
-                    "line_count": len(request.line_ids),
-                },
+            order = request._create_sample_quotation()
+            request.with_context(b2b_state_transition=_STATE_TRANSITION_TOKEN).write({
+                "sale_order_id": order.id,
+                "state": "quotation",
+            })
+            request.message_post(
+                body=_("Sample quotation %s was created and is awaiting customer payment.", order.name)
             )
-            request._transition({"approved"}, "erp_pending")
-            request.message_post(body=_("ERP integration job %s was created.", job.display_name))
         return True
+
+    def _create_sample_quotation(self):
+        self.ensure_one()
+        if self.sale_order_id:
+            return self.sale_order_id
+        company = self.commercial_partner_id
+        contact = self.contact_id or company
+        addresses = company.address_get(["invoice", "delivery"])
+        shipping = self.shipping_partner_id
+        if shipping and shipping.commercial_partner_id != company:
+            raise ValidationError(_("The selected shipping address is not available to this company."))
+        # Approval is already restricted to B2B Managers. Elevate only the
+        # server-owned quotation creation so managers do not also need broad
+        # Sales application permissions.
+        order = self.env["sale.order"].sudo().create({
+            "partner_id": contact.id,
+            "partner_invoice_id": addresses.get("invoice") or company.id,
+            "partner_shipping_id": shipping.id or addresses.get("delivery") or company.id,
+            "pricelist_id": company.property_product_pricelist.id,
+            "origin": self.name,
+            "client_order_ref": _("Paid sample request %s", self.name),
+            "require_signature": False,
+            "require_payment": True,
+            "prepayment_percent": 1.0,
+            "b2b_sample_request_id": self.id,
+            "order_line": [
+                (0, 0, {
+                    "product_id": line.product_id.id,
+                    "product_uom_qty": line.quantity,
+                    "product_uom_id": line.uom_id.id,
+                })
+                for line in self.line_ids
+            ],
+        })
+        if order.amount_total <= 0:
+            raise UserError(
+                _("The sample quotation total must be greater than zero. Configure a product or pricelist price before approval.")
+            )
+        order.action_quotation_sent()
+        return order
 
     def action_reject(self):
         if not self.env.user.has_group("b2b_core.group_b2b_manager"):
@@ -220,7 +263,12 @@ class B2BSampleRequest(models.Model):
         )
 
     def action_cancel(self):
-        return self._transition({"draft", "submitted", "under_review"}, "cancelled")
+        for request in self:
+            if request.sale_order_id.state in ("draft", "sent"):
+                request.sale_order_id.sudo().action_cancel()
+        return self._transition(
+            {"draft", "submitted", "under_review", "quotation"}, "cancelled"
+        )
 
     def action_retry_erp(self):
         if not self.env.user.has_group("b2b_erp_connector.group_b2b_integration_manager"):
@@ -254,14 +302,27 @@ class B2BSampleRequest(models.Model):
 
     def _compute_erp_jobs(self):
         Job = self.env["b2b.integration.job"]
-        jobs = Job.search([
+        order_by_request = {
+            request.sale_order_id.id: request.id
+            for request in self
+            if request.sale_order_id
+        }
+        legacy_jobs = Job.search([
             ("reference_model", "=", self._name),
             ("reference_id", "in", self.ids),
         ])
+        order_jobs = Job.search([
+            ("reference_model", "=", "sale.order"),
+            ("reference_id", "in", list(order_by_request)),
+        ]) if order_by_request else Job
         jobs_by_request = {}
-        for job in jobs:
+        for job in legacy_jobs:
             jobs_by_request.setdefault(job.reference_id, Job)
             jobs_by_request[job.reference_id] |= job
+        for job in order_jobs:
+            request_id = order_by_request.get(job.reference_id)
+            jobs_by_request.setdefault(request_id, Job)
+            jobs_by_request[request_id] |= job
         for request in self:
             request_jobs = jobs_by_request.get(request.id, Job)
             request.erp_job_ids = request_jobs
@@ -272,11 +333,72 @@ class B2BSampleRequest(models.Model):
         action = self.env["ir.actions.actions"]._for_xml_id(
             "b2b_erp_connector.action_b2b_integration_jobs"
         )
-        action["domain"] = [
-            ("reference_model", "=", self._name),
-            ("reference_id", "=", self.id),
+        action["domain"] = ["|",
+            "&", ("reference_model", "=", self._name), ("reference_id", "=", self.id),
+            "&", ("reference_model", "=", "sale.order"), ("reference_id", "=", self.sale_order_id.id),
         ]
         return action
+
+    def action_view_sale_order(self):
+        self.ensure_one()
+        if not self.sale_order_id:
+            raise UserError(_("No quotation has been created yet."))
+        return {
+            "type": "ir.actions.act_window",
+            "res_model": "sale.order",
+            "res_id": self.sale_order_id.id,
+            "view_mode": "form",
+        }
+
+
+class SaleOrder(models.Model):
+    _inherit = "sale.order"
+
+    b2b_sample_request_id = fields.Many2one(
+        "b2b.sample.request", readonly=True, copy=False, index=True
+    )
+
+    _b2b_sample_request_unique = models.Constraint(
+        "UNIQUE (b2b_sample_request_id)",
+        "A sample request can only create one quotation.",
+    )
+
+    def action_confirm(self):
+        result = super().action_confirm()
+        for order in self.filtered("b2b_sample_request_id"):
+            sample = order.b2b_sample_request_id
+            if sample.state != "quotation":
+                continue
+            if self.env["b2b.erp.service"].is_enabled():
+                order._b2b_enqueue_erp_sync()
+                sample._transition({"quotation"}, "erp_pending")
+            else:
+                sample._transition({"quotation"}, "order_confirmed")
+            sample.message_post(body=_("Sample order %s was confirmed after payment.", order.name))
+        return result
+
+    def _b2b_on_erp_job_success(self, job, result):
+        response = super()._b2b_on_erp_job_success(job, result)
+        for order in self.filtered("b2b_sample_request_id"):
+            sample = order.b2b_sample_request_id
+            if sample.state in ("erp_pending", "erp_failed"):
+                sample._transition(
+                    {"erp_pending", "erp_failed"},
+                    "erp_synced",
+                    {"erp_reference": order.b2b_erp_reference, "erp_last_error": False},
+                )
+        return response
+
+    def _b2b_on_erp_job_failure(self, job, error):
+        parent_callback = getattr(super(), "_b2b_on_erp_job_failure", None)
+        response = parent_callback(job, error) if parent_callback else None
+        for order in self.filtered("b2b_sample_request_id"):
+            sample = order.b2b_sample_request_id
+            if sample.state == "erp_pending":
+                sample._transition(
+                    {"erp_pending"}, "erp_failed", {"erp_last_error": str(error)[:2000]}
+                )
+        return response
 
 
 class B2BSampleRequestLine(models.Model):

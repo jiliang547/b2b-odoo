@@ -26,7 +26,7 @@
                         <div class="lt-field lt-field--wide"><label for="shipping-address">Shipping address</label><textarea id="shipping-address" name="shipping_address" maxlength="2000" required="required" t-out="post.get('shipping_address', shipping_address)"/></div>
                         <div class="lt-field lt-field--wide"><label for="sample-notes">Additional notes <span>(optional)</span></label><textarea id="sample-notes" name="notes" maxlength="4000" t-out="post.get('notes', '')"/></div>
                     </div></div>
-                    <div class="lt-form-submit"><p>Submitting creates a review request for the Lucky Tone team.</p><button class="lt-btn lt-btn--primary" type="submit" data-lt-submitting-label="Submitting…">Submit sample request</button><span class="lt-submit-status" data-lt-submit-status="" aria-live="polite"/></div>
+                    <div class="lt-form-submit"><p>Submitting creates a review request. If approved, you will receive an Odoo quotation to review and pay before fulfilment.</p><button class="lt-btn lt-btn--primary" type="submit" data-lt-submitting-label="Submitting…">Submit sample request</button><span class="lt-submit-status" data-lt-submit-status="" aria-live="polite"/></div>
                 </form>
             </div></section>
         </t>

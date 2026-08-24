@@ -481,8 +481,59 @@ function initializePartnerHub() {
     initializeCartForms();
     initializeCartQuantity();
     initializeAccountMenus();
+    initializePortalSidebar();
+    initializeFaq();
     initializeSubmissionForms();
     initializePaymentStatus();
+}
+
+function initializeFaq() {
+    const root = document.querySelector("[data-pg-faq]");
+    const search = document.querySelector("[data-pg-faq-search]");
+    if (!root || !search) {
+        return;
+    }
+    const buttons = [...root.querySelectorAll("[data-pg-faq-category]")];
+    const items = [...root.querySelectorAll("[data-pg-faq-item]")];
+    const empty = root.querySelector("[data-pg-faq-empty]");
+    let category = "all";
+    const apply = () => {
+        const query = search.value.trim().toLocaleLowerCase();
+        let visible = 0;
+        items.forEach((item) => {
+            const categoryMatch = category === "all" || item.dataset.pgFaqItem === category;
+            const textMatch = !query || (item.dataset.pgFaqText || "").includes(query);
+            item.hidden = !(categoryMatch && textMatch);
+            visible += item.hidden ? 0 : 1;
+        });
+        if (empty) {
+            empty.hidden = visible !== 0;
+        }
+    };
+    buttons.forEach((button) => button.addEventListener("click", () => {
+        category = button.dataset.pgFaqCategory || "all";
+        buttons.forEach((item) => item.classList.toggle("is-active", item === button));
+        apply();
+    }));
+    search.addEventListener("input", apply);
+}
+
+function initializePortalSidebar() {
+    const shell = document.querySelector(".lt-portal-shell");
+    const toggle = shell?.querySelector("[data-lt-sidebar-toggle]");
+    if (!shell || !toggle) {
+        return;
+    }
+    const sync = () => {
+        const expanded = !shell.classList.contains("is-sidebar-collapsed");
+        toggle.setAttribute("aria-expanded", String(expanded));
+        toggle.setAttribute("aria-label", expanded ? "Collapse account navigation" : "Expand account navigation");
+    };
+    toggle.addEventListener("click", () => {
+        shell.classList.toggle("is-sidebar-collapsed");
+        sync();
+    });
+    sync();
 }
 
 function resetSubmissionForm(form) {
