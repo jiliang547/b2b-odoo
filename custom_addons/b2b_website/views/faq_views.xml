@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_b2b_faq_category_list" model="ir.ui.view">
+        <field name="name">b2b.faq.category.list</field><field name="model">b2b.faq.category</field>
+        <field name="arch" type="xml"><list editable="bottom"><field name="sequence" widget="handle"/><field name="name"/><field name="website_id" groups="website.group_multi_website"/><field name="active"/></list></field>
+    </record>
+    <record id="view_b2b_faq_category_form" model="ir.ui.view">
+        <field name="name">b2b.faq.category.form</field><field name="model">b2b.faq.category</field>
+        <field name="arch" type="xml"><form><sheet><group><field name="name"/><field name="website_id" groups="website.group_multi_website"/><field name="sequence"/><field name="active"/></group><field name="item_ids"><list editable="bottom"><field name="sequence" widget="handle"/><field name="question"/><field name="published"/><field name="active"/></list></field></sheet></form></field>
+    </record>
+    <record id="view_b2b_faq_item_list" model="ir.ui.view">
+        <field name="name">b2b.faq.item.list</field><field name="model">b2b.faq.item</field>
+        <field name="arch" type="xml"><list><field name="sequence" widget="handle"/><field name="question"/><field name="category_id"/><field name="website_id" groups="website.group_multi_website"/><field name="published"/><field name="active"/></list></field>
+    </record>
+    <record id="view_b2b_faq_item_form" model="ir.ui.view">
+        <field name="name">b2b.faq.item.form</field><field name="model">b2b.faq.item</field>
+        <field name="arch" type="xml"><form><sheet><group><field name="question"/><field name="category_id"/><field name="sequence"/><field name="published"/><field name="active"/></group><field name="answer" widget="html"/><group string="Optional action"><field name="action_label"/><field name="action_url" placeholder="/contact"/></group></sheet></form></field>
+    </record>
+    <record id="action_b2b_faq_items" model="ir.actions.act_window"><field name="name">Frequently Asked Questions</field><field name="res_model">b2b.faq.item</field><field name="view_mode">list,form</field></record>
+    <record id="action_b2b_faq_categories" model="ir.actions.act_window"><field name="name">FAQ Categories</field><field name="res_model">b2b.faq.category</field><field name="view_mode">list,form</field></record>
+</odoo>

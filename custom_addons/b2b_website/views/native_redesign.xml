@@ -4,7 +4,7 @@
         <xpath expr="//t[@t-set='is_portal']" position="before"><t t-set="no_header" t-value="True"/><t t-set="no_footer" t-value="True"/><t t-set="no_breadcrumbs" t-value="True"/></xpath>
         <xpath expr="//div[@id='wrap']" position="before"><t t-call="b2b_website.partner_topbar"/></xpath>
         <xpath expr="//div[@id='wrap']" position="attributes"><attribute name="class" add="lt-portal-wrap" separator=" "/></xpath>
-        <xpath expr="//div[@id='wrap']/div[hasclass('container')]" position="attributes"><attribute name="class" add="lt-portal-shell" separator=" "/></xpath>
+        <xpath expr="//div[@id='wrap']/div[hasclass('container')]" position="attributes"><attribute name="class" add="lt-portal-shell is-sidebar-collapsed" separator=" "/></xpath>
         <xpath expr="//div[@id='wrap']/div[hasclass('container')]" position="inside"><t t-call="b2b_website.partner_portal_sidebar"/></xpath>
         <xpath expr="//div[@id='wrap']/div[hasclass('container')]/t[@t-else='']" position="replace"><t t-else=""><main class="lt-portal-main"><t t-out="0"/></main></t></xpath>
     </template>
@@ -13,10 +13,10 @@
         <xpath expr="//div[hasclass('o_portal_my_home')]" position="replace">
             <t t-set="company" t-value="request.env.user.partner_id.commercial_partner_id"/>
             <div class="o_portal_my_home lt-portal-dashboard">
-                <nav class="lt-portal-breadcrumb" aria-label="Breadcrumb">Overview</nav>
+                <nav class="lt-portal-breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><span>Overview</span></nav>
                 <header class="lt-portal-heading">
                     <h1>Welcome back, <t t-out="request.env.user.name"/></h1>
-                    <p><t t-out="company.name"/> · Orders, samples, service and company access at a glance.</p>
+                    <p class="lt-portal-heading__placeholder" aria-hidden="true">Account overview</p>
                 </header>
                 <section class="lt-dashboard-metrics" aria-label="Account metrics">
                     <a href="/my/orders"><span class="lt-metric-icon lt-metric-icon--blue"><i class="fa fa-clipboard"/></span><strong t-out="order_count or 0"/><b>Orders</b><small>Orders and payment attempts</small></a>
@@ -42,38 +42,43 @@
     </template>
 
     <template id="portal_orders_figma" inherit_id="sale.portal_my_orders" name="Partner Orders Layout">
-        <xpath expr="//t[@t-call='portal.portal_searchbar']" position="replace"><section class="lt-portal-list"><nav class="lt-portal-breadcrumb"><a href="/my">Overview</a><span>/</span>Orders</nav><header class="lt-portal-heading"><h1>Orders</h1><p>Track confirmed orders, payment attempts and actions still requiring payment.</p></header><div class="lt-portal-tabs"><a class="is-active" href="/my/orders">Orders &amp; Payments</a><a href="/my/quotes">Quotations</a></div><t t-call="portal.portal_searchbar"><t t-set="title" t-value="''"/></t></section></xpath>
+        <xpath expr="//t[@t-call='portal.portal_searchbar']" position="replace"><section class="lt-portal-list"><nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span>Orders</nav><header class="lt-portal-heading"><h1>Orders</h1><p>Track confirmed orders, payment attempts and actions still requiring payment.</p></header><div class="lt-portal-tabs"><a class="is-active" href="/my/orders">Orders &amp; Payments</a><a href="/my/quotes">Quotations</a></div><t t-call="portal.portal_searchbar"><t t-set="title" t-value="''"/></t></section></xpath>
         <xpath expr="//t[@t-if='orders'][@t-call='portal.portal_table']" position="replace">
             <div t-if="orders" class="lt-portal-card lt-table-card"><div class="table-responsive"><table class="lt-data-table"><thead><tr><th>Order No.</th><th>Date</th><th>Amount</th><th>Status</th><th/></tr></thead><tbody><tr t-foreach="orders" t-as="order"><t t-set="current_tx" t-value="order.get_portal_last_transaction()"/><td><a t-att-href="order.get_portal_url()"><strong t-out="order.name"/></a></td><td><span t-field="order.date_order" t-options="{'widget':'date'}"/></td><td><strong t-field="order.amount_total"/></td><td><span t-if="order.state == 'sale'" class="lt-status-badge lt-status-badge--sale">Confirmed</span><span t-elif="order.state == 'cancel'" class="lt-status-badge lt-status-badge--payment_cancelled">Order Cancelled</span><span t-elif="current_tx and current_tx.state in ('pending', 'authorized')" class="lt-status-badge lt-status-badge--payment_pending">Payment Pending</span><span t-elif="current_tx and current_tx.state == 'error'" class="lt-status-badge lt-status-badge--payment_failed">Payment Failed</span><span t-elif="current_tx and current_tx.state == 'cancel'" class="lt-status-badge lt-status-badge--payment_cancelled">Payment Cancelled</span><span t-else="" class="lt-status-badge lt-status-badge--awaiting_payment">Awaiting Payment</span></td><td class="text-end"><a class="lt-table-link" t-att-href="order.get_portal_url()"><t t-if="order.state in ('draft', 'sent') and current_tx and current_tx.state in ('error', 'cancel', 'draft')">Complete payment →</t><t t-elif="order.state in ('draft', 'sent') and current_tx and current_tx.state in ('pending', 'authorized')">View status →</t><t t-else="">View →</t></a></td></tr></tbody></table></div></div>
         </xpath>
     </template>
 
     <template id="portal_quotes_figma" inherit_id="sale.portal_my_quotations" name="Partner Quotations Layout">
-        <xpath expr="//t[@t-call='portal.portal_searchbar']" position="replace"><section class="lt-portal-list"><nav class="lt-portal-breadcrumb"><a href="/my">Overview</a><span>/</span>Orders</nav><header class="lt-portal-heading"><h1>Orders</h1><p>View your sales orders and quotations.</p></header><div class="lt-portal-tabs"><a href="/my/orders">Sales Orders</a><a class="is-active" href="/my/quotes">Quotations</a></div><t t-call="portal.portal_searchbar"><t t-set="title" t-value="''"/></t></section></xpath>
+        <xpath expr="//t[@t-call='portal.portal_searchbar']" position="replace"><section class="lt-portal-list"><nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span>Orders</nav><header class="lt-portal-heading"><h1>Orders</h1><p>View your sales orders and quotations.</p></header><div class="lt-portal-tabs"><a href="/my/orders">Sales Orders</a><a class="is-active" href="/my/quotes">Quotations</a></div><t t-call="portal.portal_searchbar"><t t-set="title" t-value="''"/></t></section></xpath>
     </template>
 
     <template id="portal_personal_profile_figma" inherit_id="portal.portal_my_details" name="Partner Personal Profile" priority="90">
         <xpath expr="//div[hasclass('o_customer_address_fill')]" position="attributes"><attribute name="class" add="lt-profile-page" separator=" "/></xpath>
-        <xpath expr="//div[hasclass('o_customer_address_fill')]" position="before"><nav class="lt-portal-breadcrumb"><a href="/my">Overview</a><span>/</span>Personal Profile</nav><header class="lt-portal-heading"><h1>Personal Profile</h1><p>Update your personal contact details and primary address.</p></header></xpath>
+        <xpath expr="//div[hasclass('o_customer_address_fill')]" position="before"><nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span>Personal Profile</nav><header class="lt-portal-heading"><h1>Personal Profile</h1><p>Update your personal contact details and primary address.</p></header></xpath>
     </template>
 
     <template id="portal_addresses_figma" inherit_id="portal.my_addresses" name="Partner Addresses" priority="90">
         <xpath expr="//section[hasclass('o_portal_addresses')]" position="attributes"><attribute name="class" add="lt-addresses-page" separator=" "/></xpath>
-        <xpath expr="//section[hasclass('o_portal_addresses')]" position="before"><nav class="lt-portal-breadcrumb"><a href="/my">Overview</a><span>/</span>Addresses</nav><header class="lt-portal-heading"><h1>Addresses</h1><p>Billing and delivery addresses used for orders and shipments.</p></header></xpath>
+        <xpath expr="//section[hasclass('o_portal_addresses')]" position="before"><nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span>Addresses</nav><header class="lt-portal-heading"><h1>Addresses</h1><p>Billing and delivery addresses used for orders and shipments.</p></header></xpath>
+    </template>
+
+    <template id="portal_address_management_figma" inherit_id="portal.address_management" name="Partner Address Management" priority="90">
+        <xpath expr="//div[hasclass('o_customer_address_fill')]" position="attributes"><attribute name="class" add="lt-profile-page" separator=" "/></xpath>
+        <xpath expr="//div[hasclass('o_customer_address_fill')]" position="before"><nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span><a href="/my/addresses">Addresses</a><span>/</span><t t-out="'Billing address' if address_type == 'billing' else 'Delivery address'"/></nav><header class="lt-portal-heading"><h1 t-out="'Billing address' if address_type == 'billing' else 'Delivery address'"/><p>Update the address used for orders and shipments.</p></header></xpath>
     </template>
 
     <template id="sale_order_figma" inherit_id="sale.sale_order_portal_template" name="Partner Order Detail Layout" priority="90">
         <xpath expr="//div[hasclass('o_portal_sale_sidebar')]" position="attributes"><attribute name="class" add="lt-order-detail" separator=" "/></xpath>
-        <xpath expr="//div[hasclass('o_portal_sale_sidebar')]" position="before"><div class="lt-list-intro lt-list-intro--detail"><span class="lt-kicker">ORDER DETAIL</span><h1><t t-out="sale_order.name"/></h1><p>Native Odoo order data, payment actions and fulfilment tracking.</p></div></xpath>
+        <xpath expr="//div[hasclass('o_portal_sale_sidebar')]" position="before"><nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span><a href="/my/orders">Orders</a><span>/</span><t t-out="sale_order.name"/></nav><header class="lt-portal-heading"><h1><t t-out="sale_order.name"/></h1><p>Native Odoo order data, payment actions and fulfilment tracking.</p></header></xpath>
     </template>
 
     <template id="helpdesk_list_figma" inherit_id="helpdesk.portal_helpdesk_ticket" name="Partner Service Ticket List">
-        <xpath expr="//t[@t-call='portal.portal_searchbar']" position="replace"><section class="lt-portal-list"><nav class="lt-portal-breadcrumb"><a href="/my">Overview</a><span>/</span>Service Tickets</nav><header class="lt-portal-heading lt-portal-heading--action"><div><h1>Service Tickets</h1><p>Track your after-sales support and technical helpdesk requests.</p></div><a class="lt-btn lt-btn--blue" href="/service">+ New Request</a></header><t t-call="portal.portal_searchbar"><t t-set="title" t-value="''"/></t></section></xpath>
+        <xpath expr="//t[@t-call='portal.portal_searchbar']" position="replace"><section class="lt-portal-list"><nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span>Service Tickets</nav><header class="lt-portal-heading lt-portal-heading--action"><div><h1>Service Tickets</h1><p>Track your after-sales support and technical helpdesk requests.</p></div><a class="lt-btn lt-btn--blue" href="/service">+ New Request</a></header><t t-call="portal.portal_searchbar"><t t-set="title" t-value="''"/></t></section></xpath>
     </template>
 
     <template id="helpdesk_detail_figma" inherit_id="helpdesk.tickets_followup" name="Partner Service Ticket Detail">
         <xpath expr="//div[hasclass('o_project_portal_sidebar')]" position="attributes"><attribute name="class" add="lt-ticket-detail" separator=" "/></xpath>
-        <xpath expr="//div[hasclass('o_project_portal_sidebar')]" position="before"><div class="lt-list-intro lt-list-intro--detail"><span class="lt-kicker">SERVICE REQUEST</span><h1><t t-out="ticket.name"/></h1><p>Ticket #<t t-out="ticket.ticket_ref"/> · <t t-out="ticket.stage_id.name"/></p></div></xpath>
+        <xpath expr="//div[hasclass('o_project_portal_sidebar')]" position="before"><nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span><a href="/my/tickets">Service Tickets</a><span>/</span><t t-out="ticket.ticket_ref"/></nav><header class="lt-portal-heading"><h1><t t-out="ticket.name"/></h1><p>Ticket #<t t-out="ticket.ticket_ref"/> · <t t-out="ticket.stage_id.name"/></p></header></xpath>
     </template>
 
     <template id="checkout_layout_figma_shell" inherit_id="website_sale.checkout_layout" name="Partner Checkout Shell" priority="90">
@@ -104,7 +109,7 @@
         <xpath expr="//div[@id='wrap']" position="before"><t t-set="no_header" t-value="True"/><t t-set="no_footer" t-value="True"/><t t-call="b2b_website.partner_topbar"/></xpath>
         <xpath expr="//div[@id='wrap']" position="replace">
             <div id="wrap" class="oe_structure oe_empty lt-contact-page">
-                <section class="lt-page-hero lt-page-hero--compact"><div class="container"><nav class="lt-breadcrumb lt-breadcrumb--dark" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><span>Contact</span></nav><h1>Contact Us</h1><p>Get in touch with our sales and technical teams.</p></div></section>
+                <section class="lt-page-hero lt-page-hero--compact"><div class="container"><nav class="lt-breadcrumb lt-breadcrumb--dark" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><span>Contact</span></nav><h1>Get in touch with our sales, technical support and partner service teams.</h1><p>Tell us what you need, and the right member of our team will get back to you.</p></div></section>
                 <section class="lt-section lt-section--soft"><div class="container lt-contact-layout">
                     <div class="lt-contact-card"><h2>Send a Message</h2><form action="/website/form/" method="post" class="s_website_form o_mark_required lt-contact-form" data-mark="*" data-model_name="mail.mail" data-success-mode="redirect" data-success-page="/contactus-thank-you">
                         <input type="hidden" name="email_to" t-att-value="request.env.company.email"/>
@@ -120,7 +125,7 @@
 
     <template id="login_layout_figma" inherit_id="web.login" name="Partner Hub Login">
         <xpath expr="//form" position="attributes"><attribute name="class" add="lt-login-card" separator=" "/></xpath>
-        <xpath expr="//form" position="before"><div class="lt-login-heading"><span class="lt-kicker">PARTNER HUB</span><h1>Sign in to your account</h1><p>Access pricing, orders, samples and support.</p></div></xpath>
+        <xpath expr="//form" position="before"><div class="lt-login-heading"><span class="lt-kicker">POWER &amp; GRACE PARTNER HUB</span><h1>Sign in to your account</h1><p>Access pricing, orders, samples and support.</p></div></xpath>
     </template>
 
     <template id="website_login_shell_figma" inherit_id="website.login_layout" name="Partner Hub Authentication Shell" priority="90">
@@ -129,11 +134,11 @@
 
     <template id="signup_figma" inherit_id="auth_signup.signup" name="Partner Hub Registration">
         <xpath expr="//form" position="attributes"><attribute name="class" add="lt-login-card" separator=" "/></xpath>
-        <xpath expr="//form" position="before"><div class="lt-login-heading"><span class="lt-kicker">PARTNER HUB</span><h1>Create your partner account</h1><p>Register your contact details to begin the partner approval process.</p></div></xpath>
+        <xpath expr="//form" position="before"><div class="lt-login-heading"><span class="lt-kicker">POWER &amp; GRACE PARTNER HUB</span><h1>Create your partner account</h1><p>Register your contact details to begin the partner approval process.</p></div></xpath>
     </template>
 
     <template id="reset_password_figma" inherit_id="auth_signup.reset_password" name="Partner Hub Password Reset">
         <xpath expr="//form" position="attributes"><attribute name="class" add="lt-login-card" separator=" "/></xpath>
-        <xpath expr="//form" position="before"><div class="lt-login-heading"><span class="lt-kicker">PARTNER HUB</span><h1>Reset your password</h1><p>We will send recovery instructions to your registered email.</p></div></xpath>
+        <xpath expr="//form" position="before"><div class="lt-login-heading"><span class="lt-kicker">POWER &amp; GRACE PARTNER HUB</span><h1>Reset your password</h1><p>We will send recovery instructions to your registered email.</p></div></xpath>
     </template>
 </odoo>

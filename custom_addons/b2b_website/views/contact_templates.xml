@@ -2,7 +2,7 @@
 <odoo>
     <template id="partner_contact" name="Partner Contact">
         <t t-call="b2b_website.partner_layout">
-            <section class="lt-page-hero lt-page-hero--compact"><div class="container"><nav class="lt-breadcrumb lt-breadcrumb--dark" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><span>Contact</span></nav><h1>Contact Us</h1><p>Send a tracked inquiry to our sales and technical teams.</p></div></section>
+            <section class="lt-page-hero lt-page-hero--compact"><div class="container"><nav class="lt-breadcrumb lt-breadcrumb--dark" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><span>Contact</span></nav><h1>Get in touch with our sales, technical support and partner service teams.</h1><p>Tell us what you need, and the right member of our team will get back to you.</p></div></section>
             <section class="lt-section lt-section--soft"><div class="container lt-contact-layout">
                 <div class="lt-contact-card"><h2>Send a Message</h2>
                     <div t-if="error" class="lt-alert lt-alert--warning" role="alert" t-out="error"/>
@@ -30,7 +30,7 @@
     </template>
 
     <template id="company_change_form" name="Company Change Request">
-        <t t-call="portal.portal_layout"><nav class="lt-portal-breadcrumb"><a href="/my">Overview</a><span>/</span><a href="/my/company">Company Profile</a><span>/</span>Change Request</nav><header class="lt-portal-heading"><h1 t-out="'Request a Company User Change' if request_kind == 'user_change' else 'Request a Company Change'"/><p>Your current company record remains unchanged until Lucky Tone approves this request.</p></header>
+        <t t-call="portal.portal_layout"><nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span><a href="/my/company">Company Profile</a><span>/</span>Change Request</nav><header class="lt-portal-heading"><h1 t-out="'Request a Company User Change' if request_kind == 'user_change' else 'Request a Company Change'"/><p>Your current company record remains unchanged until Lucky Tone approves this request.</p></header>
             <div t-if="error" class="lt-alert lt-alert--warning" role="alert" t-out="error"/>
             <form action="/my/company/change" method="post" class="lt-form-card lt-company-change-form" data-lt-submit-once=""><input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/><input type="hidden" name="submission_token" t-att-value="submission_token"/><input type="hidden" name="request_type" t-att-value="request_kind"/>
                 <div class="lt-form-section"><div><span>01</span><h2>Requested details</h2><p>Enter the information that should replace or supplement the current record.</p></div><div class="lt-form-grid">
