@@ -19,7 +19,7 @@ export class B2BManagementDashboard extends Component {
             failedJobs: 0,
             canUseSales: false,
             canUseService: false,
-            canUseErp: false,
+            canViewErp: false,
             canUseRepairs: false,
         });
         onWillStart(async () => {
@@ -30,10 +30,10 @@ export class B2BManagementDashboard extends Component {
                     return 0;
                 }
             };
-            const [canUseSales, canUseService, canUseErp, canUseRepairs] = await Promise.all([
+            const [canUseSales, canUseService, canViewErp, canUseRepairs] = await Promise.all([
                 user.hasGroup("sales_team.group_sale_salesman"),
                 user.hasGroup("helpdesk.group_helpdesk_user"),
-                user.hasGroup("b2b_erp_connector.group_b2b_integration_manager"),
+                user.hasGroup("b2b_core.group_b2b_operator"),
                 user.hasGroup("stock.group_stock_user"),
             ]);
             const [pendingApprovals, samples, openService, failedJobs] = await Promise.all([
@@ -50,7 +50,7 @@ export class B2BManagementDashboard extends Component {
                 failedJobs,
                 canUseSales,
                 canUseService,
-                canUseErp,
+                canViewErp,
                 canUseRepairs,
             });
         });
