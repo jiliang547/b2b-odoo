@@ -10,6 +10,12 @@
         <field name="search_view_id" ref="b2b_website.view_b2b_contact_request_search"/>
         <field name="domain">[('state', '=', 'new')]</field>
     </record>
+    <record id="action_b2b_pending_registrations" model="ir.actions.act_window">
+        <field name="name">Pending Registrations</field>
+        <field name="res_model">res.partner</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('user_ids.share', '=', True), ('user_ids.active', '=', True), ('commercial_partner_id.b2b_approved', '=', False)]</field>
+    </record>
     <record id="action_b2b_partner_applications" model="ir.actions.act_window">
         <field name="name">Partner Applications</field>
         <field name="res_model">b2b.contact.request</field>
