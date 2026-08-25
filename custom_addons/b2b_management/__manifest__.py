@@ -1,7 +1,7 @@
 {
     "name": "Lucky Tone B2B Management",
     "summary": "Installable management application for the Lucky Tone Partner Hub",
-    "version": "19.0.1.3.1",
+    "version": "19.0.1.3.2",
     "category": "Sales/B2B",
     "license": "LGPL-3",
     "author": "Lucky Tone",

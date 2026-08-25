@@ -4,11 +4,12 @@
 .o_b2b_dashboard > header h1 { font-size: 28px; letter-spacing: -.025em; margin: 14px 0 10px; }
 .o_b2b_dashboard > header p, .o_b2b_section_title p { color: #64748b; font-size: 13px; margin: 0; }
 .o_b2b_dashboard .btn-primary { background: #2563eb; border-color: #2563eb; border-radius: 8px; color: #fff; font-weight: 700; }
-.o_b2b_metrics { display: grid; gap: 10px; grid-template-columns: repeat(4, minmax(180px, 250px)); margin: 0 0 28px; }
+.o_b2b_metrics { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin: 0 0 28px; max-width: 1270px; }
 .o_b2b_metrics button { background: white; border: 1px solid #e5e7eb; border-radius: 10px; display: flex; flex-direction: column; min-height: 112px; padding: 14px; text-align: left; }
 .o_b2b_metrics span { align-self: flex-start; background: #f1f5f9; border-radius: 999px; color: #111827; font-size: 10px; font-weight: 800; padding: 4px 8px; }
 .o_b2b_metrics span.is-amber { background: #fffbeb; color: #f59e0b; }
 .o_b2b_metrics span.is-blue { background: #eff6ff; color: #2563eb; }
+.o_b2b_metrics span.is-violet { background: #f5f3ff; color: #7c3aed; }
 .o_b2b_metrics span.is-red { background: #fef2f2; color: #dc2626; }
 .o_b2b_metrics strong { color: #111827; font-size: 28px; line-height: 1; margin-top: 10px; }
 .o_b2b_metrics small { color: #64748b; font-size: 10px; margin-top: 6px; }

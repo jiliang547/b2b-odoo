@@ -13,7 +13,8 @@ export class B2BManagementDashboard extends Component {
         this.orm = useService("orm");
         this.state = useState({
             loading: true,
-            pendingApprovals: 0,
+            newContactRequests: 0,
+            pendingApplications: 0,
             samples: 0,
             openService: 0,
             failedJobs: 0,
@@ -36,15 +37,17 @@ export class B2BManagementDashboard extends Component {
                 user.hasGroup("b2b_core.group_b2b_operator"),
                 user.hasGroup("stock.group_stock_user"),
             ]);
-            const [pendingApprovals, samples, openService, failedJobs] = await Promise.all([
-                safeCount("res.partner", [["b2b_approved", "=", false], ["is_company", "=", true], ["customer_rank", ">", 0]]),
+            const [newContactRequests, pendingApplications, samples, openService, failedJobs] = await Promise.all([
+                safeCount("b2b.contact.request", [["state", "=", "new"]]),
+                safeCount("b2b.contact.request", [["request_type", "=", "partnership"], ["state", "in", ["new", "in_progress"]]]),
                 safeCount("b2b.sample.request", [["state", "in", ["submitted", "under_review"]]]),
                 safeCount("helpdesk.ticket", [["stage_id.fold", "=", false]]),
                 safeCount("b2b.integration.job", [["state", "in", ["failed", "dead"]]]),
             ]);
             Object.assign(this.state, {
                 loading: false,
-                pendingApprovals,
+                newContactRequests,
+                pendingApplications,
                 samples,
                 openService,
                 failedJobs,

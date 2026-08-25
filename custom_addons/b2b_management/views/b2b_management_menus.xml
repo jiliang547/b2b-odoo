@@ -3,6 +3,27 @@
     <record id="action_b2b_dashboard" model="ir.actions.client">
         <field name="name">Partner Hub</field><field name="tag">b2b_management.dashboard</field>
     </record>
+    <record id="action_b2b_new_contact_requests" model="ir.actions.act_window">
+        <field name="name">New Contact Requests</field>
+        <field name="res_model">b2b.contact.request</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="b2b_website.view_b2b_contact_request_search"/>
+        <field name="domain">[('state', '=', 'new')]</field>
+    </record>
+    <record id="action_b2b_partner_applications" model="ir.actions.act_window">
+        <field name="name">Partner Applications</field>
+        <field name="res_model">b2b.contact.request</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="b2b_website.view_b2b_contact_request_search"/>
+        <field name="domain">[('request_type', '=', 'partnership'), ('state', 'in', ['new', 'in_progress'])]</field>
+    </record>
+    <record id="action_b2b_failed_integration_jobs" model="ir.actions.act_window">
+        <field name="name">ERP Failures</field>
+        <field name="res_model">b2b.integration.job</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="b2b_erp_connector.view_b2b_integration_job_search"/>
+        <field name="domain">[('state', 'in', ['failed', 'dead'])]</field>
+    </record>
     <menuitem id="menu_b2b_management_root" name="B2B Management" sequence="38" web_icon="b2b_management,static/description/icon.png" groups="b2b_core.group_b2b_operator"/>
     <menuitem id="menu_b2b_dashboard" name="Dashboard" parent="menu_b2b_management_root" action="action_b2b_dashboard" sequence="5"/>
     <menuitem id="menu_b2b_operations" name="Operations" parent="menu_b2b_management_root" sequence="10"/>
