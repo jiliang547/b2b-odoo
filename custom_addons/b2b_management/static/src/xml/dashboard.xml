@@ -6,16 +6,16 @@
             <section class="o_b2b_metrics" aria-label="Operational metrics">
                 <button type="button" t-on-click="() => this.openAction('base.action_partner_form')"><span class="is-amber">Pending approvals</span><strong t-out="state.loading ? '—' : state.pendingApprovals"/><small>Customer companies</small></button>
                 <button type="button" t-on-click="() => this.openAction('b2b_sample.action_b2b_sample_requests')"><span class="is-blue">Sample review</span><strong t-out="state.loading ? '—' : state.samples"/><small>Awaiting action</small></button>
-                <button type="button" t-on-click="() => this.openAction('helpdesk.helpdesk_ticket_action_main_tree')"><span class="is-slate">Open service</span><strong t-out="state.loading ? '—' : state.openService"/><small>Active tickets</small></button>
-                <button type="button" t-on-click="() => this.openAction('b2b_erp_connector.action_b2b_integration_jobs')"><span class="is-red">ERP failures</span><strong t-out="state.loading ? '—' : state.failedJobs"/><small>Need attention</small></button>
+                <button t-if="state.canUseService" type="button" t-on-click="() => this.openAction('helpdesk.helpdesk_ticket_action_main_tree')"><span class="is-slate">Open service</span><strong t-out="state.loading ? '—' : state.openService"/><small>Active tickets</small></button>
+                <button t-if="state.canUseErp" type="button" t-on-click="() => this.openAction('b2b_erp_connector.action_b2b_integration_jobs')"><span class="is-red">ERP failures</span><strong t-out="state.loading ? '—' : state.failedJobs"/><small>Need attention</small></button>
             </section>
             <section class="o_b2b_shortcuts"><div class="o_b2b_section_title"><div><span>WORKSPACES</span><h2>Operations</h2></div><p>Native Odoo workspaces preserve existing access rules and workflows.</p></div><div class="o_b2b_shortcut_grid">
                 <button type="button" t-on-click="() => this.openAction('base.action_partner_form')"><i class="fa fa-building"/><span><strong>Customers</strong><small>Approval, segments and pricelists</small></span></button>
                 <button type="button" t-on-click="() => this.openAction('product.product_template_action')"><i class="fa fa-cubes"/><span><strong>Products</strong><small>Media, documents and visibility</small></span></button>
-                <button type="button" t-on-click="() => this.openAction('sale.action_orders')"><i class="fa fa-shopping-cart"/><span><strong>Sales Orders</strong><small>Native quotations and orders</small></span></button>
+                <button t-if="state.canUseSales" type="button" t-on-click="() => this.openAction('sale.action_orders')"><i class="fa fa-shopping-cart"/><span><strong>Sales Orders</strong><small>Native quotations and orders</small></span></button>
                 <button type="button" t-on-click="() => this.openAction('b2b_sample.action_b2b_sample_requests')"><i class="fa fa-flask"/><span><strong>Samples</strong><small>Review, approve and synchronize</small></span></button>
-                <button type="button" t-on-click="() => this.openAction('b2b_erp_connector.action_b2b_integration_jobs')"><i class="fa fa-exchange"/><span><strong>ERP Integration</strong><small>Queue status and controlled retries</small></span></button>
-                <button type="button" t-on-click="() => this.openAction('repair.action_repair_order_tree')"><i class="fa fa-wrench"/><span><strong>Repairs</strong><small>Native repair operations</small></span></button>
+                <button t-if="state.canUseErp" type="button" t-on-click="() => this.openAction('b2b_erp_connector.action_b2b_integration_jobs')"><i class="fa fa-exchange"/><span><strong>ERP Integration</strong><small>Queue status and controlled retries</small></span></button>
+                <button t-if="state.canUseRepairs" type="button" t-on-click="() => this.openAction('repair.action_repair_order_tree')"><i class="fa fa-wrench"/><span><strong>Repairs</strong><small>Native repair operations</small></span></button>
             </div></section>
         </div>
     </t>

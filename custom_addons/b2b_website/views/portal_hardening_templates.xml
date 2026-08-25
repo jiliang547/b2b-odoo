@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Odoo's native address form remains in use; only commercial master
+         fields are removed from the portal self-service surface. -->
+    <template id="portal_address_commercial_fields_readonly" inherit_id="portal.address_form_fields" name="Partner Hub Portal Commercial Field Protection">
+        <xpath expr="//div[@id='company_name_div']" position="replace"/>
+        <xpath expr="//div[@id='div_vat']" position="replace"/>
+    </template>
+
+    <!-- The native website layout recomputes no_index before rendering the
+         caller body. Apply the private-route policy at the same native layer. -->
+    <template id="website_layout_partner_seo" inherit_id="website.layout" name="Partner Hub SEO Safety Net">
+        <xpath expr="//meta[@name='robots']" position="after">
+            <t t-set="b2b_private_route" t-value="request.httprequest.path.startswith(('/my', '/service', '/sample', '/shop/checkout', '/shop/payment'))"/>
+            <meta t-if="not no_index and b2b_private_route" name="robots" content="noindex"/>
+        </xpath>
+        <xpath expr="//meta[@name='description']" position="after">
+            <meta t-if="not meta_description and not b2b_private_route" name="description" content="POWER &amp; GRACE Partner Hub for professional audio products, partner pricing, samples, ordering and after-sales support."/>
+        </xpath>
+    </template>
+
+    <template id="portal_layout_mobile_account_label" inherit_id="portal.portal_layout" name="Partner Hub Accessible Portal Navigation">
+        <xpath expr="//button[@data-bs-target='#accountOffCanvas']" position="attributes">
+            <attribute name="type">button</attribute>
+            <attribute name="aria-label">Open account navigation</attribute>
+            <attribute name="aria-controls">accountOffCanvas</attribute>
+            <attribute name="aria-expanded">false</attribute>
+        </xpath>
+    </template>
+
+    <template id="portal_home_document_image_alt" inherit_id="portal.portal_docs_entry" name="Partner Hub Portal Image Alternatives">
+        <xpath expr="//div[hasclass('o_portal_icon')]/img" position="attributes">
+            <attribute name="t-att-alt">title</attribute>
+        </xpath>
+    </template>
+</odoo>

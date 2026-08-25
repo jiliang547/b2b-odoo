@@ -1,7 +1,7 @@
 {
     "name": "Lucky Tone B2B Core",
     "summary": "Shared Partner Hub security, visibility, taxonomy, and pricing services",
-    "version": "19.0.1.1.2",
+    "version": "19.0.1.3.0",
     "category": "Sales/B2B",
     "license": "LGPL-3",
     "author": "Lucky Tone",
@@ -14,6 +14,7 @@
         "views/res_partner_views.xml",
         "views/product_template_views.xml",
         "views/product_document_views.xml",
+        "views/product_media_views.xml",
         "views/res_config_settings_views.xml",
     ],
     "installable": True,

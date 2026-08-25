@@ -1,7 +1,7 @@
 {
     "name": "Lucky Tone B2B ERP Connector",
     "summary": "Reliable Partner Hub ERP adapters and asynchronous jobs",
-    "version": "19.0.1.0.0",
+    "version": "19.0.1.1.0",
     "category": "Sales/B2B",
     "license": "LGPL-3",
     "author": "Lucky Tone",

@@ -308,6 +308,30 @@ function initializeVariantPickers() {
                         ? `/web/login?redirect=${encodeURIComponent(info.b2b_sample_url)}`
                         : info.b2b_sample_url;
                 }
+                const resourceList = document.querySelector("[data-lt-resource-list]");
+                const resourceEmpty = document.querySelector("[data-lt-resource-empty]");
+                if (resourceList && Array.isArray(info.b2b_resources)) {
+                    resourceList.replaceChildren(...info.b2b_resources.map((resource) => {
+                        const article = document.createElement("article");
+                        article.className = "lt-resource-card";
+                        const icon = document.createElement("div");
+                        icon.className = "lt-resource-card__icon";
+                        icon.textContent = resource.format || "FILE";
+                        const copy = document.createElement("div");
+                        const heading = document.createElement("h3");
+                        heading.textContent = resource.name;
+                        const meta = document.createElement("p");
+                        meta.textContent = [resource.version && `v${resource.version}`, resource.language, resource.format, resource.size_mb && `${resource.size_mb} MB`].filter(Boolean).join(" · ");
+                        copy.append(heading, meta);
+                        const link = document.createElement("a");
+                        link.className = "lt-btn lt-btn--outline lt-btn--small";
+                        link.href = resource.url;
+                        link.textContent = "Download";
+                        article.append(icon, copy, link);
+                        return article;
+                    }));
+                    resourceEmpty?.toggleAttribute("hidden", info.b2b_resources.length > 0);
+                }
             } catch (_error) {
                 if (currentRequest === requestNumber) {
                     form?.querySelector("button[type='submit']")?.setAttribute("disabled", "disabled");
@@ -320,6 +344,31 @@ function initializeVariantPickers() {
         });
         quantityInput?.addEventListener("change", refreshCombination);
     });
+}
+
+function initializeServiceProductFilter() {
+    const order = document.getElementById("service-order");
+    const product = document.querySelector("[data-lt-service-product]");
+    if (!order || !product) return;
+    const options = [...product.querySelectorAll("option[data-order-id]")];
+    const refresh = () => {
+        const orderId = order.value;
+        let first = null;
+        options.forEach((option) => {
+            const visible = Boolean(orderId && option.dataset.orderId === orderId);
+            option.hidden = !visible;
+            option.disabled = !visible;
+            if (visible && !first) first = option;
+        });
+        if (!options.some((option) => !option.hidden && option.value === product.value)) {
+            product.value = "";
+        }
+        product.options[0].textContent = orderId
+            ? (first ? "Select an ordered product" : "No eligible products on this order")
+            : "Select an order first";
+    };
+    order.addEventListener("change", refresh);
+    refresh();
 }
 
 function initializeCategoryBrowsers() {
@@ -475,6 +524,7 @@ function initializePartnerHub() {
     initializeDetailTabs();
     initializeQuantityControls();
     initializeVariantPickers();
+    initializeServiceProductFilter();
     initializeCategoryBrowsers();
     initializeFeaturedProducts();
     initializeHorizontalCarousels();

@@ -4,5 +4,6 @@ from . import res_partner
 from . import res_users
 from . import product_template
 from . import product_document
+from . import price_security
 from . import website
 from . import res_config_settings

@@ -2,6 +2,7 @@
 
 import {Component, onWillStart, useState} from "@odoo/owl";
 import {registry} from "@web/core/registry";
+import {user} from "@web/core/user";
 import {useService} from "@web/core/utils/hooks";
 
 export class B2BManagementDashboard extends Component {
@@ -16,6 +17,10 @@ export class B2BManagementDashboard extends Component {
             samples: 0,
             openService: 0,
             failedJobs: 0,
+            canUseSales: false,
+            canUseService: false,
+            canUseErp: false,
+            canUseRepairs: false,
         });
         onWillStart(async () => {
             const safeCount = async (model, domain) => {
@@ -25,6 +30,12 @@ export class B2BManagementDashboard extends Component {
                     return 0;
                 }
             };
+            const [canUseSales, canUseService, canUseErp, canUseRepairs] = await Promise.all([
+                user.hasGroup("sales_team.group_sale_salesman"),
+                user.hasGroup("helpdesk.group_helpdesk_user"),
+                user.hasGroup("b2b_erp_connector.group_b2b_integration_manager"),
+                user.hasGroup("stock.group_stock_user"),
+            ]);
             const [pendingApprovals, samples, openService, failedJobs] = await Promise.all([
                 safeCount("res.partner", [["b2b_approved", "=", false], ["is_company", "=", true], ["customer_rank", ">", 0]]),
                 safeCount("b2b.sample.request", [["state", "in", ["submitted", "under_review"]]]),
@@ -37,6 +48,10 @@ export class B2BManagementDashboard extends Component {
                 samples,
                 openService,
                 failedJobs,
+                canUseSales,
+                canUseService,
+                canUseErp,
+                canUseRepairs,
             });
         });
     }

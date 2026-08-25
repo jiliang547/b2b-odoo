@@ -1,6 +1,9 @@
 from odoo.addons.mail.tests.common import mail_new_test_user
 from odoo.exceptions import AccessError
 from odoo.tests import TransactionCase, tagged
+from unittest.mock import patch
+
+from odoo.addons.b2b_erp_connector.services.erp_service import B2BERPError
 
 
 @tagged("post_install", "-at_install")
@@ -52,3 +55,21 @@ class TestIntegrationJob(TransactionCase):
             job.with_user(self.manager).with_context(b2b_job_write=True).write({
                 "state": "success"
             })
+
+    def test_partial_success_without_reference_is_retried(self):
+        job = self.env["b2b.integration.job"].enqueue(
+            "sales_order", self.order, "test-partial-response"
+        )
+        with patch.object(type(self.env["b2b.erp.service"]), "dispatch_job", return_value={"success": True}):
+            self.assertFalse(job._process_locked())
+        self.assertEqual(job.state, "failed")
+
+    def test_non_retryable_adapter_error_goes_directly_to_dead_letter(self):
+        job = self.env["b2b.integration.job"].enqueue(
+            "sales_order", self.order, "test-non-retryable"
+        )
+        error = B2BERPError("http_401", "ERP rejected the credentials.", retryable=False)
+        with patch.object(type(self.env["b2b.erp.service"]), "dispatch_job", side_effect=error):
+            self.assertFalse(job._process_locked())
+        self.assertEqual(job.state, "dead")
+        self.assertFalse(job.next_retry_at)

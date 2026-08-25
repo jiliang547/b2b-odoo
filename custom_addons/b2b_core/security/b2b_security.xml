@@ -18,6 +18,16 @@
         <field name="implied_ids" eval="[Command.link(ref('b2b_core.group_b2b_manager'))]"/>
     </record>
 
+    <!-- Keep Sales Managers on Odoo's native role while making the sensitive
+         B2B price permission explicit and auditable. Product/Marketing roles
+         deliberately do not inherit this group. -->
+    <record id="sales_team.group_sale_manager" model="res.groups">
+        <field name="implied_ids" eval="[Command.link(ref('b2b_core.group_b2b_special_price_manager'))]"/>
+    </record>
+    <record id="base.group_system" model="res.groups">
+        <field name="implied_ids" eval="[Command.link(ref('b2b_core.group_b2b_special_price_manager'))]"/>
+    </record>
+
     <record id="group_b2b_product_manager" model="res.groups">
         <field name="name">B2B Product Manager</field>
         <field name="implied_ids" eval="[Command.link(ref('b2b_core.group_b2b_operator'))]"/>

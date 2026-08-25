@@ -12,6 +12,7 @@
     <menuitem id="menu_b2b_business_data" name="Business Data" parent="menu_b2b_management_root" sequence="20"/>
     <menuitem id="menu_b2b_customers" name="Customers" parent="menu_b2b_business_data" action="base.action_partner_form" sequence="10"/>
     <menuitem id="menu_b2b_products" name="Products" parent="menu_b2b_business_data" action="product.product_template_action" sequence="20"/>
+    <menuitem id="menu_b2b_product_media" name="Product Media" parent="menu_b2b_business_data" action="b2b_core.action_b2b_product_media" sequence="30" groups="b2b_core.group_b2b_marketing_media,b2b_core.group_b2b_product_manager"/>
     <menuitem id="menu_b2b_configuration" name="Configuration" parent="menu_b2b_management_root" sequence="90" groups="b2b_core.group_b2b_manager"/>
     <menuitem id="menu_b2b_segments" name="Customer Segments" parent="menu_b2b_configuration" action="b2b_core.action_b2b_customer_segments" sequence="10"/>
     <menuitem id="menu_b2b_brands" name="Product Brands" parent="menu_b2b_configuration" action="b2b_core.action_b2b_product_brands" sequence="20"/>

@@ -6,6 +6,27 @@ from odoo.addons.portal.controllers.portal import CustomerPortal, pager as porta
 
 
 class PartnerHubPortal(CustomerPortal):
+    def _parse_form_data(self, form_data):
+        """Portal contacts may edit themselves, never commercial master data."""
+        personal_data = dict(form_data)
+        personal_data.pop("company_name", None)
+        personal_data.pop("vat", None)
+        return super()._parse_form_data(personal_data)
+
+    def _create_or_update_address(self, partner_sudo, **form_data):
+        if (
+            partner_sudo
+            and partner_sudo.is_company
+            and partner_sudo == request.env.user.partner_id.commercial_partner_id
+        ):
+            return partner_sudo, {
+                "messages": [_("Company master data can only be changed by authorized staff.")],
+                "invalid_fields": ["name"],
+            }
+        form_data.pop("company_name", None)
+        form_data.pop("vat", None)
+        return super()._create_or_update_address(partner_sudo, **form_data)
+
     def _website_payment_order_ids(self, partner):
         """Return attempted website orders within the current portal company.
 
@@ -77,7 +98,7 @@ class PartnerHubPortal(CustomerPortal):
 
         # The Figma dashboard is backed exclusively by records visible to the
         # current portal user; no demo counters or sudoed records are exposed.
-        values.update({
+        dashboard_values = {
             "sample_count": Sample.search_count(self._sample_domain()),
             "inquiry_count": Inquiry.search_count(self._inquiry_domain()),
             "order_count": Order.search_count(sale_domain) if can_read_orders else 0,
@@ -93,7 +114,14 @@ class PartnerHubPortal(CustomerPortal):
                 self._inquiry_domain(), order="create_date desc", limit=2
             ),
             "recent_tickets": recent_tickets,
-        })
+        }
+        # Native /my/counters expects the response to contain only requested
+        # placeholders. Returning dashboard-only keys makes Odoo's own counter
+        # interaction address DOM nodes that do not exist.
+        if counters:
+            values.update({key: value for key, value in dashboard_values.items() if key in counters})
+        else:
+            values.update(dashboard_values)
         return values
 
     @route(

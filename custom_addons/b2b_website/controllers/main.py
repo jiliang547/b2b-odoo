@@ -949,7 +949,9 @@ class PartnerHubWebsite(WebsiteController):
             "product": product,
             "variant": variant,
             "media": media,
-            "resources": service.allowed_documents(product, website=self._website()),
+            "resources": service.allowed_documents(
+                product, website=self._website(), variant=variant
+            ),
             "price": price,
             "procurement": procurement,
             "related": related,
@@ -1061,19 +1063,28 @@ class PartnerHubWebsite(WebsiteController):
         # lines with elevation so a product that was later unpublished or removed
         # from the customer's segment cannot make the entire service form fail.
         # Only products actually bought on those owned orders are returned.
-        order_lines = orders.sudo().order_line.filtered(
-            lambda line: not line.display_type and line.product_id
-        )
+        order_lines = orders.sudo().order_line.filtered(self._service_line_is_eligible)
         products = order_lines.product_id
         return {
             "orders": orders,
             "products": products,
+            "service_order_lines": order_lines,
             "contact_name": contact.name or "",
             "company_name": company.name or "",
             "email": contact.email or company.email or "",
             "phone": contact.phone or company.phone or "",
             "submission_token": self._submission_token(request.params),
         }
+
+    @staticmethod
+    def _service_line_is_eligible(line):
+        """Keep real purchased products; exclude native delivery/section lines."""
+        return bool(
+            not line.display_type
+            and line.product_id
+            and not line.is_delivery
+            and line.product_uom_qty > 0
+        )
 
     def _validated_uploads(self):
         uploads = request.httprequest.files.getlist("attachments")
@@ -1106,7 +1117,7 @@ class PartnerHubWebsite(WebsiteController):
                 if order not in values["orders"]:
                     raise AccessError(_("Select a product from one of your completed or confirmed orders."))
                 historical_products = order.sudo().order_line.filtered(
-                    lambda line: not line.display_type and line.product_id
+                    self._service_line_is_eligible
                 ).product_id
                 if product.id not in historical_products.ids:
                     raise AccessError(_("Select a product from one of your completed or confirmed orders."))

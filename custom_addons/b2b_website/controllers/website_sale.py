@@ -136,6 +136,9 @@ class PartnerHubVariantController(WebsiteSaleVariantController):
             website=request.website,
             combination_info=info,
         ) if variant else {}
+        resources = service.allowed_documents(
+            product, website=request.website, variant=variant
+        ) if variant else request.env["product.document"]
         info.update({
             "b2b_can_view_price": service.can_view_price(website=request.website),
             "b2b_price_state": service.price_state(website=request.website),
@@ -151,6 +154,15 @@ class PartnerHubVariantController(WebsiteSaleVariantController):
             "b2b_stock_quantity": procurement.get("stock_quantity"),
             "b2b_show_stock_quantity": procurement.get("show_stock_quantity"),
             "b2b_lead_time_days": procurement.get("lead_time_days"),
+            "b2b_resources": [{
+                "id": document.id,
+                "name": document.name,
+                "version": document.b2b_version or "",
+                "language": document.b2b_language or "",
+                "format": (document.mimetype or "File").split("/")[-1].upper(),
+                "size_mb": round(document.file_size / 1048576.0, 1) if document.file_size else False,
+                "url": "/products/resource/%s" % document.id,
+            } for document in resources],
         })
         if not info["b2b_can_view_price"]:
             for key in (

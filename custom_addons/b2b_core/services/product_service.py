@@ -265,6 +265,15 @@ class B2BProductService(models.AbstractModel):
         product = self.product_from_document(document)
         if not document.active or not self.is_visible(product, partner=partner, website=website):
             return False
+        if (
+            not self.env.user._is_internal()
+            and not document.shown_on_product_page
+            and not (
+                document.res_model == "product.product"
+                and document.b2b_publish_in_partner_hub
+            )
+        ):
+            return False
         if self.env.user._is_internal():
             return True
         partner = self.commercial_partner(partner)
@@ -280,7 +289,7 @@ class B2BProductService(models.AbstractModel):
         return bool(document.b2b_visible_segment_ids & partner.b2b_segment_ids)
 
     @api.model
-    def allowed_documents(self, product, partner=None, website=None):
+    def allowed_documents(self, product, partner=None, website=None, variant=None):
         if not self.is_visible(product, partner=partner, website=website):
             return self.env["product.document"]
         # Portal users do not have generic attachment read access. Elevation is
@@ -294,6 +303,17 @@ class B2BProductService(models.AbstractModel):
             document_domain,
             order="sequence, name, id",
         )
+        template = product if product._name == "product.template" else product.product_tmpl_id
+        variants = variant or (
+            product if product._name == "product.product" else template.product_variant_ids
+        )
+        variant_documents = self.env["product.document"].sudo().search([
+            ("active", "=", True),
+            ("res_model", "=", "product.product"),
+            ("res_id", "in", variants.ids),
+            ("b2b_publish_in_partner_hub", "=", True),
+        ], order="sequence, name, id")
+        documents |= variant_documents
         return documents.filtered(
             lambda document: self.document_is_allowed(
                 document, partner=partner, website=website

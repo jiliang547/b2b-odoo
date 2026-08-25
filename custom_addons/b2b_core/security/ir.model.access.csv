@@ -11,3 +11,5 @@ access_b2b_product_application_manager,b2b.product.application manager,model_b2b
 access_b2b_product_application_b2b_manager,b2b.product.application b2b manager,model_b2b_product_application,b2b_core.group_b2b_manager,1,1,1,1
 access_b2b_product_application_public,b2b.product.application public,model_b2b_product_application,base.group_public,1,0,0,0
 access_b2b_product_application_portal,b2b.product.application portal,model_b2b_product_application,base.group_portal,1,0,0,0
+access_product_image_marketing_media,product.image marketing media,website_sale.model_product_image,b2b_core.group_b2b_marketing_media,1,1,1,1
+access_product_document_marketing_media,product.document marketing media,product.model_product_document,b2b_core.group_b2b_marketing_media,1,1,1,1

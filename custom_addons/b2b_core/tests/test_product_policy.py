@@ -135,3 +135,19 @@ class TestB2BProductPolicy(TransactionCase):
             self.env["b2b.product.brand"].with_user(operator).create({
                 "name": "Forbidden Brand",
             })
+
+    def test_partner_hub_publishes_variant_document_without_overriding_odoo_constraint(self):
+        variant = self.allowed.product_variant_id
+        document = self.env["product.document"].create({
+            "name": "Variant Wiring Guide",
+            "res_model": "product.product",
+            "res_id": variant.id,
+            "type": "url",
+            "url": "https://example.test/variant-guide.pdf",
+            "shown_on_product_page": False,
+            "b2b_publish_in_partner_hub": True,
+        })
+        documents = self.env["b2b.product.service"].allowed_documents(
+            self.allowed, website=self.website, variant=variant
+        )
+        self.assertIn(document, documents)

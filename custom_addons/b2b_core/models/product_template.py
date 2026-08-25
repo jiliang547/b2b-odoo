@@ -1,4 +1,4 @@
-from odoo import fields, models
+from odoo import api, fields, models
 from odoo.http import request
 
 
@@ -39,6 +39,17 @@ class ProductTemplate(models.Model):
     )
     b2b_model_number = fields.Char(string="Model Number", index="trigram")
     b2b_specifications = fields.Html(string="Technical Specifications", sanitize=True)
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        if any({"list_price", "compare_list_price"}.intersection(vals) for vals in vals_list):
+            self.env["b2b.price.write.mixin"]._b2b_check_price_write()
+        return super().create(vals_list)
+
+    def write(self, vals):
+        if {"list_price", "compare_list_price"}.intersection(vals):
+            self.env["b2b.price.write.mixin"]._b2b_check_price_write()
+        return super().write(vals)
 
     def _get_sales_prices(self, website):
         """Use each card's effective MOQ when explicitly requested by B2B catalog code.

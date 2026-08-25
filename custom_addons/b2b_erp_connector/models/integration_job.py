@@ -6,6 +6,7 @@ from psycopg2 import IntegrityError
 
 from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, UserError, ValidationError
+from odoo.addons.b2b_erp_connector.services.erp_service import B2BERPError
 
 _logger = logging.getLogger(__name__)
 
@@ -150,9 +151,9 @@ class B2BIntegrationJob(models.Model):
         self.ensure_one()
         return timedelta(minutes=min(5 * (2 ** max(self.attempt_count - 1, 0)), 24 * 60))
 
-    def _mark_failure(self, error):
+    def _mark_failure(self, error, retryable=True):
         self.ensure_one()
-        dead = self.attempt_count >= self._max_attempts()
+        dead = not retryable or self.attempt_count >= self._max_attempts()
         self._system_write({
             "state": "dead" if dead else "failed",
             "last_error": self._sanitize_error(error),
@@ -184,8 +185,9 @@ class B2BIntegrationJob(models.Model):
         })
         try:
             result = self.env["b2b.erp.service"].dispatch_job(self, reference)
-            if not isinstance(result, dict) or not result.get("success"):
-                raise UserError(_("ERP adapter returned an invalid or unsuccessful response."))
+            # Defence in depth: custom adapters and test doubles cannot bypass
+            # the common contract by overriding dispatch_job.
+            result = self.env["b2b.erp.service"].validate_push_response(result)
             safe_result = self.env["b2b.erp.service"].safe_response_summary(result)
             self._system_write({
                 "state": "success",
@@ -199,7 +201,10 @@ class B2BIntegrationJob(models.Model):
             return True
         except Exception as error:  # worker boundary: persist a safe retry state
             _logger.warning("B2B ERP job %s failed: %s", self.id, self._sanitize_error(error))
-            self._mark_failure(error)
+            self._mark_failure(
+                error,
+                retryable=not isinstance(error, B2BERPError) or error.retryable,
+            )
             return False
 
     @api.model
