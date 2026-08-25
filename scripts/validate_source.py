@@ -49,7 +49,14 @@ def main() -> None:
         for path in module.rglob("*.xml"):
             xml_count += 1
             root = ElementTree.parse(path).getroot()
-            for element in root.iter():
+            # External XML IDs are declared by records/templates at Odoo's data
+            # layer.  QWeb descendants also use ordinary HTML ``id`` values;
+            # those are local to a rendered page and may legitimately repeat in
+            # different templates (for example, form field IDs).
+            data_elements = list(root)
+            for data in root.findall("data"):
+                data_elements.extend(list(data))
+            for element in data_elements:
                 xml_id = element.attrib.get("id")
                 if xml_id and xml_id in ids:
                     fail(f"{module.name}: duplicate XML id {xml_id}")
