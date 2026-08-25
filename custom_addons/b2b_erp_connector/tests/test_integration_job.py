@@ -1,6 +1,7 @@
 from odoo.addons.mail.tests.common import mail_new_test_user
 from odoo.exceptions import AccessError
 from odoo.tests import TransactionCase, tagged
+from odoo.tools import mute_logger
 from unittest.mock import patch
 
 from odoo.addons.b2b_erp_connector.services.erp_service import B2BERPError
@@ -56,6 +57,7 @@ class TestIntegrationJob(TransactionCase):
                 "state": "success"
             })
 
+    @mute_logger("odoo.addons.b2b_erp_connector.models.integration_job")
     def test_partial_success_without_reference_is_retried(self):
         job = self.env["b2b.integration.job"].enqueue(
             "sales_order", self.order, "test-partial-response"
@@ -64,6 +66,7 @@ class TestIntegrationJob(TransactionCase):
             self.assertFalse(job._process_locked())
         self.assertEqual(job.state, "failed")
 
+    @mute_logger("odoo.addons.b2b_erp_connector.models.integration_job")
     def test_non_retryable_adapter_error_goes_directly_to_dead_letter(self):
         job = self.env["b2b.integration.job"].enqueue(
             "sales_order", self.order, "test-non-retryable"
