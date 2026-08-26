@@ -14,6 +14,21 @@ class B2BPriceWriteMixin(models.AbstractModel):
         if not self.env.user.has_group("b2b_core.group_b2b_special_price_manager"):
             raise AccessError(_("You are not authorized to maintain B2B prices."))
 
+    @api.model
+    def _b2b_check_price_only_product_write(self, vals, allowed_fields):
+        """Prevent a price-only role from using its narrow ACL to edit products."""
+        if self.env.su or self.env.user.has_group("base.group_system"):
+            return
+        if not self.env.user.has_group("b2b_core.group_b2b_special_price_manager"):
+            return
+        if self.env.user.has_group("product.group_product_manager"):
+            return
+        forbidden_fields = set(vals) - set(allowed_fields)
+        if forbidden_fields:
+            raise AccessError(_(
+                "B2B Special Price Managers can update prices, but not product master data."
+            ))
+
 
 class ProductPricelist(models.Model):
     _name = "product.pricelist"

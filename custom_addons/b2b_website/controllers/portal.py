@@ -77,14 +77,21 @@ class PartnerHubPortal(CustomerPortal):
 
     def _prepare_home_portal_values(self, counters):
         values = super()._prepare_home_portal_values(counters)
-        company = request.env.user.partner_id.commercial_partner_id
-        sale_domain = self._prepare_orders_domain(request.env.user.partner_id)
-        quotation_domain = self._prepare_quotations_domain(request.env.user.partner_id)
+        contact = request.env.user.partner_id
+        company = contact.commercial_partner_id
+        has_linked_company = company != contact
+        sale_domain = self._prepare_orders_domain(contact)
+        quotation_domain = self._prepare_quotations_domain(contact)
         ticket_domain = [("partner_id", "child_of", company.id)]
         Sample = request.env["b2b.sample.request"]
         Order = request.env["sale.order"]
         Ticket = request.env["helpdesk.ticket"]
         Inquiry = request.env["b2b.contact.request"]
+        open_company_request = Inquiry.search([
+            ("partner_id", "=", contact.id),
+            ("request_type", "=", "company_change"),
+            ("state", "in", ("new", "in_progress")),
+        ], limit=1, order="create_date desc")
         can_read_orders = Order.has_access("read")
         can_read_tickets = Ticket.has_access("read")
         recent_orders = (
@@ -114,6 +121,13 @@ class PartnerHubPortal(CustomerPortal):
                 self._inquiry_domain(), order="create_date desc", limit=2
             ),
             "recent_tickets": recent_tickets,
+            "b2b_has_linked_company": has_linked_company,
+            "b2b_open_company_request": open_company_request,
+            "b2b_show_company_prompt": bool(
+                not has_linked_company
+                and not contact.b2b_approved
+                and not open_company_request
+            ),
         }
         # Native /my/counters expects the response to contain only requested
         # placeholders. Returning dashboard-only keys makes Odoo's own counter

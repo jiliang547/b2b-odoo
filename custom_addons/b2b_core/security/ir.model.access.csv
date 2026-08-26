@@ -13,3 +13,7 @@ access_b2b_product_application_public,b2b.product.application public,model_b2b_p
 access_b2b_product_application_portal,b2b.product.application portal,model_b2b_product_application,base.group_portal,1,0,0,0
 access_product_image_marketing_media,product.image marketing media,website_sale.model_product_image,b2b_core.group_b2b_marketing_media,1,1,1,1
 access_product_document_marketing_media,product.document marketing media,product.model_product_document,b2b_core.group_b2b_marketing_media,1,1,1,1
+access_product_template_special_price,product.template special price,product.model_product_template,b2b_core.group_b2b_special_price_manager,1,1,0,0
+access_product_product_special_price,product.product special price,product.model_product_product,b2b_core.group_b2b_special_price_manager,1,1,0,0
+access_product_pricelist_special_price,product.pricelist special price,product.model_product_pricelist,b2b_core.group_b2b_special_price_manager,1,1,1,1
+access_product_pricelist_item_special_price,product.pricelist.item special price,product.model_product_pricelist_item,b2b_core.group_b2b_special_price_manager,1,1,1,1

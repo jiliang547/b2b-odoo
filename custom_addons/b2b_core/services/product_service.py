@@ -130,11 +130,13 @@ class B2BProductService(models.AbstractModel):
     def procurement_info(self, product, pricelist=None, website=None, combination_info=None):
         """Return website purchasing facts backed by native Odoo fields.
 
-        ``product.pricelist.item.min_quantity`` is used as the customer-specific
-        minimum quantity, the product UoM supplies the display unit, and installed
-        stock modules supply website-warehouse availability and sales lead time.
-        The method deliberately degrades to neutral availability when Inventory
-        is not installed so the website module remains portable to Odoo.sh.
+        The product's ``b2b_default_moq`` is the maintain-once fallback and an
+        applicable native ``product.pricelist.item.min_quantity`` overrides it
+        for customer-specific terms. The product UoM supplies the display unit,
+        while installed stock modules supply website-warehouse availability and
+        sales lead time. The method deliberately degrades to neutral availability
+        when Inventory is not installed so the website module remains portable to
+        Odoo.sh.
         """
         variant = product
         if product and product._name == "product.template":
@@ -148,7 +150,11 @@ class B2BProductService(models.AbstractModel):
             and "pricelist_id" in website._fields
             and website.pricelist_id
         )
-        minimum_quantity = max(variant.uom_id.rounding, 1.0)
+        minimum_quantity = max(
+            variant.uom_id.rounding,
+            variant.product_tmpl_id.b2b_default_moq,
+            1.0,
+        )
 
         if pricelist:
             rules = pricelist.sudo()._get_applicable_rules(variant, fields.Datetime.now())

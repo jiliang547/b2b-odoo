@@ -18,11 +18,30 @@
                     <h1>Welcome back, <t t-out="request.env.user.name"/></h1>
                     <p class="lt-portal-heading__placeholder" aria-hidden="true">Account overview</p>
                 </header>
+                <section t-if="not b2b_has_linked_company" t-att-class="'lt-company-onboarding-card ' + ('is-pending' if b2b_open_company_request else 'is-action')">
+                    <span><i t-att-class="'fa ' + ('fa-clock-o' if b2b_open_company_request else 'fa-building-o')"/></span>
+                    <div>
+                        <strong t-out="'Company request under review' if b2b_open_company_request else 'Connect your company account'"/>
+                        <p t-out="'Our team is reviewing your company information. Your personal account remains unchanged until the review is complete.' if b2b_open_company_request else 'Submit your company information so our team can configure the correct pricing and product access.'"/>
+                    </div>
+                    <a t-if="b2b_open_company_request" class="lt-btn lt-btn--outline" t-att-href="'/my/inquiries/%s' % b2b_open_company_request.id">View Request</a>
+                    <a t-else="" class="lt-btn lt-btn--blue" href="/my/company/change">Request Company Setup</a>
+                </section>
+                <div t-if="b2b_show_company_prompt" class="lt-company-onboarding-dialog" t-att-data-lt-company-onboarding="request.env.user.id" hidden="hidden">
+                    <button type="button" class="lt-company-onboarding-dialog__backdrop" data-lt-company-onboarding-close="" aria-label="Close company setup reminder"/>
+                    <section role="dialog" aria-modal="true" aria-labelledby="lt-company-onboarding-title">
+                        <button type="button" class="lt-company-onboarding-dialog__close" data-lt-company-onboarding-close="" aria-label="Close"><i class="fa fa-times"/></button>
+                        <span class="lt-company-onboarding-dialog__icon"><i class="fa fa-building-o"/></span>
+                        <h2 id="lt-company-onboarding-title">Connect your company account</h2>
+                        <p>Your account is not linked to a company yet. Send your company information for review so Lucky Tone can configure the correct pricing and product access.</p>
+                        <div><a class="lt-btn lt-btn--blue" href="/my/company/change">Request Company Setup</a><button type="button" class="lt-btn lt-btn--outline" data-lt-company-onboarding-close="">Maybe Later</button></div>
+                    </section>
+                </div>
                 <section class="lt-dashboard-metrics" aria-label="Account metrics">
                     <a href="/my/orders"><span class="lt-metric-icon lt-metric-icon--blue"><i class="fa fa-clipboard"/></span><strong t-out="order_count or 0"/><b>Orders</b><small>Orders and payment attempts</small></a>
                     <a href="/my/sample-requests"><span class="lt-metric-icon lt-metric-icon--green"><i class="fa fa-flask"/></span><strong t-out="sample_count or 0"/><b>Samples</b><small>Sample requests submitted</small></a>
                     <a href="/my/tickets"><span class="lt-metric-icon lt-metric-icon--orange"><i class="fa fa-comment-o"/></span><strong t-out="ticket_count or 0"/><b>Service</b><small>Support tickets</small></a>
-                    <a href="/my/company"><span class="lt-metric-icon lt-metric-icon--green"><i class="fa fa-building-o"/></span><strong t-out="'Active' if company.b2b_approved else 'Review'"/><b>Account</b><small t-out="'Partner Hub Approved' if company.b2b_approved else 'Approval pending'"/></a>
+                    <a href="/my/company"><span class="lt-metric-icon lt-metric-icon--green"><i class="fa fa-building-o"/></span><strong t-out="'Active' if b2b_has_linked_company and company.b2b_approved else ('Review' if b2b_open_company_request or b2b_has_linked_company else 'Setup')"/><b>Account</b><small t-out="'Partner Hub Approved' if b2b_has_linked_company and company.b2b_approved else ('Company request pending' if b2b_open_company_request else ('Approval pending' if b2b_has_linked_company else 'Company not linked'))"/></a>
                 </section>
                 <section class="lt-quick-actions" aria-label="Quick actions">
                     <span>Quick Actions</span><div><a href="/products"><i class="fa fa-cube"/>Browse Products</a><a href="/products"><i class="fa fa-flask"/>Request a Sample</a><a href="/service"><i class="fa fa-ticket"/>New Service Request</a><a href="/contact"><i class="fa fa-commenting-o"/>Contact Support</a></div>

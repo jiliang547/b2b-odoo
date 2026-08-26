@@ -1,7 +1,7 @@
 from odoo import Command
 from odoo.addons.mail.tests.common import mail_new_test_user
 from odoo.addons.website_sale.tests.common import MockRequest
-from odoo.exceptions import AccessError
+from odoo.exceptions import AccessError, ValidationError
 from odoo.tests import TransactionCase, tagged
 
 
@@ -76,6 +76,7 @@ class TestB2BProductPolicy(TransactionCase):
         self.assertEqual(service.price_state(website=self.website), "visible")
 
     def test_catalog_price_uses_customer_moq_tier(self):
+        self.allowed.b2b_default_moq = 50
         self.allowed.list_price = 750
         pricelist = self.env["product.pricelist"].create({
             "name": "MOQ Catalog Test",
@@ -109,6 +110,59 @@ class TestB2BProductPolicy(TransactionCase):
 
         self.assertEqual(quantity_one_price, 675)
         self.assertEqual(payload[self.allowed.id]["price"], 999)
+
+    def test_product_default_moq_is_used_without_pricelist_quantity_rule(self):
+        self.allowed.b2b_default_moq = 120
+        pricelist = self.env["product.pricelist"].create({"name": "Default MOQ Test"})
+        service = self.env["b2b.product.service"]
+
+        procurement = service.procurement_info(
+            self.allowed,
+            pricelist=pricelist,
+            website=self.website,
+        )
+
+        self.assertEqual(procurement["minimum_quantity"], 120)
+        self.assertEqual(
+            service.validate_sale_quantity(
+                self.allowed, 120, pricelist=pricelist, website=self.website
+            ),
+            120,
+        )
+        with self.assertRaises(ValidationError):
+            service.validate_sale_quantity(
+                self.allowed, 119, pricelist=pricelist, website=self.website
+            )
+
+    def test_pricelist_moq_overrides_product_default(self):
+        self.allowed.b2b_default_moq = 100
+        pricelist = self.env["product.pricelist"].create({
+            "name": "Customer MOQ Override",
+            "item_ids": [Command.create({
+                "applied_on": "1_product",
+                "product_tmpl_id": self.allowed.id,
+                "min_quantity": 500,
+                "compute_price": "fixed",
+                "fixed_price": 600,
+            })],
+        })
+        service = self.env["b2b.product.service"]
+
+        procurement = service.procurement_info(
+            self.allowed,
+            pricelist=pricelist,
+            website=self.website,
+        )
+
+        self.assertEqual(procurement["minimum_quantity"], 500)
+        with self.assertRaises(ValidationError):
+            service.validate_sale_quantity(
+                self.allowed, 100, pricelist=pricelist, website=self.website
+            )
+
+    def test_product_default_moq_must_be_positive(self):
+        with self.assertRaises(ValidationError):
+            self.allowed.b2b_default_moq = 0
 
     def test_b2b_manager_can_maintain_product_taxonomy(self):
         manager = mail_new_test_user(

@@ -7,21 +7,29 @@
         <field name="arch" type="xml">
             <xpath expr="//sheet/notebook" position="inside">
                 <page string="Partner Hub" name="b2b_partner_hub" groups="b2b_core.group_b2b_operator">
+                    <field name="b2b_is_commercial_entity" invisible="1"/>
                     <group>
                         <group>
-                            <field name="b2b_approved" readonly="1"/>
-                            <field name="b2b_segment_ids" widget="many2many_tags"/>
-                            <field name="property_product_pricelist"/>
+                            <field name="commercial_partner_id" string="Company Account" readonly="1" invisible="b2b_is_commercial_entity"/>
+                            <field name="b2b_approved" readonly="1" invisible="not b2b_is_commercial_entity"/>
+                            <field name="b2b_effective_approved" string="Partner Hub Approved" readonly="1" invisible="b2b_is_commercial_entity"/>
+                            <field name="b2b_segment_ids" widget="many2many_tags" groups="b2b_core.group_b2b_manager" invisible="not b2b_is_commercial_entity"/>
+                            <field name="b2b_effective_segment_ids" string="B2B Segments" widget="many2many_tags" readonly="1" invisible="b2b_is_commercial_entity"/>
+                            <field name="property_product_pricelist" groups="b2b_core.group_b2b_manager,b2b_core.group_b2b_special_price_manager" readonly="not b2b_is_commercial_entity"/>
+                            <field name="property_product_pricelist" readonly="1" groups="b2b_core.group_b2b_operator,!b2b_core.group_b2b_manager,!b2b_core.group_b2b_special_price_manager"/>
                         </group>
                         <group>
-                            <field name="b2b_erp_customer_id"/>
-                            <field name="b2b_approval_date"/>
-                            <field name="b2b_approved_by_id"/>
+                            <field name="b2b_erp_customer_id" invisible="not b2b_is_commercial_entity"/>
+                            <field name="b2b_effective_erp_customer_id" string="ERP Customer ID" invisible="b2b_is_commercial_entity"/>
+                            <field name="b2b_approval_date" invisible="not b2b_is_commercial_entity"/>
+                            <field name="b2b_effective_approval_date" invisible="b2b_is_commercial_entity"/>
+                            <field name="b2b_approved_by_id" invisible="not b2b_is_commercial_entity"/>
+                            <field name="b2b_effective_approved_by_id" invisible="b2b_is_commercial_entity"/>
                         </group>
                     </group>
                     <group groups="b2b_core.group_b2b_manager">
-                        <button name="action_b2b_approve" type="object" string="Approve Partner Hub Access" class="btn-primary" invisible="b2b_approved"/>
-                        <button name="action_b2b_revoke" type="object" string="Revoke Partner Hub Access" class="btn-secondary" invisible="not b2b_approved" confirm="Revoke this customer's Partner Hub approval?"/>
+                        <button name="action_b2b_approve" type="object" string="Approve Partner Hub Access" class="btn-primary" invisible="not b2b_is_commercial_entity or b2b_approved"/>
+                        <button name="action_b2b_revoke" type="object" string="Revoke Partner Hub Access" class="btn-secondary" invisible="not b2b_is_commercial_entity or not b2b_approved" confirm="Revoke this customer's Partner Hub approval?"/>
                     </group>
                 </page>
             </xpath>

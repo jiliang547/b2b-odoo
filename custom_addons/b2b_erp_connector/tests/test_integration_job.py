@@ -26,6 +26,13 @@ class TestIntegrationJob(TransactionCase):
         second = Job.enqueue("sales_order", self.order, "test-order-key")
         self.assertEqual(first, second)
 
+    def test_integration_role_does_not_receive_business_manager_permissions(self):
+        self.assertTrue(self.manager.has_group("b2b_core.group_b2b_operator"))
+        self.assertFalse(self.manager.has_group("b2b_core.group_b2b_manager"))
+        self.assertFalse(
+            self.manager.has_group("b2b_core.group_b2b_special_price_manager")
+        )
+
     def test_mock_job_processes_successfully(self):
         job = self.env["b2b.integration.job"].enqueue(
             "sales_order", self.order, "test-order-success"

@@ -66,6 +66,14 @@ class PartnerHubWebsite(WebsiteController):
             )
         return request.redirect(submission.response_url, code=303)
 
+    def _open_company_request(self, contact=None):
+        contact = contact or request.env.user.partner_id
+        return request.env["b2b.contact.request"].search([
+            ("partner_id", "=", contact.id),
+            ("request_type", "=", "company_change"),
+            ("state", "in", ("new", "in_progress")),
+        ], limit=1, order="create_date desc")
+
     def _contact_values(self, form=None, error=None):
         company = request.env.company.sudo()
         partner = company.partner_id
@@ -623,7 +631,9 @@ class PartnerHubWebsite(WebsiteController):
 
     @route("/my/company", type="http", auth="user", website=True, sitemap=False)
     def company_profile(self, **kwargs):
-        company = request.env.user.partner_id.commercial_partner_id
+        contact = request.env.user.partner_id
+        company = contact.commercial_partner_id
+        has_linked_company = company != contact
         change_requests = request.env["b2b.contact.request"].search(
             [
                 ("commercial_partner_id", "=", company.id),
@@ -636,6 +646,9 @@ class PartnerHubWebsite(WebsiteController):
             "b2b_website.company_profile",
             {
                 "company": company,
+                "contact": contact,
+                "has_linked_company": has_linked_company,
+                "open_company_request": self._open_company_request(contact),
                 "change_requests": change_requests,
                 "page_name": "company_profile",
                 "no_index": True,
@@ -648,8 +661,17 @@ class PartnerHubWebsite(WebsiteController):
         )
         if request_kind not in ("company_change", "user_change"):
             request_kind = "company_change"
+        contact = request.env.user.partner_id
+        company = contact.commercial_partner_id
+        has_linked_company = company != contact
         return {
-            "company": request.env.user.partner_id.commercial_partner_id,
+            "company": company,
+            "contact": contact,
+            "has_linked_company": has_linked_company,
+            "open_company_request": (
+                self._open_company_request(contact)
+                if request_kind == "company_change" else False
+            ),
             "countries": request.env["res.country"].sudo().search([], order="name"),
             "request_kind": request_kind,
             "form": dict(form or {}),
@@ -672,14 +694,24 @@ class PartnerHubWebsite(WebsiteController):
         company = request.env.user.partner_id.commercial_partner_id
         contact = request.env.user.partner_id
         try:
+            if (
+                form.get("request_type", "company_change") == "company_change"
+                and self._open_company_request(contact)
+            ):
+                raise ValidationError(_(
+                    "Your company request is already under review."
+                ))
             base_values = self._clean_contact_form(
                 {
                     **form,
                     "contact_name": contact.name,
                     "email": contact.email or company.email,
                     "phone": contact.phone or company.phone,
-                    "company_name": company.name,
-                    "subject": _("Company account change request"),
+                    "company_name": company.name if company != contact else "",
+                    "subject": _(
+                        "Company account change request"
+                        if company != contact else "Company setup request"
+                    ),
                 },
                 allowed_types={"company_change", "user_change"},
             )
@@ -687,13 +719,21 @@ class PartnerHubWebsite(WebsiteController):
                 self._safe_int(form.get("requested_country_id"))
             ).exists()
             requested_email = (form.get("requested_email") or "").strip()[:254]
+            requested_company_name = (
+                form.get("requested_company_name") or ""
+            ).strip()[:200]
+            if (
+                form.get("request_type", "company_change") == "company_change"
+                and not requested_company_name
+            ):
+                raise ValidationError(_("Please enter your company name."))
             if requested_email and not tools.single_email_re.match(requested_email):
                 raise ValidationError(_("Please enter a valid requested business email."))
             base_values.update({
                 "partner_id": contact.id,
                 "website_id": request.website.id,
                 "source_url": "/my/company/change",
-                "requested_company_name": (form.get("requested_company_name") or "").strip()[:200],
+                "requested_company_name": requested_company_name,
                 "requested_vat": (form.get("requested_vat") or "").strip()[:128],
                 "requested_email": requested_email,
                 "requested_phone": (form.get("requested_phone") or "").strip()[:64],
@@ -718,15 +758,21 @@ class PartnerHubWebsite(WebsiteController):
 
     @route("/my/company/users", type="http", auth="user", website=True, sitemap=False)
     def company_users(self, **kwargs):
-        company = request.env.user.partner_id.commercial_partner_id
-        contacts = request.env["res.partner"].search([
-            ("id", "child_of", company.id),
-            ("is_company", "=", False),
-        ], order="name")
+        contact = request.env.user.partner_id
+        company = contact.commercial_partner_id
+        has_linked_company = company != contact
+        contacts = (
+            request.env["res.partner"].search([
+                ("id", "child_of", company.id),
+                ("is_company", "=", False),
+            ], order="name")
+            if has_linked_company else request.env["res.partner"]
+        )
         return request.render(
             "b2b_website.company_users",
             {
                 "company": company,
+                "has_linked_company": has_linked_company,
                 "contacts": contacts,
                 "page_name": "company_users",
                 "no_index": True,

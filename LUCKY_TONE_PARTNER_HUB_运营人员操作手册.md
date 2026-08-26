@@ -1,365 +1,518 @@
-# Lucky Tone Partner Hub 运营人员操作手册
+# Partner Hub 运营人员操作手册
 
-版本：V4.1  
-适用系统：Odoo 19 + Lucky Tone Partner Hub  
-适用对象：管理员、B2B Manager、Sales、Product、Marketing、After-sales
+版本：V4.5（2026-08-26 产品默认 MOQ 修订）
+适用系统：Odoo 19 Enterprise + Partner Hub
+适用对象：管理员、B2B Manager、Sales、Product、Marketing、PMC、After-sales、Integration Manager
 
-## 一、先了解系统中的角色分工
+## 1. 使用原则
 
-Partner Hub 前台负责客户注册、登录、查看商品、样品申请、购物车、订单和售后入口；Odoo 后台负责客户审批、产品主数据、客户标签、样品审核和运营数据管理。
+Partner Hub 前台用于客户注册、登录、浏览商品、查看客户价、申请样品、支付、查看订单、提交售后和联系团队；Odoo 后台用于客户审批、权限、产品主数据、价格表、内容、样品审核、Helpdesk 和 ERP 集成管理。
 
-常用后台入口：
+运营时遵循以下原则：
 
-1. 登录 Odoo 后台。
-2. 点击应用菜单，进入 **B2B Management**。
-3. 常用菜单包括：
-   - Dashboard：查看待处理运营事项。
-   - Operations → Sample Requests：处理客户样品申请。
-   - Operations → ERP Jobs：查看需要 ERP 同步的任务。
-   - Business Data → Customers：查看客户和客户审批状态。
-   - Business Data → Products：进入 Odoo 原生产品主数据。
-   - Configuration → Customer Segments：维护客户人群标签。
+1. 公司、联系人、登录用户、权限组分别维护，不把所有资料都堆在用户账号上。
+2. 产品、客户、报价、订单、支付、Helpdesk、Repair、附件尽量使用 Odoo 原生模型和流程。
+3. 先确认客户和公司，再确认权限，最后修改业务数据。
+4. 价格、库存、订单、客户审批和 ERP 重试均属于敏感操作。
+5. 不在网站模板、图片或公开文档中写死 SKU、价格、库存或客户隐私。
 
-产品、客户、销售订单仍然使用 Odoo 原生数据，不要在系统外另建一套产品或客户台账。
+## 2. 后台入口与角色
 
-## 二、客户注册后的基本流程
+登录 Odoo 后进入 `B2B Management`。
 
-### 2.1 普通客户的操作
+常用入口：
 
-1. 客户打开 Partner Hub，点击注册。
-2. 填写姓名、邮箱、密码和公司信息。
-3. 注册成功后登录网站。
-4. 客户可以浏览允许公开展示的商品，但在公司审批前通常看不到正式价格。
-5. 客户可进入 **My Account → Company Profile** 查看审批状态。
+- `Dashboard`：显示当前账号有权处理的运营指标和快捷入口。
+- `Operations → Sample Requests`：样品申请。
+- `Operations → Contact Requests`：联系请求。
+- `Operations → ERP Jobs`：仅 Integration Manager 可见。
+- `Business Data → Customers`：Odoo 原生联系人和公司。
+- `Business Data → Products`：Odoo 原生产品主数据。
+- `Business Data → Product Media`：Marketing/Product 人员维护原生产品图片和视频 URL。
+- `Configuration`：仅 B2B Manager 可见，包含分群、品牌、应用、首页商品、FAQ 和设置。
 
-审批状态有两种：
+### 2.1 B2B 权限组
 
-- `Approval pending`：公司资料等待运营人员审核。
-- `Partner Hub Approved`：客户已经获得 Partner Hub 价格和服务权限。
-
-### 2.2 运营人员审批客户
-
-1. 后台进入 **Contacts**，搜索客户公司或注册邮箱。
-2. 打开客户的公司联系人记录，不要只打开个人联系人记录。
-3. 检查公司名称、邮箱、电话、国家、地址和客户类型。
-4. 在 Partner Hub 相关区域检查：
-   - B2B Approved：是否已审批。
-   - Customer Segments：客户所属人群标签。
-   - Pricelist：客户对应的价格表。
-5. 确认资料无误后，点击 **Approve Partner Hub Access**。
-6. 给客户分配一个或多个 Customer Segment。
-7. 保存记录。
-8. 通知客户退出后重新登录，或刷新页面确认价格已经生效。
-
-如果需要取消权限，打开客户记录后点击 **Revoke Partner Hub Access**。取消后，客户不应继续看到受保护价格或受限商品。
-
-## 三、使用人群标签展示不同商品和价格
-
-### 3.1 价格控制的基本原则
-
-系统通过三个条件决定客户是否可以看到价格：
-
-1. 客户公司是否已经 B2B Approved。
-2. 客户公司属于哪个 Customer Segment。
-3. 产品使用哪个 Pricelist，以及该价格表中的价格规则。
-
-客户没有审批时，前台通常显示 **Request a quote for pricing**。  
-客户审批后，系统按照客户所属公司的价格表显示价格。  
-系统不会因为客户修改浏览器页面内容而改变 Odoo 服务器中的实际价格。
-
-### 3.2 创建或维护人群标签
-
-1. 后台进入 **B2B Management → Configuration → Customer Segments**。
-2. 点击 **New**。
-3. 填写标签名称，例如：
-   - Dealer
-   - Integrator
-   - Strategic Partner
-   - Regional Distributor
-4. 填写说明，说明该标签对应的客户类型和适用范围。
-5. 保存。
-
-建议标签按业务规则命名，不要使用客户姓名、邮箱或临时测试名称。
-
-### 3.3 给客户分配标签
-
-1. 进入 **Contacts**。
-2. 搜索并打开客户公司的商业伙伴记录。
-3. 找到 **Customer Segments** 字段。
-4. 选择一个或多个标签。
-5. 检查客户的 Pricelist 是否正确。
-6. 保存。
-
-如果客户属于多个标签，产品只要允许其中任意一个标签即可展示。价格仍由客户实际使用的 Pricelist 决定。
-
-### 3.4 给产品配置人群可见范围
-
-1. 进入 **B2B Management → Business Data → Products**，或进入 Odoo 原生 **Sales → Products → Products**。
-2. 搜索并打开产品。
-3. 确认产品已勾选 **Sales / Can be Sold**，并已配置网站发布状态。
-4. 找到 Partner Hub 相关字段 **Visibility Mode**。
-5. 根据业务选择：
-   - `All`：所有允许浏览的客户都可看到。
-   - `Approved`：只有已审批客户可看到。
-   - `Segments`：只有指定 Customer Segments 可看到。
-   - `Hidden`：前台不展示，适合下架或内部测试。
-6. 如果选择 `Segments`，在 **Visible Segments** 中选择允许访问的标签。
-7. 保存。
-
-### 3.5 给不同人群配置不同价格
-
-价格应在 Odoo 原生 Pricelist 中维护：
-
-1. 进入 **Sales → Products → Pricelists**。
-2. 打开对应价格表，或点击 **New** 新建价格表。
-3. 填写价格表名称、币种和适用客户范围。
-4. 在价格规则中添加产品、产品分类或产品模板。
-5. 设置固定价格、折扣、最小数量和有效期。
-6. 保存。
-7. 回到客户公司记录，把该 Pricelist 分配给客户。
-
-示例：
-
-| 客户人群 | 客户标签 | 价格表 | 产品价格 |
-|---|---|---|---:|
-| Dealer A | Dealer | UAT Dealer Pricelist | 100 |
-| Integrator B | Integrator | UAT Integrator Pricelist | 80 |
-
-### 3.6 配置后的检查方法
-
-运营人员必须用实际客户账号检查：
-
-1. Dealer A 登录后查看产品列表和产品详情。
-2. 确认价格与 Dealer A Pricelist 一致。
-3. Integrator B 登录后确认显示另一套价格。
-4. 未审批账号登录，确认只显示报价提示。
-5. 访客访问产品页面，确认页面源码和页面文本中没有实际价格。
-6. 隐藏产品使用直接链接访问，应返回不可访问或 404。
-
-## 四、普通注册用户申请样品
-
-### 4.1 客户前台操作
-
-1. 客户登录 Partner Hub。
-2. 进入 **Samples**，或在产品详情点击 **Request a Sample**。
-3. 在 Product 中选择产品或产品变体。
-4. 填写 Quantity。
-5. 填写 Reason / Project Use，说明项目用途和测试目的。
-6. 检查 Contact Name、Company、Email、Phone。
-7. 填写 Shipping Address。
-8. 如有需要，填写 Additional Notes。
-9. 点击 **Submit Sample Request**。
-10. 系统跳转到样品详情页，并生成类似 `SAM-2026-000008` 的申请编号。
-
-客户可以在 **My Account → Samples** 中查看申请状态和申请详情。
-
-### 4.2 样品申请状态
-
-| 状态 | 含义 | 客户下一步 |
-|---|---|---|
-| Submitted | 已提交，等待审核 | 等待运营人员处理 |
-| Under Review | 运营人员正在审核 | 等待结果或补充资料 |
-| Approved | 审核通过 | 等待发样或 ERP 同步 |
-| Rejected | 审核未通过 | 查看原因，必要时重新申请 |
-| ERP Pending | 已进入 ERP 同步队列 | 等待 ERP 处理 |
-| ERP Synced | ERP 已接收 | 按系统提供的物流或履约信息跟进 |
-
-### 4.3 运营人员审核样品
-
-1. 后台进入 **B2B Management → Operations → Sample Requests**。
-2. 按 Created、State 或客户名称查找申请。
-3. 打开申请，检查：
-   - 客户是否为已审批客户。
-   - 产品是否属于客户允许访问的范围。
-   - 数量是否合理。
-   - 申请用途是否清晰。
-   - 联系人和收货地址是否完整。
-4. 点击 **Start Review**，状态变为 `Under Review`。
-5. 如果需要补充信息，通过 Odoo 的消息区联系客户或内部负责人。
-6. 审核通过点击 **Approve**。
-7. 审核不通过时，填写 Rejection Reason，然后执行拒绝操作。
-8. 审批通过后，系统会生成 ERP Jobs 或进入 ERP Pending 状态。
-9. 在申请详情的 ERP 区域查看同步状态和错误信息。
-
-不要直接修改状态字段来代替审批按钮。审批按钮会同时记录审核人、审核时间和业务状态。
-
-## 五、已购买客户申请售后
-
-售后流程必须基于客户已经确认的销售订单。没有确认订单时，前台会显示 **No eligible orders**，这是正常的业务限制。
-
-### 5.1 客户前台操作
-
-1. 客户登录 Partner Hub。
-2. 进入 **My Account → Orders**，确认订单已经是 Confirmed / Sale 状态。
-3. 进入 **Service Center**，点击 **New Service Request**。
-4. 选择关联订单和订单行。
-5. 选择服务类型：
-   - Repair：维修。
-   - Replacement：更换。
-6. 填写问题描述、产品序列号、故障数量和现场情况。
-7. 上传必要的照片、检测报告或视频证据。
-8. 填写联系人和联系方式。
-9. 点击提交。
-10. 客户在 **My Account → Service** 中查看工单进度。
-
-### 5.2 售后运营人员操作
-
-1. 后台进入 **Repairs** 或 After-sales 相关菜单。
-2. 查找客户提交的 Repair / Replacement 请求。
-3. 检查关联销售订单、产品、数量和序列号。
-4. 检查是否仍在保修或售后服务范围内。
-5. 确认问题类型和处理责任人。
-6. 分配负责人，并补充内部备注。
-7. 需要维修时，创建或关联 Repair Order。
-8. 需要更换时，确认库存、退回旧件和发出新件的处理方式。
-9. 更新工单状态并在消息区记录处理过程。
-10. 完成处理后关闭工单，填写解决方案和完成日期。
-
-售后人员不要直接修改原销售订单金额或客户价格。退款、换货和库存调整应通过 Odoo 对应的原生流程完成。
-
-## 六、运营人员上传商品链接、图片、视频和说明书资源
-
-### 6.1 创建或维护商品
-
-1. 后台进入 **B2B Management → Business Data → Products**。
-2. 点击 **New** 创建产品，或搜索并打开已有产品。
-3. 使用 Odoo 原生产品字段维护：
-   - Product Name
-   - Internal Reference / SKU
-   - Product Type
-   - Sales Price
-   - Product Category
-   - Sales / Can be Sold
-   - Website Published
-4. 在 Partner Hub 字段中维护：
-   - Model Number
-   - Brand
-   - Application
-   - Product Tags
-   - Short Description
-   - Technical Specifications
-   - Visibility Mode
-5. 保存产品。
-
-产品主数据只在 Odoo 产品记录维护，不要在网站页面里写死 SKU、价格或库存。
-
-### 6.2 上传产品图片
-
-1. 打开产品记录。
-2. 在产品图片区域点击添加图片。
-3. 上传主图，建议使用清晰的正方形或横向产品图片。
-4. 添加其他图片作为图库图片，例如包装、接口、安装效果或尺寸图。
-5. 调整第一张图片为主图。
-6. 保存。
-7. 打开前台产品详情页，确认主图、图库和缩略图均能显示。
-
-图片命名建议：
-
-`SKU_用途_序号.jpg`，例如 `UAT-P2_front_01.jpg`。
-
-### 6.3 上传视频或视频链接
-
-1. 打开产品记录的媒体或营销内容区域。
-2. 如果系统提供视频链接字段，填写完整的视频 URL。
-3. 如果系统提供附件上传区域，上传经过压缩的视频文件。
-4. 填写视频标题和说明。
-5. 保存。
-6. 以客户账号打开产品详情页，确认视频只在允许的客户范围内展示。
-
-视频不要上传包含客户隐私、内部价格或未公开工程资料的内容。
-
-### 6.4 上传说明书、证书和其他资源
-
-1. 打开产品记录。
-2. 在 Documents / Product Documents 区域点击添加文档。
-3. 上传 PDF、规格书、安装手册、测试报告或认证证书。
-4. 填写资源类型，例如：
-   - Manual
-   - Datasheet
-   - Certificate
-   - Installation Guide
-   - Compliance Document
-5. 设置版本号和语言。
-6. 设置显示范围：
-   - `Product`：所有能看到该产品的客户可访问。
-   - `Segments`：只允许指定 Customer Segments 访问。
-7. 如果是受限资源，选择对应的 Visible Segments。
-8. 保存。
-9. 使用访客、普通客户和目标客户账号分别测试下载权限。
-
-### 6.5 发布前检查清单
-
-- 产品名称、SKU、品牌和型号正确。
-- 主图清晰，图片没有错位或拉伸。
-- 产品描述没有内部备注。
-- 价格没有写进图片或公开说明书。
-- 产品 Visibility Mode 正确。
-- Pricelist 规则已经配置。
-- 说明书、证书和视频链接可以打开。
-- 受限文档不能通过直接 URL 被无权限客户访问。
-- 产品前台页面、搜索和详情页均可正常显示。
-
-## 七、客户购买后查看订单进度
-
-### 7.1 客户前台查看订单
-
-1. 客户登录 Partner Hub。
-2. 点击右上角账户菜单，进入 **My Account**。
-3. 点击 **Orders**。
-4. 在订单列表查看：
-   - 订单编号。
-   - 下单日期。
-   - 订单状态。
-   - 订单金额。
-5. 点击订单编号进入详情。
-6. 在订单详情查看产品、数量、价格、地址和订单状态。
-7. 对已经确认的订单，可以点击 **Track ERP Fulfilment** 查看 ERP 履约状态。
-
-### 7.2 订单状态说明
-
-| 状态 | 含义 |
+| 权限组 | 主要职责 |
 |---|---|
-| Quotation / Sent | 报价或待确认订单，尚未成为正式销售订单 |
-| Confirmed / Sale | Odoo 已确认销售订单 |
-| Locked / Done | 订单已锁定或流程完成 |
-| ERP Pending | 等待 ERP 同步 |
-| ERP Synced | ERP 已接收订单 |
-| Preparing | ERP 或仓库准备中 |
-| Shipped | 已发货 |
-| Delivered | 已交付 |
-| Exception | 同步或履约发生异常 |
+| B2B Operator | B2B 基础查看和日常处理；其他 B2B 角色通常包含它 |
+| B2B Manager | 客户审批、样品批准/拒绝、分群及 Partner Hub 配置 |
+| B2B Special Price Manager | 特殊价格表、客户专属价和敏感价格规则 |
+| B2B Product Manager | 产品、品牌、应用、可见范围及商品内容 |
+| B2B Marketing Media | 产品图片、视频 URL、说明书、证书和展示资源 |
+| B2B PMC | 供应链、计划及 ERP 供货协作 |
+| B2B After-sales | Helpdesk、维修、更换和售后跟进 |
+| B2B Integration Manager | ERP 队列、接口日志、异常和受控重试 |
 
-ERP 履约状态需要 ERP 接口可用时才会实时更新。接口不可用时，客户仍可查看 Odoo 中已经确认的订单信息，但 ERP tracking 可能显示暂不可用。
+权限继承关系：
 
-### 7.3 运营人员协助查询订单
+```text
+B2B Operator
+├── B2B Manager
+├── B2B Special Price Manager
+├── B2B Product Manager
+├── B2B Marketing Media
+├── B2B PMC
+├── B2B After-sales
+└── B2B Integration Manager
+```
 
-1. 后台进入 **Sales → Orders → Orders**。
-2. 按订单编号、客户名称或日期搜索。
-3. 打开订单，检查客户、订单行、金额和确认状态。
-4. 如果需要查看客户前台能看到的内容，使用对应客户账号进行验证。
-5. ERP 相关状态可在订单上的 **ERP Jobs** 或 **Track ERP Fulfilment** 区域查看。
-6. 订单同步失败时记录错误信息，不要重复手工创建同一订单。
-7. 先确认幂等键、订单编号和 ERP Job 状态，再执行重试。
+以上 B2B 角色均使用 Odoo 原生 `res.groups` 权限机制，不是另一套独立权限系统。统一在 `Settings → Users & Companies → Users` 中分配；普通内部用户不会自动获得 B2B Operator。
 
-客户只能看到与自己所属商业伙伴相关的订单。运营人员不要把一个客户的订单截图、价格或地址发送给另一个客户。
+为减少重复配置，岗位稳定需要的原生权限已经包含在 B2B 角色中：
 
-## 八、日常运营建议
+| B2B 角色 | 自动包含的原生权限 | 不会自动包含 |
+|---|---|---|
+| B2B Operator | Internal User | 客户审批、联系人编辑、价格、产品、Helpdesk、库存管理 |
+| B2B Manager | Contacts 管理 | Special Price、产品、Helpdesk、库存、ERP 管理 |
+| B2B Special Price Manager | Contacts 管理、敏感价格维护授权 | 客户审批、客户分群、产品和库存管理 |
+| B2B Product Manager | Product Manager | 特殊价格、客户审批、库存管理 |
+| B2B Marketing Media | 仅产品图片和文档资源维护 | 产品模板、价格、库存、客户审批 |
+| B2B PMC | Inventory User | Purchase、Inventory Manager、客户审批 |
+| B2B After-sales | Helpdesk User | Helpdesk Manager、Repair/Inventory、客户审批 |
+| B2B Integration Manager | ERP 队列管理 | 客户审批、价格、产品和库存管理 |
 
-每天登录 B2B Management Dashboard，依次检查：
+仍按实际岗位单独增加以下高权限：
+
+- Sales：报价单和销售订单。
+- PMC：确实需要创建采购单时增加 Purchase User；Inventory Manager 单独审批。
+- After-sales：需要创建维修单或操作库存时增加 Inventory/Repair；Helpdesk Manager 单独审批。
+- Marketing：Website/Marketing；只有确需创建产品时才加产品创建权限。
+- ERP/IT：不应顺带授予无关业务权限。
+
+Odoo 原生 Sales Manager 会获得特殊价格维护权限，但不会因此获得 B2B Manager 或客户审批权限。Settings Administrator 也不会自动获得任何 B2B 业务角色；如管理员同时承担业务审批，需要明确分配 B2B Manager。
+
+客户审批、撤销审批、Customer Segments 和 ERP 客户资料仅允许 B2B Manager 修改；客户 Pricelist 仅允许 B2B Manager 或 B2B Special Price Manager 分配。限制同时作用于页面、导入和 API，不要使用导入或直接修改字段绕过审批按钮。
+
+纯 `B2B Marketing Media` 可以通过 `Product Media` 和产品的 `Documents` 维护媒体资源，但产品模板仍保持只读，不能修改价格、库存或产品主数据。
+
+## 3. 客户、公司与登录账号
+
+### 3.1 数据结构
+
+- 公司：`Contacts` 中 `Company` 类型的商业伙伴。
+- 联系人：归属公司，可有多个。
+- 登录用户：通过邀请或注册绑定到联系人。
+- Partner Hub 审批、Customer Segments、Pricelist 和 ERP 客户号维护在公司层级。
+
+避免重复创建同名公司。发现重复记录时先核对邮箱、地址、税号和商业伙伴关系，再由管理员合并。
+
+### 3.2 前台注册与合作申请
+
+普通注册仍只要求客户填写姓名、邮箱和密码，注册结果首先是一个个人联系人，不要求客户在注册页一次性填写完整公司资料。客户可登录并浏览公开商品；未关联并审批公司时通常不显示正式价格，也不能提交付费样品。
+
+未关联公司的客户首次进入 `My Account` 时，系统会弹出提示，并在页面持续显示 `Connect your company account` 卡片：
+
+1. 客户点击 `Request Company Setup`。
+2. 填写 Legal company name、地址、税号和申请原因等公司资料。
+3. 提交后，系统显示 `Company request under review`，同时禁止重复提交另一条未完成的公司申请。
+4. 客户可在 `My Inquiries` 查看申请和运营人员回复。
+
+关闭首次弹窗不会关闭申请入口；客户仍可从 My Account 或 Company Profile 继续申请。该流程只创建 `Company Change` 请求，不会自动创建公司、自动关联联系人或自动审批。
+
+客户可通过 `/partner-application` 填写：
+
+- Legal company name
+- Country / region
+- Company website
+- Business type
+- Full name、Role / title、Business email、Phone
+- Markets, channels and project types
+- 信息确认勾选项
+
+提交只产生审核请求，不会自动获得 Partner Hub 权限。
+
+### 3.3 邀请联系人登录
+
+1. 进入 `Contacts`。
+2. 打开或新建联系人，并确认其归属公司。
+3. 填写唯一且正确的邮箱。
+4. 使用 Odoo 原生门户访问授权/邀请功能发送邀请。
+5. 客户完成密码设置后成为 Portal 用户。
+
+用户已存在时不要重复邀请，应先检查邮箱对应的联系人和公司层级。
+
+### 3.4 审批公司
+
+前提：操作账号必须有效拥有 `B2B Manager`。Sales Manager、Special Price Manager、Product Manager、PMC、After-sales、Marketing 和普通内部用户都不能审批客户。
+
+1. 进入 `B2B Management → Business Data → Customers` 或 `Contacts`。
+2. 打开公司记录，不要误在个人联系人上审批。
+3. 检查公司名称、邮箱、电话、国家、地址、客户类型和联系人。
+4. 在 `Partner Hub` 区域设置 Customer Segments、Pricelist、ERP 客户信息。
+5. 由 B2B Manager 点击 `Approve Partner Hub Access`。
+6. 保存并让客户刷新页面或重新登录验证。
+
+取消权限时点击 `Revoke Partner Hub Access`。撤销后，客户不应继续看到受保护价格、受限商品或付费样品入口。
+
+### 3.5 公司和公司用户变更
+
+客户不能直接改变商业伙伴归属。公司资料或公司成员调整通过 Company Profile 的申请入口或 `/contact` 提交：
+
+- `Company Change`
+- `Company User Change`
+
+处理尚未关联公司的 `Company Change` 请求时：
+
+1. 在 `Operations → Contact Requests` 核对申请人、公司名称、域名、地址、税号和申请理由。
+2. 搜索 Contacts，确认目标公司是否已经存在，避免创建同名公司。
+3. 已有公司：核实申请人身份后，将个人联系人关联到该公司。
+4. 没有公司：先创建 `Company` 类型联系人，再把申请人关联到新公司。
+5. 在公司记录维护 Customer Segments、Pricelist 和 ERP 客户号；确认资料后由 B2B Manager 审批公司。
+6. 在请求 Chatter 记录核验依据和处理结果，再 Resolve/Close。
+
+Partner Hub 审批、Customer Segments、Pricelist 和 ERP 客户号以公司为唯一业务来源。同一公司下所有登录联系人共享这些配置；个人联系人页面只显示公司的有效值，不应再单独编辑或审批。把已有个人联系人关联到公司时，系统会清除其历史遗留的个人审批、分群和 ERP 客户号，避免新旧配置冲突；Pricelist 使用 Odoo 原生商业伙伴继承机制。
+
+重要变更在 Chatter 留痕。若历史数据中已有重复未完成申请，先核对后关闭重复项；新版本会阻止同一客户再次创建重复的未完成公司申请。
+
+## 4. Customer Segments、商品可见性和价格
+
+### 4.1 创建分群
+
+1. 进入 `B2B Management → Configuration → Customer Segments`。
+2. 点击 `New`，填写 Name、Priority、Active。
+3. 需要填写业务含义时，点击行末的打开表单按钮，填写 Description。
+4. 使用 Sequence 手柄调整顺序；数字越小越靠前。
+
+Priority 用于多个分群同时存在时的业务优先级；Description 应写清适用客户和可见范围，不写价格规则本身。
+
+### 4.2 给公司分配分群和价格表
+
+Customer Segments 只能由 B2B Manager 修改；Pricelist 可以由 B2B Manager 或 B2B Special Price Manager 分配。
+
+1. 打开客户公司。
+2. 在 `Partner Hub` 中选择一个或多个 Customer Segments。
+3. 分配正确的 Pricelist。
+4. 检查是否已审批并保存。
+
+客户属于多个分群时，商品只要允许其中任意一个分群即可显示；实际价格仍由客户公司当前 Pricelist 决定。
+
+### 4.3 产品可见范围
+
+打开 `Business Data → Products → 产品 → Partner Hub`，设置：
+
+- `All Visitors`：公开访问者可见。
+- `Approved Partners`：仅已审批公司可见。
+- `Segments`：仅指定分群可见，并填写 Visible Segments。
+- `Hidden`：前台下架或内部测试。
+
+受限商品使用直接 URL 也应不可访问。发布前分别使用游客、未审批客户和不同分群客户验证。
+
+### 4.4 价格表
+
+价格使用 Odoo 原生 Pricelist：
+
+1. 进入 Sales 的 Pricelists。
+2. 设置名称、币种、适用公司和价格规则。
+3. 规则可按商品、模板或分类设置固定价、折扣、最小数量和有效期。
+4. 将 Pricelist 分配到客户公司。
+
+未审批客户显示报价提示；已审批客户按公司价格表显示价格。Marketing 和 Product 人员不应修改销售价格，价格由 Special Price Manager、Sales Manager 或管理员维护。
+
+### 4.5 默认 MOQ 与客户覆盖
+
+上架产品时，在产品 `Partner Hub → Catalog → Default B2B MOQ` 填写默认最小订购数量。该值必须大于零，未特别维护时默认为 1。
+
+前台最终 MOQ 按以下优先级计算：
+
+1. 客户公司当前 Pricelist 中存在适用于该商品的原生 `Minimum Quantity` 规则时，使用该客户级 MOQ。
+2. 价格表没有适用的数量规则时，使用产品的 `Default B2B MOQ`。
+3. 前台商品卡片、商品详情、默认购买数量及购物车服务端校验使用同一个最终 MOQ。
+
+因此，大多数商品只需在上架时维护一次默认 MOQ；只有客户存在特殊起订量时，才在其公司价格表中设置 `Minimum Quantity`。MOQ 不控制商品可见性，也不替代价格规则。
+
+## 5. 产品主数据、分类、品牌与媒体
+
+### 5.1 创建或维护产品
+
+进入 `B2B Management → Business Data → Products`。填写并复核：
+
+- Product Name、Internal Reference/SKU、Can be Sold
+- Odoo 内部 Product Category
+- Website Published
+- Sales Description、Ecommerce Description
+- Brand、Model Number、Applications
+- Default B2B MOQ、Lead Time、Warranty
+- Website Categories
+- Visibility Mode 和 Visible Segments
+- 技术规格和 Partner Hub 内容
+
+产品主数据只在 Odoo 产品记录维护。
+
+### 5.2 内部分类与网站分类
+
+产品顶部的 `Product Category` 用于库存、成本、会计和内部报表；`Website Categories` 使用 Odoo 原生 eCommerce Categories，控制首页分类、产品筛选和品牌页导航。两者不能互相替代。
+
+创建多层网站类目：
+
+1. 进入 `Website / eCommerce → Products → eCommerce Categories`。
+2. 从顶层到末级逐级创建并设置 Parent Category。
+3. 建议为顶层类目上传统一比例 Cover Image。
+4. 在产品 `Partner Hub → Catalog → Website Categories` 中选择最具体的末级类目。
+
+例如：
+
+```text
+Microphones
+└── Wireless Microphones
+    └── Direct Bluetooth
+        └── Handheld
+```
+
+只选 `Handheld` 即可形成完整前台路径。一个商品可以多选末级类目，但没有明确需求时只选一个主要路径，避免重复展示。
+
+类目不显示时检查：Can be Sold、网站发布、Website Categories、B2B Visibility、网站归属，以及分支下是否存在当前用户可见商品。空分支会自动隐藏。
+
+### 5.3 Product Applications
+
+进入 `Configuration → Product Applications` 创建应用标签，设置 Name、Sequence、Active，并在产品 Partner Hub 区域关联。应用用于产品筛选和场景说明，不替代 Website Categories。
+
+### 5.4 Product Brands
+
+进入 `Configuration → Product Brands`。B2B Manager 或 Product Manager 可新建，Operator 只读。
+
+字段：
+
+- Name：品牌正式名称，不重复。
+- Tagline：首页品牌卡片和品牌页副标题。
+- Sequence：数字越小越靠前；首页最多取前 6 个有效品牌。
+- Active：停用后前台隐藏但不删除商品关系。
+- Website Published：是否发布。
+- Logo：品牌详情页标识，建议透明 PNG；系统最大处理 512×512。
+- Cover Image：首页品牌卡片，建议统一横向比例；系统最大处理 1920×1080。
+- Website Description：品牌历史、定位、能力、产品和服务区域。
+- Product Focus：每行一项，前台显示为标签。
+- Advantages：每行一项，前台显示为优势列表。
+- Internal Notes：仅内部可见。
+
+在产品 `Partner Hub → Catalog → Brand` 关联品牌。品牌只有在 Active、Website Published 且至少关联一个当前用户可见商品时才在前台出现。
+
+品牌页自动包含 Logo/名称/Tagline、该品牌类目、前 4 个可见商品、介绍、Product Focus、Advantages 和查看全部商品入口。
+
+### 5.5 图片和视频 URL
+
+Marketing 推荐使用：
+
+`B2B Management → Business Data → Product Media`
+
+1. 点击 New。
+2. 选择 Product Template；仅变体专用素材时再选 Product Variant。
+3. 填写 Name、Sequence。
+4. 上传图片，或填写受支持的完整 Video URL。
+5. 保存后用有权限的客户账号检查产品详情。
+
+Product Manager 也可在产品的 Sales/eCommerce Media 区域使用 Odoo 原生 Add Media。
+
+图片命名建议：`SKU_用途_序号.jpg`。视频不要包含客户隐私、内部价格或未公开工程资料。
+
+### 5.6 说明书、证书和资源
+
+1. 打开产品，点击顶部 `Documents`。
+2. 点击 Upload 或新增文档。
+3. 上传 PDF、规格书、安装手册、测试报告或证书，或使用 URL 类型。
+4. 设置资源类型、版本、语言、网站显示和 Partner Hub 可见范围。
+5. 变体文档需要在 Partner Hub 发布时使用 `Publish Variant Document in Partner Hub`。
+
+受限文档必须用无权限账号测试直接 URL，不能只检查页面是否隐藏。
+
+## 6. 首页内容
+
+### 6.1 Featured Products
+
+进入 `Configuration → Homepage Featured Products`，设置 Section、Product、Sequence、Website、Active。
+
+- Recommended：无行为客户使用默认池；有浏览/购买记录时优先使用 Odoo 原生 Optional Products，不足再补默认池。
+- Special Offers：人工促销/阶段主推，不在此处修改价格。
+- Best Sellers：当前为人工选定，并非按订单销量自动排名。
+
+每个栏目最多读取 10 个有效商品。同商品不能在同网站同栏目重复，但可进入不同栏目。使用 10、20、30 的 Sequence，临时下线关闭 Active，不必删除。
+
+未发布、不可销售或对当前客户不可见的商品不会显示。Recommended 无配置时有普通商品兜底；其他栏目无配置时显示空状态。
+
+### 6.2 Our Brands
+
+首页最多展示 Sequence 最靠前的 6 个有效品牌，卡片优先使用 Cover Image。缺图时显示品牌名称。排查顺序：Active、Website Published、关联商品、商品发布、Website Categories、Visibility、Sequence。
+
+## 7. FAQ
+
+仅 B2B Manager/管理员维护：
+
+- `Configuration → FAQ Categories`
+- `Configuration → Frequently Asked Questions`
+
+分类字段：Name、Website、Sequence、Active。问题字段：Question、Category、Sequence、Published、Active、Answer、Action Label、Action URL。
+
+常用 Action URL：
+
+| 功能 | URL |
+|---|---|
+| 联系销售 | `/contact` |
+| 订单 | `/my/orders` |
+| 样品申请 | `/my/sample-requests` |
+| 联系会话 | `/my/inquiries` |
+| 下载资源 | `/resources` |
+| 项目支持介绍 | `/repair-service` |
+| 新建售后申请 | `/service` |
+| 配送说明 | `/shipping` |
+| 产品列表 | `/products` |
+
+分类和问题分别用 Sequence 排序。临时下线优先取消 Published；取消 Active 会让后台默认列表也可能隐藏。前台 `/faq` 支持分类筛选、搜索、展开答案和业务按钮。
+
+## 8. 付费样品申请
+
+### 8.1 客户提交
+
+前提：公司已审批，产品对客户可见且有有效价格。
+
+客户从商品详情的 `Request Sample`，或 `Sample Center → New Sample Request` 进入，填写 Product、Quantity、Reason / Project Use、联系人、公司、邮箱、电话、Shipping Address 和可选备注，然后提交。
+
+系统防止连续点击重复创建。客户在 `My Account → Sample Requests` 查看编号、日期、产品、状态、运营回复、报价、金额、支付入口和 ERP 状态。
+
+### 8.2 后台审核
+
+进入 `Operations → Sample Requests`：
+
+1. 检查客户公司、联系方式、地址、产品变体、数量、用途和权限。
+2. B2B Operator 点击 `Start Review`，状态进入 Under Review。
+3. 公开消息会显示给客户；内部说明使用 Note。
+4. B2B Manager 点击 `Approve & Create Quotation`。
+
+批准后系统使用 Odoo 原生 Sales：创建唯一报价单、写入商品数量、按客户 Pricelist 计算币种/税费/单位、关联客户和地址，并要求全额付款。价格为零时阻止批准。
+
+不符合要求时填写原因并点击 Reject。常见原因包括不提供样品、数量过多、地址不完整、项目资料不足或地区不支持配送。
+
+### 8.3 客户付款
+
+客户在样品详情点击 `Review & Pay`，进入 Odoo 原生报价单，核对商品、数量、单价、税费、配送、币种和总额，再使用已配置的支付提供商付款。
+
+- 成功：支付交易成功，报价单确认，样品进入 Order Confirmed 或 ERP Pending。
+- Pending：保留报价和申请，不进入 ERP。
+- Error/Cancelled：保留报价和申请，可重新付款，未成功前不履约。
+
+样品状态：Submitted、Under Review、Awaiting Payment、Order Confirmed、ERP Pending、ERP Synced、ERP Failed、Rejected、Cancelled。
+
+不要在付款前手工发货或触发 ERP；不要为同一申请重建第二张报价。修改报价优先使用 Odoo 原生报价功能。ERP 关闭时付款后显示 Order Confirmed；ERP Failed 仅 Integration Manager 执行 Retry ERP。
+
+## 9. 售后与维修
+
+### 9.1 配置
+
+如果前台提示 `Partner service is not configured yet`：
+
+1. 在 `Helpdesk → Configuration → Helpdesk Teams` 创建或确认 Partner Hub Support 团队。
+2. 添加负责人和成员并启用团队。
+3. 在 Partner Hub 设置中绑定该 Helpdesk Team。
+4. 团队 Visibility 使用允许受邀 Portal 用户和内部人员访问的配置。
+
+### 9.2 客户提交
+
+前提是客户存在 Confirmed/Sale 或完成状态的订单。没有合格订单时显示 `No eligible orders`，属于正常限制。
+
+客户进入 `Service Center → New Service Request` 或 `/service`，填写：
+
+- Repair 或 Replacement
+- 已确认订单
+- 该订单中的产品
+- Model number、可选 Serial number
+- Problem description
+- 联系人、公司、邮箱、电话
+- 最多 5 个附件，每个 10 MB；支持 PDF、PNG、JPG/JPEG、ZIP
+
+当前表单没有单独的“故障数量”和“现场情况”字段；相关内容写入 Problem description。当前不直接上传视频，需要时把材料整理为 ZIP，或在后续 Helpdesk 会话中按公司政策提供。
+
+提交会创建 Helpdesk Ticket，不会直接创建 Repair Order。客户在 `Service Center` 或 `My Account → Service Tickets` 查看和回复。
+
+### 9.3 售后人员处理
+
+1. 进入 Helpdesk 的 All Tickets 或 Unassigned Tickets；不要只看 My Tickets。
+2. 清除不必要的 My Tickets/Open 筛选，按编号、客户或时间搜索。
+3. 检查订单、商品、型号、序列号、描述、附件和保修范围。
+4. 分配负责人，使用内部 Note 记录内部判断，公开消息回复客户。
+5. 需要实体维修时使用 Odoo 原生 Repair 创建或关联 Repair Order。
+6. Replacement 按库存、退回旧件和发出新件的原生流程处理。
+7. 更新 Helpdesk 阶段，完成后填写解决说明并关闭。
+
+未分配的新工单不会出现在某员工的 My Tickets；关闭工单也可能被 Open 筛选隐藏。不要直接修改原订单金额或客户价；退款、换货和库存调整使用对应 Odoo 原生流程。
+
+## 10. Contact Request 闭环
+
+### 10.1 请求类型
+
+`/contact` 支持 Sales Inquiry、Technical Support、Sample Request、Partnership、Company Change、Company User Change、Other。
+
+这些类型用于分类、筛选和显示，不会自动路由到不同部门：
+
+| 条件 | 自动分配 |
+|---|---|
+| Website Salesperson 是有效 B2B Operator | 分配给该 Salesperson |
+| 未配置 Salesperson | 分配给第一个有效 B2B Operator |
+| Salesperson 不是 B2B Operator | 忽略并选择有效 B2B Operator |
+| 运营人员点击 Start | 改为当前操作人员 |
+
+Technical Support 不会自动创建 Helpdesk；Sample Request 不会自动创建正式付费样品。故障维修引导至 Project Support/Service Center，正式样品引导至商品详情或 Sample Center。
+
+### 10.2 后台处理
+
+进入 `Operations → Contact Requests`：
+
+1. New：核对类型、主题、公司、联系人、正文和负责人。
+2. 点击 Start：进入 In Progress，并由当前人员接手。
+3. 使用 Send Message 对客户公开回复；内部讨论使用 Note。
+4. 问题明确处理后点击 Resolve。
+5. 客户确认、长期未回复、重复/无效或已转正式业务流程时点击 Close。
+
+状态为 `New → In Progress → Resolved → Closed`。关闭前建议在 Chatter 写明原因。客户在 `My Account → My Inquiries` 查看请求和回复。
+
+### 10.3 各类型后续
+
+- Sales Inquiry：使用 Odoo 原生报价单和客户 Pricelist。
+- Technical Support：一般咨询在 Contact 中回复；实体故障转 Helpdesk 售后。
+- Sample Request：解释政策后引导正式付费样品。
+- Partnership：审核资料后维护公司/联系人并执行审批。
+- Company Change/User Change：核实身份后在 Contacts 修改并留痕。
+
+## 11. 订单、支付与 ERP
+
+客户在 `My Account → Orders` 查看编号、日期、状态、金额，进入详情查看商品、数量、价格和地址。已确认订单可使用 `Track ERP Fulfilment`。
+
+运营人员在 Odoo 原生 Sales Orders 中按订单号、客户或日期核对。ERP Jobs 仅 Integration Manager 可见；不要因同步失败手工重复创建订单，应先检查幂等键、引用编号、状态和错误，再执行 Retry。
+
+客户只能看到自己商业伙伴范围内的订单，不要把一个客户的订单、截图、价格或地址发送给另一个客户。
+
+## 12. 日常检查与故障排查
+
+每日检查：
 
 1. 待审批客户。
 2. 待审核样品。
-3. ERP Pending 或 Exception 任务。
-4. 新增或变更的产品资料。
-5. 需要跟进的售后请求。
+3. 新 Contact Requests。
+4. 有权限时检查 Helpdesk、ERP Pending/Failed。
+5. 新增或变更的商品、品牌、FAQ 和资源。
 
-发现以下情况时先暂停发布并联系管理员：
+发布前检查：
 
-- 客户能看到不属于自己的价格。
-- 未审批客户能看到正式价格。
-- 受限产品或文档可以通过直接 URL 打开。
-- Marketing 账号可以修改销售价格或库存。
-- 订单同步重复生成。
-- 样品或售后记录无法关联客户和订单。
+- 名称、SKU、品牌、型号、类目和主图正确。
+- 描述和资源不含内部备注、客户隐私或写死价格。
+- Visibility、Segments、Pricelist 和 MOQ 正确。
+- 图片、视频 URL、说明书和证书可打开。
+- 受限商品和文档的直接 URL 已用无权限账号测试。
+- 游客、未审批、不同分群客户看到的商品和价格符合预期。
 
-所有运营人员都应遵循“先确认客户、再确认权限、最后修改业务数据”的顺序。价格、库存、订单和客户审批属于敏感业务数据，修改前必须确认记录和操作目的。
+发现以下情况立即暂停发布并通知管理员：
+
+- 客户看到不属于自己的价格、订单或地址。
+- 未审批客户看到正式价格。
+- 受限商品或文档可通过直接 URL 打开。
+- Marketing 可以修改价格、库存或产品主数据。
+- 订单、样品或 ERP 同步重复生成。
+- 样品、售后或 Contact 无法关联正确客户。
+
+常见排查顺序：
+
+1. 公司是否重复、联系人归属是否正确。
+2. 登录用户是否绑定正确联系人。
+3. 公司是否审批，Segments 和 Pricelist 是否正确。
+4. 商品是否发布、可销售、分类和 Visibility 是否正确。
+5. Helpdesk Team、Visibility、负责人和默认筛选是否正确。
+6. 内部员工的 B2B 组和 Odoo 原生应用权限是否匹配。
+7. 网站公司邮箱、电话、地址和社交链接是否为最新。

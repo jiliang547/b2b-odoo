@@ -535,6 +535,7 @@ function initializePartnerHub() {
     initializeFaq();
     initializeSubmissionForms();
     initializePaymentStatus();
+    initializeCompanyOnboarding();
 }
 
 function initializeFaq() {
@@ -591,6 +592,8 @@ function resetSubmissionForm(form) {
     form.removeAttribute("aria-busy");
     form.querySelectorAll("button[type='submit'], input[type='submit']").forEach((button) => {
         button.disabled = false;
+        button.style.removeProperty("width");
+        button.style.removeProperty("height");
         if (button.dataset.ltOriginalLabel) {
             if (button instanceof HTMLInputElement) {
                 button.value = button.dataset.ltOriginalLabel;
@@ -616,6 +619,9 @@ function initializeSubmissionForms() {
             form.dataset.ltSubmitting = "true";
             form.setAttribute("aria-busy", "true");
             form.querySelectorAll("button[type='submit'], input[type='submit']").forEach((button) => {
+                const buttonRect = button.getBoundingClientRect();
+                button.style.width = `${buttonRect.width}px`;
+                button.style.height = `${buttonRect.height}px`;
                 button.dataset.ltOriginalLabel ||= button instanceof HTMLInputElement
                     ? button.value
                     : button.innerHTML;
@@ -703,6 +709,37 @@ function initializeAccountMenus() {
             }
         });
     });
+}
+
+function initializeCompanyOnboarding() {
+    const dialog = document.querySelector("[data-lt-company-onboarding]");
+    if (!dialog) {
+        return;
+    }
+    const storageKey = `lt-company-onboarding-${dialog.dataset.ltCompanyOnboarding}`;
+    try {
+        if (window.sessionStorage.getItem(storageKey)) {
+            return;
+        }
+        window.sessionStorage.setItem(storageKey, "shown");
+    } catch (_error) {
+        // The reminder can still be displayed when browser storage is blocked.
+    }
+    const close = () => {
+        dialog.hidden = true;
+        document.body.classList.remove("lt-has-company-onboarding-dialog");
+    };
+    dialog.querySelectorAll("[data-lt-company-onboarding-close]").forEach(
+        (button) => button.addEventListener("click", close)
+    );
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !dialog.hidden) {
+            close();
+        }
+    });
+    dialog.hidden = false;
+    document.body.classList.add("lt-has-company-onboarding-dialog");
+    dialog.querySelector("a, button:not(.lt-company-onboarding-dialog__backdrop)")?.focus();
 }
 
 if (document.readyState === "loading") {

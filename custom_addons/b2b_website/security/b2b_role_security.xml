@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Stable native application access is bundled with the B2B job role.
+         Higher-risk manager roles remain separately assignable. -->
+    <record id="b2b_core.group_b2b_after_sales" model="res.groups">
+        <field name="implied_ids" eval="[Command.link(ref('helpdesk.group_helpdesk_user'))]"/>
+    </record>
+
+    <record id="b2b_core.group_b2b_pmc" model="res.groups">
+        <field name="implied_ids" eval="[Command.link(ref('stock.group_stock_user'))]"/>
+    </record>
+</odoo>

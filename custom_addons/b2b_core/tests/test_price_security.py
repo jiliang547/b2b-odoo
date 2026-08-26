@@ -11,12 +11,12 @@ class TestB2BPriceSecurity(TransactionCase):
         cls.product_manager = mail_new_test_user(
             cls.env,
             login="b2b-product-no-price",
-            groups="product.group_product_manager,b2b_core.group_b2b_product_manager",
+            groups="b2b_core.group_b2b_product_manager",
         )
         cls.price_manager = mail_new_test_user(
             cls.env,
             login="b2b-price-manager",
-            groups="product.group_product_manager,b2b_core.group_b2b_special_price_manager",
+            groups="b2b_core.group_b2b_special_price_manager",
         )
         cls.marketing = mail_new_test_user(
             cls.env,
@@ -29,9 +29,17 @@ class TestB2BPriceSecurity(TransactionCase):
         with self.assertRaises(AccessError):
             self.product.with_user(self.product_manager).write({"list_price": 999})
 
+    def test_product_manager_bundle_can_change_product_master_data(self):
+        self.product.with_user(self.product_manager).write({"name": "Updated Product"})
+        self.assertEqual(self.product.name, "Updated Product")
+
     def test_price_manager_can_change_sales_price(self):
         self.product.with_user(self.price_manager).write({"list_price": 123})
         self.assertEqual(self.product.list_price, 123)
+
+    def test_price_manager_cannot_change_product_master_data(self):
+        with self.assertRaises(AccessError):
+            self.product.with_user(self.price_manager).write({"name": "Forbidden"})
 
     def test_product_manager_cannot_create_pricelist_rule(self):
         pricelist = self.env["product.pricelist"].create({"name": "Guarded Pricelist"})
@@ -41,6 +49,17 @@ class TestB2BPriceSecurity(TransactionCase):
                 "compute_price": "fixed",
                 "fixed_price": 1,
             })
+
+    def test_price_manager_can_create_pricelist_rule_without_product_role(self):
+        pricelist = self.env["product.pricelist"].with_user(self.price_manager).create({
+            "name": "Authorized Pricelist",
+        })
+        item = self.env["product.pricelist.item"].with_user(self.price_manager).create({
+            "pricelist_id": pricelist.id,
+            "compute_price": "fixed",
+            "fixed_price": 12,
+        })
+        self.assertTrue(item.exists())
 
     def test_marketing_can_manage_native_product_media(self):
         image = self.env["product.image"].with_user(self.marketing).create({

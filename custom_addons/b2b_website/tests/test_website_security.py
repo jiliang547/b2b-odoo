@@ -139,3 +139,89 @@ class TestWebsiteIDOR(HttpCase):
         self.authenticate("portal-http", "portal-http")
         response = self.url_open("/en/my/orders/%s/erp-status" % self.other_order.id)
         self.assertIn(response.status_code, (403, 404), response.text[:500])
+
+
+@tagged("post_install", "-at_install")
+class TestCompanyOnboardingHttp(HttpCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.contact = cls.env["res.partner"].create({
+            "name": "Company Onboarding Contact",
+            "email": "company-onboarding-http@example.com",
+        })
+        cls.portal_user = mail_new_test_user(
+            cls.env,
+            login="company-onboarding-http",
+            password="company-onboarding-http",
+            groups="base.group_portal",
+            partner_id=cls.contact.id,
+        )
+
+    def _authenticate(self):
+        self.authenticate("company-onboarding-http", "company-onboarding-http")
+
+    def test_unlinked_contact_sees_setup_prompt_and_form(self):
+        self._authenticate()
+        dashboard = self.url_open("/en/my")
+        self.assertEqual(dashboard.status_code, 200)
+        self.assertIn("Connect your company account", dashboard.text)
+        self.assertIn("Request Company Setup", dashboard.text)
+
+        company_form = self.url_open("/en/my/company/change")
+        self.assertEqual(company_form.status_code, 200)
+        self.assertIn("Request Company Setup", company_form.text)
+        self.assertIn("Submit the company you represent", company_form.text)
+
+    def test_open_request_replaces_form_with_review_state(self):
+        request_record = self.env["b2b.contact.request"].create({
+            "partner_id": self.contact.id,
+            "website_id": self.env["website"].search([], limit=1).id,
+            "request_type": "company_change",
+            "subject": "Set up Test Company",
+            "contact_name": self.contact.name,
+            "email": self.contact.email,
+            "message": "Please link my login to Test Company.",
+        })
+        self._authenticate()
+
+        dashboard = self.url_open("/en/my")
+        self.assertEqual(dashboard.status_code, 200)
+        self.assertIn("Company request under review", dashboard.text)
+        self.assertIn("/my/inquiries/%s" % request_record.id, dashboard.text)
+
+        company_form = self.url_open("/en/my/company/change")
+        self.assertEqual(company_form.status_code, 200)
+        self.assertIn("Company request under review", company_form.text)
+        self.assertNotIn("name=\"company_name\"", company_form.text)
+
+    def test_linked_contact_sees_company_as_effective_account(self):
+        company = self.env["res.partner"].create({
+            "name": "Effective Portal Company",
+            "is_company": True,
+            "b2b_approved": True,
+        })
+        self.contact.parent_id = company
+        self._authenticate()
+
+        company_profile = self.url_open("/en/my/company")
+        self.assertEqual(company_profile.status_code, 200)
+        self.assertIn("Effective Portal Company", company_profile.text)
+        self.assertIn("Partner Hub Approved", company_profile.text)
+        self.assertNotIn("Set up your company profile", company_profile.text)
+
+    def test_native_profile_navigation_highlights_current_page(self):
+        self._authenticate()
+
+        profile = self.url_open("/en/my/account")
+        self.assertEqual(profile.status_code, 200)
+        self.assertIn('title="Personal profile" class="is-active"', profile.text)
+
+        addresses = self.url_open("/en/my/addresses")
+        self.assertEqual(addresses.status_code, 200)
+        self.assertIn('title="Addresses" class="is-active"', addresses.text)
+
+    def test_footer_after_sales_uses_native_ticket_portal(self):
+        homepage = self.url_open("/en")
+        self.assertEqual(homepage.status_code, 200)
+        self.assertIn('my/tickets">After-Sales Support</a>', homepage.text)

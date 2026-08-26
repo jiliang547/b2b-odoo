@@ -1,4 +1,5 @@
-from odoo import api, fields, models
+from odoo import _, api, fields, models
+from odoo.exceptions import ValidationError
 from odoo.http import request
 
 
@@ -38,7 +39,23 @@ class ProductTemplate(models.Model):
         string="Applications",
     )
     b2b_model_number = fields.Char(string="Model Number", index="trigram")
+    b2b_default_moq = fields.Float(
+        string="Default B2B MOQ",
+        default=1.0,
+        required=True,
+        digits="Product Unit",
+        tracking=True,
+        help=(
+            "Minimum quantity shown and enforced in Partner Hub when the "
+            "customer's pricelist has no applicable Minimum Quantity rule."
+        ),
+    )
     b2b_specifications = fields.Html(string="Technical Specifications", sanitize=True)
+
+    @api.constrains("b2b_default_moq")
+    def _check_b2b_default_moq(self):
+        if any(product.b2b_default_moq <= 0 for product in self):
+            raise ValidationError(_("Default B2B MOQ must be greater than zero."))
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -47,6 +64,10 @@ class ProductTemplate(models.Model):
         return super().create(vals_list)
 
     def write(self, vals):
+        self.env["b2b.price.write.mixin"]._b2b_check_price_only_product_write(
+            vals,
+            {"list_price", "compare_list_price"},
+        )
         if {"list_price", "compare_list_price"}.intersection(vals):
             self.env["b2b.price.write.mixin"]._b2b_check_price_write()
         return super().write(vals)
@@ -138,3 +159,16 @@ class ProductTemplate(models.Model):
                     round=False,
                 )
         return prices
+
+
+class ProductProduct(models.Model):
+    _inherit = "product.product"
+
+    def write(self, vals):
+        self.env["b2b.price.write.mixin"]._b2b_check_price_only_product_write(
+            vals,
+            {"lst_price"},
+        )
+        if "lst_price" in vals:
+            self.env["b2b.price.write.mixin"]._b2b_check_price_write()
+        return super().write(vals)
