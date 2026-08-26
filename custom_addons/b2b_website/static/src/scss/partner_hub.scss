@@ -343,7 +343,7 @@
     width: 36px; height: 36px; display: grid; place-items: center; flex: 0 0 36px; overflow: hidden; border-radius: 6px;
     background: #2563eb;
 }
-.lt-brand__mark img { width: 28px; height: 28px; display: block; object-fit: contain; filter: brightness(0) invert(1); }
+.lt-brand__mark img { width: 28px; height: 28px; display: block; object-fit: contain; }
 .lt-brand > span:last-child { display: grid; line-height: 1.05; }
 .lt-brand strong { font-size: 14px; letter-spacing: .02em; }
 .lt-brand small { margin-top: 3px; color: var(--lt-muted); font: 650 10px/1 "JetBrains Mono", monospace; letter-spacing: .12em; }
