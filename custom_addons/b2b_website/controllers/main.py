@@ -471,26 +471,6 @@ class PartnerHubWebsite(WebsiteController):
             )
         return request.redirect(response_url, code=303)
 
-    @route("/products/compare", type="http", auth="public", website=True, sitemap=False)
-    def product_compare(self, **query):
-        raw_ids = (query.get("ids") or "").split(",")
-        ids = [value for value in (self._safe_int(item) for item in raw_ids) if value][:4]
-        domain = Domain.AND([
-            self._service().visible_domain(website=self._website()),
-            [("id", "in", ids)],
-        ])
-        products = request.env["product.template"].sudo().search(domain)
-        products = products.sorted(key=lambda item: ids.index(item.id) if item.id in ids else 99)
-        if not products:
-            products = self._visible_products(limit=3)
-        return request.render(
-            "b2b_website.product_comparison",
-            self._catalog_values(
-                products,
-                page_name="partner_product_compare",
-            ),
-        )
-
     def _resource_format(self, document):
         if document.type == "url":
             path = urlparse(document.url or "").path

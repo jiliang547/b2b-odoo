@@ -95,6 +95,89 @@ class TestWebsiteSaleQuantity(TransactionCase):
                 self.product.uom_id.id,
             )
 
+
+@tagged("post_install", "-at_install")
+class TestPartnerHubCartBrowser(HttpCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.website = cls.env["website"].search([], limit=1)
+        cls.website.b2b_price_display_mode = "approved"
+        cls.company = cls.env["res.partner"].create({
+            "name": "Browser Cart Company",
+            "is_company": True,
+            "b2b_approved": True,
+        })
+        cls.contact = cls.env["res.partner"].create({
+            "name": "Browser Cart Contact",
+            "parent_id": cls.company.id,
+            "email": "browser-cart@example.com",
+        })
+        cls.login = "browser-cart-portal"
+        cls.portal_user = mail_new_test_user(
+            cls.env,
+            login=cls.login,
+            password=cls.login,
+            groups="base.group_portal",
+            partner_id=cls.contact.id,
+        )
+        cls.product = cls.env["product.product"].create({
+            "name": "Browser Cart Regression Product",
+            "default_code": "BROWSER-CART-REGRESSION",
+            "sale_ok": True,
+            "is_published": True,
+            "b2b_visibility_mode": "all",
+        })
+
+    def _assert_add_to_cart_succeeds(self, url):
+        self.browser_js(
+            url,
+            """
+                const form = document.querySelector('[data-lt-cart-form]');
+                if (!form) {
+                    console.error('Partner Hub add-to-cart form was not rendered.');
+                } else {
+                    setTimeout(() => {
+                        const quantityElement = document.querySelector('.my_cart_quantity');
+                        const initialQuantity = Number(quantityElement?.textContent || 0);
+                        const startedAt = Date.now();
+                        let increasedAt = 0;
+                        form.requestSubmit();
+                        const timer = setInterval(() => {
+                            const failed = [...document.querySelectorAll('.o_notification')].some(
+                                (item) => item.textContent.includes('We could not add this product')
+                            );
+                            const currentQuantity = Number(quantityElement?.textContent || 0);
+                            if (failed) {
+                                clearInterval(timer);
+                                console.error('Partner Hub reported a failed add after the cart request.');
+                            } else if (currentQuantity > initialQuantity) {
+                                increasedAt ||= Date.now();
+                                if (Date.now() - increasedAt > 750) {
+                                    clearInterval(timer);
+                                    console.log('test successful');
+                                }
+                            } else if (Date.now() - startedAt > 10000) {
+                                clearInterval(timer);
+                                console.error('The cart quantity did not increase.');
+                            }
+                        }, 100);
+                    }, 1500);
+                }
+            """,
+            login=self.login,
+            timeout=30,
+        )
+
+    def test_catalog_card_add_uses_native_cart_service(self):
+        self._assert_add_to_cart_succeeds(
+            "/en/products?search=BROWSER-CART-REGRESSION"
+        )
+
+    def test_product_detail_add_uses_native_cart_service(self):
+        slug = self.env["ir.http"]._slug(self.product.product_tmpl_id)
+        self._assert_add_to_cart_succeeds("/en/products/%s" % slug)
+
 @tagged("post_install", "-at_install")
 class TestWebsiteIDOR(HttpCase):
     @classmethod

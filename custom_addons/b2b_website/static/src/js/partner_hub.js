@@ -1,6 +1,8 @@
 /** @odoo-module **/
 
 import {rpc} from "@web/core/network/rpc";
+import {registry} from "@web/core/registry";
+import {Interaction} from "@web/public/interaction";
 
 function synchronizeCartQuantity(quantity) {
     const cartQuantity = Math.max(0, Number(quantity) || 0);
@@ -177,43 +179,84 @@ function initializeQuantityControls() {
     });
 }
 
-function initializeCartForms() {
-    document.querySelectorAll("[data-lt-cart-form]").forEach((form) => {
-        form.addEventListener("submit", async (event) => {
-            event.preventDefault();
-            const button = form.querySelector("button[type='submit']");
-            const status = form.querySelector("[data-lt-cart-status]");
-            const quantity = Number(form.elements.add_qty.value);
-            const minimum = Number(form.elements.add_qty.min || 0);
-            const maximum = Number(form.elements.add_qty.max || 10000);
-            if (!Number.isFinite(quantity) || quantity < minimum || quantity > maximum) {
-                status.textContent = `Enter a quantity between ${formatQuantity(minimum)} and ${formatQuantity(maximum)}.`;
-                return;
-            }
-            const step = Number(form.elements.add_qty.step || 1);
-            if (!isQuantityAligned(quantity, minimum, step)) {
-                status.textContent = `Start at ${formatQuantity(minimum)} and order in steps of ${formatQuantity(step)}.`;
-                return;
-            }
-            button.disabled = true;
-            status.textContent = "Adding product…";
-            try {
-                const result = await rpc("/shop/cart/add", {
-                    product_template_id: Number(form.elements.product_template_id.value),
-                    product_id: Number(form.elements.product_id.value),
-                    uom_id: Number(form.elements.uom_id.value),
-                    quantity,
+class PartnerHubCartForm extends Interaction {
+    static selector = "[data-lt-cart-form]";
+    dynamicContent = {
+        _root: {"t-on-submit": this.onSubmit},
+    };
+
+    async onSubmit(event) {
+        event.preventDefault();
+        const form = this.el;
+        const button = form.querySelector("button[type='submit']");
+        const status = form.querySelector("[data-lt-cart-status]");
+        const quantityInput = form.elements.add_qty;
+        const quantity = Number(quantityInput.value);
+        const minimum = Number(quantityInput.min || 0);
+        const maximum = Number(quantityInput.max || 10000);
+        const showValidation = (message) => {
+            if (status) {
+                status.textContent = message;
+            } else {
+                this.services.notification.add(message, {
+                    type: "warning",
+                    autocloseDelay: 3000,
                 });
-                synchronizeCartQuantity(result.cart_quantity);
-                status.textContent = "Added to cart.";
-                button.disabled = false;
-            } catch (_error) {
-                button.disabled = false;
-                status.textContent = "We could not add this product. Please try again.";
             }
-        });
-    });
+        };
+        if (!Number.isFinite(quantity) || quantity < minimum || quantity > maximum) {
+            showValidation(`Enter a quantity between ${formatQuantity(minimum)} and ${formatQuantity(maximum)}.`);
+            return;
+        }
+        const step = Number(quantityInput.step || 1);
+        if (!isQuantityAligned(quantity, minimum, step)) {
+            showValidation(`Start at ${formatQuantity(minimum)} and order in steps of ${formatQuantity(step)}.`);
+            return;
+        }
+        if (status) {
+            status.textContent = "";
+        }
+        const buttonRect = button.getBoundingClientRect();
+        button.style.width = `${buttonRect.width}px`;
+        button.style.height = `${buttonRect.height}px`;
+        button.disabled = true;
+        try {
+            await this.waitFor(this.services.cart.add({
+                productTemplateId: Number(form.elements.product_template_id.value),
+                productId: Number(form.elements.product_id.value),
+                uomId: Number(form.elements.uom_id.value),
+                quantity,
+            }, {
+                showQuantity: true,
+            }));
+        } catch (error) {
+            const message = error?.data?.message
+                || "We could not add this product. Please try again.";
+            this.services.notification.add(message, {
+                type: "danger",
+                autocloseDelay: 3000,
+            });
+        } finally {
+            button.disabled = false;
+            button.style.removeProperty("width");
+            button.style.removeProperty("height");
+        }
+    }
 }
+
+class PartnerHubToast extends Interaction {
+    static selector = "[data-lt-toast]";
+
+    start() {
+        this.services.notification.add(this.el.textContent.trim(), {
+            type: this.el.dataset.ltToastType || "success",
+            autocloseDelay: Number(this.el.dataset.ltToastDuration || 3000),
+        });
+    }
+}
+
+registry.category("public.interactions").add("b2b_website.cart_form", PartnerHubCartForm);
+registry.category("public.interactions").add("b2b_website.toast", PartnerHubToast);
 
 function initializeVariantPickers() {
     document.querySelectorAll("[data-lt-variant-picker]").forEach((picker) => {
@@ -528,7 +571,6 @@ function initializePartnerHub() {
     initializeCategoryBrowsers();
     initializeFeaturedProducts();
     initializeHorizontalCarousels();
-    initializeCartForms();
     initializeCartQuantity();
     initializeAccountMenus();
     initializePortalSidebar();
@@ -602,10 +644,6 @@ function resetSubmissionForm(form) {
             }
         }
     });
-    const status = form.querySelector("[data-lt-submit-status]");
-    if (status) {
-        status.textContent = "";
-    }
 }
 
 function initializeSubmissionForms() {
@@ -633,10 +671,6 @@ function initializeSubmissionForms() {
                     button.innerHTML = `<i class="fa fa-circle-notch fa-spin" aria-hidden="true"></i> ${label}`;
                 }
             });
-            const status = form.querySelector("[data-lt-submit-status]");
-            if (status) {
-                status.textContent = "Please wait. Your request is being submitted.";
-            }
         });
     });
     window.addEventListener("pageshow", () => {

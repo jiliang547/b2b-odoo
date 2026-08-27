@@ -2,7 +2,7 @@
 <odoo>
     <template id="product_catalog" name="Partner Product Catalog">
         <t t-call="b2b_website.partner_layout">
-            <section class="lt-catalog-page"><div class="container">
+            <section class="oe_website_sale lt-catalog-page"><div class="container">
                 <nav class="lt-breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><span>Products</span></nav>
                 <div class="lt-catalog-intro"><h1>Product Catalog</h1><p><t t-out="total"/> industrial products with certified specifications and account-specific pricing.</p></div>
                 <form class="lt-catalog-toolbar" action="/products" method="get">
@@ -37,11 +37,11 @@
     <template id="product_detail" name="Partner Product Detail">
         <t t-call="b2b_website.partner_layout">
             <t t-set="additional_title" t-value="product.name"/>
-            <section class="lt-detail-page"><div class="container">
+            <section class="oe_website_sale lt-detail-page"><div class="container">
                 <nav class="lt-breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><a href="/products">Products</a><span>/</span><span t-if="product.public_categ_ids" t-out="product.public_categ_ids[:1].name"/><span t-if="product.public_categ_ids">/</span><span t-out="product.b2b_model_number or product.name"/></nav>
                 <div class="lt-product-detail">
                     <div class="lt-gallery" data-lt-gallery="">
-                        <div class="lt-gallery__stage"><span class="lt-gallery__sku" data-lt-variant-sku="" t-out="variant.default_code or product.b2b_model_number or 'LUCKY TONE'"/><img data-lt-gallery-image="" t-att-src="'/web/image/product.template/%s/image_1024' % product.id" t-att-alt="product.name"/><div t-foreach="media.filtered('video_url')" t-as="video" t-att-id="'lt-video-%s' % video.id" class="lt-gallery__video d-none" t-field="video.embed_code"/></div>
+                        <div class="lt-gallery__stage"><img data-lt-gallery-image="" t-att-src="'/web/image/product.template/%s/image_1024' % product.id" t-att-alt="product.name"/><div t-foreach="media.filtered('video_url')" t-as="video" t-att-id="'lt-video-%s' % video.id" class="lt-gallery__video d-none" t-field="video.embed_code"/></div>
                         <div class="lt-gallery__thumbs">
                             <button type="button" class="is-active" t-att-data-image-src="'/web/image/product.template/%s/image_1024' % product.id"><img t-att-src="'/web/image/product.template/%s/image_128' % product.id" t-att-alt="'%s main image' % product.name"/></button>
                             <button t-foreach="media" t-as="item" type="button" t-att-class="'is-video' if item.video_url else ''" t-att-data-image-src="'/web/image/product.image/%s/image_1024' % item.id" t-att-data-video-target="'lt-video-%s' % item.id if item.video_url else ''"><img t-att-src="'/web/image/product.image/%s/image_128' % item.id" t-att-alt="item.name"/><span t-if="item.video_url">VIDEO</span></button>

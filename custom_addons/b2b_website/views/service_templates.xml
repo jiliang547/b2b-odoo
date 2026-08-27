@@ -25,7 +25,7 @@
                         <div class="lt-field"><label for="service-email">Email</label><input id="service-email" name="email" type="email" maxlength="254" required="required" t-att-value="post.get('email', email)"/></div>
                         <div class="lt-field"><label for="service-phone">Phone</label><input id="service-phone" name="phone" maxlength="64" required="required" t-att-value="post.get('phone', phone)"/></div>
                     </div></div>
-                    <div class="lt-form-submit"><p>Your request will create a Helpdesk ticket visible in My Account.</p><button class="lt-btn lt-btn--primary" type="submit" data-lt-submitting-label="Submitting…">Submit service request</button><span class="lt-submit-status" data-lt-submit-status="" aria-live="polite"/></div>
+                    <div class="lt-form-submit"><p>Your request will create a Helpdesk ticket visible in My Account.</p><button class="lt-btn lt-btn--primary" type="submit" data-lt-submitting-label="Submitting…">Submit service request</button></div>
                 </form>
             </div></section>
         </t>
