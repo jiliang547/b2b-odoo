@@ -1,6 +1,6 @@
 # Partner Hub 运营人员操作手册
 
-版本：V4.5（2026-08-26 产品默认 MOQ 修订）
+版本：V4.6（2026-09-03 注册与公司审核流程修订）
 适用系统：Odoo 19 Enterprise + Partner Hub
 适用对象：管理员、B2B Manager、Sales、Product、Marketing、PMC、After-sales、Integration Manager
 
@@ -99,16 +99,21 @@ Odoo 原生 Sales Manager 会获得特殊价格维护权限，但不会因此获
 
 ### 3.2 前台注册与合作申请
 
-普通注册仍只要求客户填写姓名、邮箱和密码，注册结果首先是一个个人联系人，不要求客户在注册页一次性填写完整公司资料。客户可登录并浏览公开商品；未关联并审批公司时通常不显示正式价格，也不能提交付费样品。
+普通客户在注册页一次性填写姓名、职位、待审核公司名称、国家、Business Email、Mobile/WhatsApp、Business Type、密码，以及可选的公司电话、公司网站和 Products of Interest。
 
-未关联公司的客户首次进入 `My Account` 时，系统会弹出提示，并在页面持续显示 `Connect your company account` 卡片：
+注册后的状态流转为：
 
-1. 客户点击 `Request Company Setup`。
-2. 填写 Legal company name、地址、税号和申请原因等公司资料。
-3. 提交后，系统显示 `Company request under review`，同时禁止重复提交另一条未完成的公司申请。
-4. 客户可在 `My Inquiries` 查看申请和运营人员回复。
+```text
+Verify Email → Partner Review → Access Activated
+```
 
-关闭首次弹窗不会关闭申请入口；客户仍可从 My Account 或 Company Profile 继续申请。该流程只创建 `Company Change` 请求，不会自动创建公司、自动关联联系人或自动审批。
+提交注册时只创建未激活的 Portal 用户和注册申请，客户填写的公司名称不会立即创建正式公司。客户验证邮箱后账号激活，申请进入 `Partner Review`，B2B Management Dashboard 才显示 Pending Registration。B2B Manager 审核时选择关联已有公司或创建新公司；批准后系统把个人联系人归入公司并批准公司 Partner Hub 权限。
+
+待审核客户可以登录 My 页面查看 `Partner registration under review`，但在公司正式关联并审批前不会获得完整 B2B 价格、受限商品和业务权限。
+
+详细字段、邮箱验证、审核、拒绝及异常处理参见 [Partner Hub 注册与审核流程操作手册](PARTNER_HUB_注册与审核流程操作手册.md)。
+
+旧的 `Request Company Setup` / Company Change 流程继续用于历史账号、人工邀请账号以及审核后需要调整公司归属的客户，不再是新客户注册的必经步骤。
 
 客户可通过 `/partner-application` 填写：
 
@@ -136,12 +141,17 @@ Odoo 原生 Sales Manager 会获得特殊价格维护权限，但不会因此获
 
 前提：操作账号必须有效拥有 `B2B Manager`。Sales Manager、Special Price Manager、Product Manager、PMC、After-sales、Marketing 和普通内部用户都不能审批客户。
 
-1. 进入 `B2B Management → Business Data → Customers` 或 `Contacts`。
-2. 打开公司记录，不要误在个人联系人上审批。
-3. 检查公司名称、邮箱、电话、国家、地址、客户类型和联系人。
-4. 在 `Partner Hub` 区域设置 Customer Segments、Pricelist、ERP 客户信息。
-5. 由 B2B Manager 点击 `Approve Partner Hub Access`。
-6. 保存并让客户刷新页面或重新登录验证。
+新注册客户按以下流程审批：
+
+1. 进入 `B2B Management → Dashboard → Pending Registrations`，或 `Operations → Pending Registrations`。
+2. 检查客户姓名、职位、邮箱、公司名称、国家、电话、网站、Business Type 和 Products of Interest。
+3. 在 Contacts 搜索公司名称、域名和电话，确认是否已有正式公司。
+4. 已有公司：选择 `Link Existing Company` 和正确的 `Resolved Company`；现有公司资料不会被注册资料覆盖，只补充原本为空的字段。
+5. 没有公司：选择 `Create New Company`，系统使用审核后的资料创建正式公司。
+6. 点击 `Approve & Activate`。系统自动关联个人联系人、批准公司并发送通过邮件。
+7. 进入公司记录检查 Customer Type、Customer Segments、基础价格表、公司专属价格覆盖和 ERP 客户信息。
+
+人工邀请、历史账号或 Company Change 请求仍可在公司记录中由 B2B Manager 点击 `Approve Partner Hub Access`。
 
 取消权限时点击 `Revoke Partner Hub Access`。撤销后，客户不应继续看到受保护价格、受限商品或付费样品入口。
 

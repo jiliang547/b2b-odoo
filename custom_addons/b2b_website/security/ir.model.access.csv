@@ -10,3 +10,6 @@ access_b2b_faq_category_operator,b2b.faq.category operator,model_b2b_faq_categor
 access_b2b_faq_category_manager,b2b.faq.category manager,model_b2b_faq_category,b2b_core.group_b2b_manager,1,1,1,1
 access_b2b_faq_item_operator,b2b.faq.item operator,model_b2b_faq_item,b2b_core.group_b2b_operator,1,0,0,0
 access_b2b_faq_item_manager,b2b.faq.item manager,model_b2b_faq_item,b2b_core.group_b2b_manager,1,1,1,1
+access_b2b_registration_application_portal,b2b.registration.application portal,model_b2b_registration_application,base.group_portal,1,0,0,0
+access_b2b_registration_application_operator,b2b.registration.application operator,model_b2b_registration_application,b2b_core.group_b2b_operator,1,0,0,0
+access_b2b_registration_application_manager,b2b.registration.application manager,model_b2b_registration_application,b2b_core.group_b2b_manager,1,1,1,0

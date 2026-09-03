@@ -87,6 +87,10 @@ class PartnerHubPortal(CustomerPortal):
         Order = request.env["sale.order"]
         Ticket = request.env["helpdesk.ticket"]
         Inquiry = request.env["b2b.contact.request"]
+        Registration = request.env["b2b.registration.application"]
+        registration = Registration.search([
+            ("partner_id", "=", contact.id),
+        ], order="create_date desc", limit=1)
         open_company_request = Inquiry.search([
             ("partner_id", "=", contact.id),
             ("request_type", "=", "company_change"),
@@ -123,10 +127,12 @@ class PartnerHubPortal(CustomerPortal):
             "recent_tickets": recent_tickets,
             "b2b_has_linked_company": has_linked_company,
             "b2b_open_company_request": open_company_request,
+            "b2b_registration_application": registration,
             "b2b_show_company_prompt": bool(
                 not has_linked_company
                 and not contact.b2b_approved
                 and not open_company_request
+                and registration.state not in ("pending", "rejected")
             ),
         }
         # Native /my/counters expects the response to contain only requested

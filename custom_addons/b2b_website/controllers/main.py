@@ -350,6 +350,13 @@ class PartnerHubWebsite(WebsiteController):
             {"page_name": "partner_privacy"},
         )
 
+    @route("/terms", type="http", auth="public", website=True, sitemap=True)
+    def terms(self, **kwargs):
+        return request.render(
+            "b2b_website.partner_terms",
+            {"page_name": "partner_terms"},
+        )
+
     @route("/contact", type="http", auth="public", website=True, sitemap=True)
     def contact(self, **kwargs):
         return request.render("b2b_website.partner_contact", self._contact_values())
@@ -666,6 +673,12 @@ class PartnerHubWebsite(WebsiteController):
         methods=["GET", "POST"], sitemap=False,
     )
     def company_change(self, **form):
+        registration = request.env["b2b.registration.application"].search([
+            ("partner_id", "=", request.env.user.partner_id.id),
+            ("state", "=", "pending"),
+        ], limit=1)
+        if registration:
+            return request.redirect("/my")
         if request.httprequest.method == "GET":
             return request.render(
                 "b2b_website.company_change_form",

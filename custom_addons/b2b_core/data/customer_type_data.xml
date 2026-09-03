@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="customer_type_distributor_importer" model="b2b.customer.type"><field name="name">Distributor / Importer</field><field name="sequence">10</field></record>
+    <record id="customer_type_system_integrator" model="b2b.customer.type"><field name="name">System Integrator</field><field name="sequence">20</field></record>
+    <record id="customer_type_installer_contractor" model="b2b.customer.type"><field name="name">Installer / Contractor</field><field name="sequence">30</field></record>
+    <record id="customer_type_retailer_ecommerce" model="b2b.customer.type"><field name="name">Retailer / E-commerce</field><field name="sequence">40</field></record>
+    <record id="customer_type_brand_owner_oem" model="b2b.customer.type"><field name="name">Brand Owner / OEM Customer</field><field name="sequence">50</field></record>
+    <record id="customer_type_consultant_designer" model="b2b.customer.type"><field name="name">Consultant / Designer</field><field name="sequence">60</field></record>
+    <record id="customer_type_end_user_project_owner" model="b2b.customer.type"><field name="name">End User / Project Owner</field><field name="sequence">70</field></record>
+    <record id="customer_type_other" model="b2b.customer.type"><field name="name">Other</field><field name="sequence">80</field></record>
+</odoo>

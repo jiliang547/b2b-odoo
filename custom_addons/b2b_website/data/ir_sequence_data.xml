@@ -6,4 +6,10 @@
         <field name="prefix">CRQ/%(year)s/</field>
         <field name="padding">5</field>
     </record>
+    <record id="seq_b2b_registration_application" model="ir.sequence">
+        <field name="name">Partner Hub Registration</field>
+        <field name="code">b2b.registration.application</field>
+        <field name="prefix">REG/%(year)s/</field>
+        <field name="padding">5</field>
+    </record>
 </odoo>

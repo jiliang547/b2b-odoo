@@ -158,6 +158,18 @@
         </t>
     </template>
 
+    <template id="partner_terms" name="Partner Hub Terms of Use">
+        <t t-call="b2b_website.partner_layout">
+            <section class="lt-page-hero"><div class="container"><nav class="lt-breadcrumb lt-breadcrumb--dark" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><span>Terms</span></nav><span class="lt-kicker">PARTNER ACCESS</span><h1>Terms of Use</h1><p>The operating terms for Partner Hub accounts, business information and B2B services.</p></div></section>
+            <section class="lt-section"><div class="container lt-legal-content">
+                <h2>Account information</h2><p>You must provide accurate business and contact information and keep your credentials secure. Partner access remains subject to review and may be suspended when information is inaccurate or access is misused.</p>
+                <h2>Pricing and availability</h2><p>Partner prices, minimum order quantities, product availability and delivery estimates may vary by approved company, market, currency and quotation. A confirmed quotation or order takes precedence over general website information.</p>
+                <h2>Permitted use</h2><p>Technical resources, pricing and account-specific information are provided for your organization's legitimate business use and must not be shared outside the authorized company without permission.</p>
+                <h2>Support</h2><p>Questions about these terms can be submitted through the <a href="/contact">contact page</a>.</p>
+            </div></section>
+        </t>
+    </template>
+
     <template id="partner_application" name="Partner Application">
         <t t-call="b2b_website.partner_layout"><t t-set="no_index" t-value="True"/>
             <section class="lt-page-head lt-page-head--compact"><div class="container"><span class="lt-kicker">PARTNER NETWORK</span><h1>Partner Application</h1><p>Complete the short form below. Our team will contact you after reviewing your application.</p></div></section>

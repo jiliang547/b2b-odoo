@@ -1,6 +1,13 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_b2b_customer_segment_operator,b2b.customer.segment operator,model_b2b_customer_segment,b2b_core.group_b2b_operator,1,0,0,0
 access_b2b_customer_segment_manager,b2b.customer.segment manager,model_b2b_customer_segment,b2b_core.group_b2b_manager,1,1,1,1
+access_b2b_customer_type_operator,b2b.customer.type operator,model_b2b_customer_type,b2b_core.group_b2b_operator,1,0,0,0
+access_b2b_customer_type_manager,b2b.customer.type manager,model_b2b_customer_type,b2b_core.group_b2b_manager,1,1,1,1
+access_b2b_customer_type_price_manager,b2b.customer.type price manager,model_b2b_customer_type,b2b_core.group_b2b_special_price_manager,1,0,0,0
+access_b2b_customer_type_pricelist_manager,b2b.customer.type.pricelist manager,model_b2b_customer_type_pricelist,b2b_core.group_b2b_manager,1,0,0,0
+access_b2b_customer_type_pricelist_price_manager,b2b.customer.type.pricelist price manager,model_b2b_customer_type_pricelist,b2b_core.group_b2b_special_price_manager,1,1,1,1
+access_b2b_partner_pricelist_override_operator,b2b.partner.pricelist.override operator,model_b2b_partner_pricelist_override,b2b_core.group_b2b_operator,1,0,0,0
+access_b2b_partner_pricelist_override_price_manager,b2b.partner.pricelist.override price manager,model_b2b_partner_pricelist_override,b2b_core.group_b2b_special_price_manager,1,1,1,1
 access_b2b_product_brand_operator,b2b.product.brand operator,model_b2b_product_brand,b2b_core.group_b2b_operator,1,0,0,0
 access_b2b_product_brand_manager,b2b.product.brand manager,model_b2b_product_brand,b2b_core.group_b2b_product_manager,1,1,1,1
 access_b2b_product_brand_b2b_manager,b2b.product.brand b2b manager,model_b2b_product_brand,b2b_core.group_b2b_manager,1,1,1,1

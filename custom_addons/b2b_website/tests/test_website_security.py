@@ -1,5 +1,6 @@
 from odoo import Command
 from odoo.addons.mail.tests.common import mail_new_test_user
+from odoo.addons.website_sale.tests.common import MockRequest
 from odoo.exceptions import AccessError, ValidationError
 from odoo.tests import HttpCase, TransactionCase, tagged
 
@@ -94,6 +95,85 @@ class TestWebsiteSaleQuantity(TransactionCase):
                 1.01,
                 self.product.uom_id.id,
             )
+
+
+@tagged("post_install", "-at_install")
+class TestWebsiteCustomerPricing(TransactionCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.website = cls.env["website"].search([], limit=1)
+        currency = cls.website.company_id.currency_id
+        cls.base_pricelist = cls.env["product.pricelist"].create({
+            "name": "Website Customer Base", "currency_id": currency.id,
+        })
+        cls.customer_type = cls.env["b2b.customer.type"].create({
+            "name": "Website Customer Type",
+        })
+        cls.env["b2b.customer.type.pricelist"].create({
+            "customer_type_id": cls.customer_type.id,
+            "website_id": cls.website.id,
+            "pricelist_id": cls.base_pricelist.id,
+        })
+        cls.company = cls.env["res.partner"].create({
+            "name": "Website Pricing Company",
+            "is_company": True,
+            "b2b_customer_type_id": cls.customer_type.id,
+        })
+        cls.contact = cls.env["res.partner"].create({
+            "name": "Website Pricing Contact",
+            "parent_id": cls.company.id,
+            "email": "website-pricing@example.com",
+        })
+        cls.portal_user = mail_new_test_user(
+            cls.env,
+            login="website-pricing-user",
+            groups="base.group_portal",
+            partner_id=cls.contact.id,
+        )
+        cls.effective = cls.company._b2b_get_effective_pricelist(
+            cls.website, currency
+        )
+
+    def test_portal_request_and_draft_cart_use_company_effective_pricelist(self):
+        cart = self.env["sale.order"].create({
+            "partner_id": self.contact.id,
+            "website_id": self.website.id,
+            "pricelist_id": self.base_pricelist.id,
+            "b2b_pricing_revision": 0,
+        })
+        portal_env = self.env(user=self.portal_user)
+        website = self.website.with_env(portal_env)
+        with MockRequest(
+            portal_env,
+            website=website,
+            sale_order_id=cart.id,
+            website_sale_current_pl=self.base_pricelist.id,
+        ) as http_request:
+            self.assertEqual(http_request.pricelist, self.effective)
+        self.assertEqual(cart.pricelist_id, self.effective)
+        self.assertEqual(
+            cart.b2b_pricing_revision, self.company.b2b_pricing_revision
+        )
+
+    def test_another_company_effective_pricelist_cannot_be_selected(self):
+        other_company = self.env["res.partner"].create({
+            "name": "Other Website Pricing Company",
+            "is_company": True,
+            "b2b_customer_type_id": self.customer_type.id,
+        })
+        foreign_effective = other_company._b2b_get_effective_pricelist(
+            self.website, self.base_pricelist.currency_id
+        )
+        portal_env = self.env(user=self.portal_user)
+        website = self.website.with_env(portal_env)
+        with MockRequest(
+            portal_env,
+            website=website,
+            website_sale_current_pl=foreign_effective.id,
+            website_sale_selected_pl_id=foreign_effective.id,
+        ) as http_request:
+            self.assertEqual(http_request.pricelist, self.effective)
 
 
 @tagged("post_install", "-at_install")

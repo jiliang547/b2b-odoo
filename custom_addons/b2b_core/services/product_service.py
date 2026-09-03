@@ -157,7 +157,9 @@ class B2BProductService(models.AbstractModel):
         )
 
         if pricelist:
-            rules = pricelist.sudo()._get_applicable_rules(variant, fields.Datetime.now())
+            rules = pricelist.sudo().b2b_procurement_rules(
+                variant, fields.Datetime.now()
+            )
             quantity_rules = rules.filtered(lambda rule: rule.min_quantity > 0)
             if quantity_rules:
                 specificity = {

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_b2b_customer_type_list" model="ir.ui.view">
+        <field name="name">b2b.customer.type.list</field>
+        <field name="model">b2b.customer.type</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="partner_count"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_b2b_customer_type_form" model="ir.ui.view">
+        <field name="name">b2b.customer.type.form</field>
+        <field name="model">b2b.customer.type</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button type="object" name="action_view_partners" class="oe_stat_button" icon="fa-users">
+                            <field name="partner_count" widget="statinfo" string="Companies"/>
+                        </button>
+                    </div>
+                    <widget name="web_ribbon" title="Archived" bg_color="text-bg-danger" invisible="active"/>
+                    <group>
+                        <field name="active" invisible="1"/>
+                        <field name="name"/>
+                        <field name="sequence"/>
+                    </group>
+                    <field name="description" placeholder="Describe which customers belong to this type..."/>
+                    <group string="Base Pricelists">
+                        <field name="pricelist_mapping_ids" context="{'default_customer_type_id': id}" groups="b2b_core.group_b2b_special_price_manager">
+                            <list editable="bottom">
+                                <field name="website_id"/>
+                                <field name="currency_id" readonly="1"/>
+                                <field name="pricelist_id" domain="[('b2b_effective_partner_id', '=', False)]"/>
+                                <field name="active" widget="boolean_toggle"/>
+                            </list>
+                        </field>
+                        <field name="pricelist_mapping_ids" readonly="1" groups="b2b_core.group_b2b_manager,!b2b_core.group_b2b_special_price_manager">
+                            <list>
+                                <field name="website_id"/>
+                                <field name="currency_id"/>
+                                <field name="pricelist_id"/>
+                                <field name="active"/>
+                            </list>
+                        </field>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_b2b_customer_types" model="ir.actions.act_window">
+        <field name="name">Customer Types &amp; Base Pricing</field>
+        <field name="res_model">b2b.customer.type</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

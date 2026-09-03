@@ -1,4 +1,6 @@
 from . import customer_segment
+from . import customer_type
+from . import partner_pricing
 from . import product_taxonomy
 from . import res_partner
 from . import res_users

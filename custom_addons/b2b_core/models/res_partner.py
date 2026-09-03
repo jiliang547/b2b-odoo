@@ -13,7 +13,11 @@ class ResPartner(models.Model):
         "b2b_approval_date",
         "b2b_approved_by_id",
     })
-    _B2B_MANAGER_FIELDS = frozenset({"b2b_segment_ids", "b2b_erp_customer_id"})
+    _B2B_MANAGER_FIELDS = frozenset({
+        "b2b_segment_ids",
+        "b2b_erp_customer_id",
+        "b2b_customer_type_id",
+    })
     _B2B_COMMERCIAL_ONLY_FIELDS = _B2B_APPROVAL_FIELDS | _B2B_MANAGER_FIELDS
 
     b2b_segment_ids = fields.Many2many(
@@ -46,6 +50,19 @@ class ResPartner(models.Model):
         copy=False,
         index=True,
         groups="b2b_core.group_b2b_manager",
+    )
+    b2b_product_interest_id = fields.Many2one(
+        "res.partner.category",
+        string="Products of Interest",
+        tracking=True,
+        groups="b2b_core.group_b2b_operator",
+        help="Primary product family selected during Partner Hub registration.",
+    )
+    b2b_mobile_whatsapp = fields.Char(
+        string="Mobile / WhatsApp",
+        tracking=True,
+        groups="b2b_core.group_b2b_operator",
+        help="Direct mobile or WhatsApp number supplied by the Partner Hub contact.",
     )
     b2b_is_commercial_entity = fields.Boolean(
         string="Is Partner Hub Commercial Entity",
@@ -108,7 +125,7 @@ class ResPartner(models.Model):
                 )
             if is_child:
                 raise AccessError(_(
-                    "Partner Hub approval, segments, and ERP customer data must "
+                    "Partner Hub approval, customer type, segments, and ERP customer data must "
                     "be maintained on the commercial company record."
                 ))
 
@@ -127,7 +144,7 @@ class ResPartner(models.Model):
         is_manager = self.env.user.has_group("b2b_core.group_b2b_manager")
         if keys & self._B2B_MANAGER_FIELDS and not is_manager:
             raise AccessError(_(
-                "Only a B2B Manager can maintain customer segments and ERP customer data."
+                "Only a B2B Manager can maintain customer type, segments, and ERP customer data."
             ))
 
         if "property_product_pricelist" in keys and not (
@@ -164,7 +181,9 @@ class ResPartner(models.Model):
                     "b2b_approved_by_id": False,
                     "b2b_segment_ids": [Command.clear()],
                     "b2b_erp_customer_id": False,
+                    "b2b_customer_type_id": False,
                 })
+                linked_contacts.mapped("b2b_pricelist_override_ids").sudo().unlink()
         return result
 
     def action_b2b_approve(self):

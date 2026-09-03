@@ -40,7 +40,7 @@ export class B2BManagementDashboard extends Component {
             ]);
             const [newContactRequests, pendingRegistrations, pendingApplications, samples, openService, failedJobs] = await Promise.all([
                 safeCount("b2b.contact.request", [["state", "=", "new"]]),
-                safeCount("res.partner", [["user_ids.share", "=", true], ["user_ids.active", "=", true], ["commercial_partner_id.b2b_approved", "=", false]]),
+                safeCount("b2b.registration.application", [["state", "=", "pending"]]),
                 safeCount("b2b.contact.request", [["request_type", "=", "partnership"], ["state", "in", ["new", "in_progress"]]]),
                 safeCount("b2b.sample.request", [["state", "in", ["submitted", "under_review"]]]),
                 safeCount("helpdesk.ticket", [["stage_id.fold", "=", false]]),

@@ -1,9 +1,11 @@
-from odoo import SUPERUSER_ID, _, models
+from odoo import SUPERUSER_ID, _, fields, models
 from odoo.exceptions import AccessError, UserError
 
 
 class SaleOrder(models.Model):
     _inherit = "sale.order"
+
+    b2b_pricing_revision = fields.Integer(copy=False, readonly=True)
 
     def _b2b_is_trusted_payment_confirmation(self):
         self.ensure_one()

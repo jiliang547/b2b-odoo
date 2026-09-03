@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="partner_category_product_interests" model="res.partner.category">
+        <field name="name">Product Interests</field>
+        <field name="color">0</field>
+    </record>
+    <record id="partner_interest_commercial_audio" model="res.partner.category"><field name="name">Commercial Audio</field><field name="parent_id" ref="partner_category_product_interests"/></record>
+    <record id="partner_interest_professional_audio" model="res.partner.category"><field name="name">Professional Audio</field><field name="parent_id" ref="partner_category_product_interests"/></record>
+    <record id="partner_interest_ip_sip_audio" model="res.partner.category"><field name="name">IP / SIP Network Audio</field><field name="parent_id" ref="partner_category_product_interests"/></record>
+    <record id="partner_interest_voice_alarm" model="res.partner.category"><field name="name">Voice Alarm &amp; Evacuation</field><field name="parent_id" ref="partner_category_product_interests"/></record>
+    <record id="partner_interest_smart_home_audio" model="res.partner.category"><field name="name">Smart Home Audio</field><field name="parent_id" ref="partner_category_product_interests"/></record>
+    <record id="partner_interest_portable_audio" model="res.partner.category"><field name="name">Portable Audio</field><field name="parent_id" ref="partner_category_product_interests"/></record>
+    <record id="partner_interest_oem_odm" model="res.partner.category"><field name="name">OEM / ODM Cooperation</field><field name="parent_id" ref="partner_category_product_interests"/></record>
+</odoo>

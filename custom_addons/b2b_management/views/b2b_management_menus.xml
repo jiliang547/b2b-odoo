@@ -12,9 +12,10 @@
     </record>
     <record id="action_b2b_pending_registrations" model="ir.actions.act_window">
         <field name="name">Pending Registrations</field>
-        <field name="res_model">res.partner</field>
+        <field name="res_model">b2b.registration.application</field>
         <field name="view_mode">list,form</field>
-        <field name="domain">[('user_ids.share', '=', True), ('user_ids.active', '=', True), ('commercial_partner_id.b2b_approved', '=', False)]</field>
+        <field name="search_view_id" ref="b2b_website.view_b2b_registration_application_search"/>
+        <field name="domain">[('state', '=', 'pending')]</field>
     </record>
     <record id="action_b2b_partner_applications" model="ir.actions.act_window">
         <field name="name">Partner Applications</field>
@@ -35,17 +36,19 @@
     <menuitem id="menu_b2b_operations" name="Operations" parent="menu_b2b_management_root" sequence="10"/>
     <menuitem id="menu_b2b_samples" name="Sample Requests" parent="menu_b2b_operations" action="b2b_sample.action_b2b_sample_requests" sequence="10"/>
     <menuitem id="menu_b2b_contact_requests" name="Contact Requests" parent="menu_b2b_operations" action="b2b_website.action_b2b_contact_requests" sequence="15"/>
+    <menuitem id="menu_b2b_pending_registrations" name="Pending Registrations" parent="menu_b2b_operations" action="action_b2b_pending_registrations" sequence="17" groups="b2b_core.group_b2b_manager"/>
     <menuitem id="menu_b2b_erp_jobs" name="ERP Jobs" parent="menu_b2b_operations" action="b2b_erp_connector.action_b2b_integration_jobs" sequence="20" groups="b2b_core.group_b2b_operator"/>
     <menuitem id="menu_b2b_business_data" name="Business Data" parent="menu_b2b_management_root" sequence="20"/>
     <menuitem id="menu_b2b_customers" name="Customers" parent="menu_b2b_business_data" action="base.action_partner_form" sequence="10"/>
     <menuitem id="menu_b2b_products" name="Products" parent="menu_b2b_business_data" action="product.product_template_action" sequence="20"/>
     <menuitem id="menu_b2b_product_media" name="Product Media" parent="menu_b2b_business_data" action="b2b_core.action_b2b_product_media" sequence="30" groups="b2b_core.group_b2b_marketing_media,b2b_core.group_b2b_product_manager"/>
-    <menuitem id="menu_b2b_configuration" name="Configuration" parent="menu_b2b_management_root" sequence="90" groups="b2b_core.group_b2b_manager"/>
-    <menuitem id="menu_b2b_segments" name="Customer Segments" parent="menu_b2b_configuration" action="b2b_core.action_b2b_customer_segments" sequence="10"/>
-    <menuitem id="menu_b2b_brands" name="Product Brands" parent="menu_b2b_configuration" action="b2b_core.action_b2b_product_brands" sequence="20"/>
-    <menuitem id="menu_b2b_applications" name="Product Applications" parent="menu_b2b_configuration" action="b2b_core.action_b2b_product_applications" sequence="30"/>
-    <menuitem id="menu_b2b_homepage_products" name="Homepage Featured Products" parent="menu_b2b_configuration" action="b2b_website.action_b2b_homepage_products" sequence="40"/>
-    <menuitem id="menu_b2b_faq" name="Frequently Asked Questions" parent="menu_b2b_configuration" action="b2b_website.action_b2b_faq_items" sequence="50"/>
-    <menuitem id="menu_b2b_faq_categories" name="FAQ Categories" parent="menu_b2b_configuration" action="b2b_website.action_b2b_faq_categories" sequence="51"/>
-    <menuitem id="menu_b2b_settings" name="Settings" parent="menu_b2b_configuration" action="base_setup.action_general_configuration" sequence="90"/>
+    <menuitem id="menu_b2b_configuration" name="Configuration" parent="menu_b2b_management_root" sequence="90" groups="b2b_core.group_b2b_manager,b2b_core.group_b2b_special_price_manager"/>
+    <menuitem id="menu_b2b_customer_types" name="Customer Types &amp; Base Pricing" parent="menu_b2b_configuration" action="b2b_core.action_b2b_customer_types" sequence="5" groups="b2b_core.group_b2b_manager,b2b_core.group_b2b_special_price_manager"/>
+    <menuitem id="menu_b2b_segments" name="Customer Segments" parent="menu_b2b_configuration" action="b2b_core.action_b2b_customer_segments" sequence="10" groups="b2b_core.group_b2b_manager"/>
+    <menuitem id="menu_b2b_brands" name="Product Brands" parent="menu_b2b_configuration" action="b2b_core.action_b2b_product_brands" sequence="20" groups="b2b_core.group_b2b_manager"/>
+    <menuitem id="menu_b2b_applications" name="Product Applications" parent="menu_b2b_configuration" action="b2b_core.action_b2b_product_applications" sequence="30" groups="b2b_core.group_b2b_manager"/>
+    <menuitem id="menu_b2b_homepage_products" name="Homepage Featured Products" parent="menu_b2b_configuration" action="b2b_website.action_b2b_homepage_products" sequence="40" groups="b2b_core.group_b2b_manager"/>
+    <menuitem id="menu_b2b_faq" name="Frequently Asked Questions" parent="menu_b2b_configuration" action="b2b_website.action_b2b_faq_items" sequence="50" groups="b2b_core.group_b2b_manager"/>
+    <menuitem id="menu_b2b_faq_categories" name="FAQ Categories" parent="menu_b2b_configuration" action="b2b_website.action_b2b_faq_categories" sequence="51" groups="b2b_core.group_b2b_manager"/>
+    <menuitem id="menu_b2b_settings" name="Settings" parent="menu_b2b_configuration" action="base_setup.action_general_configuration" sequence="90" groups="b2b_core.group_b2b_manager"/>
 </odoo>

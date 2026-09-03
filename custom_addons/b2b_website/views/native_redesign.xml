@@ -18,14 +18,19 @@
                     <h1>Welcome back, <t t-out="request.env.user.name"/></h1>
                     <p class="lt-portal-heading__placeholder" aria-hidden="true">Account overview</p>
                 </header>
-                <section t-if="not b2b_has_linked_company" t-att-class="'lt-company-onboarding-card ' + ('is-pending' if b2b_open_company_request else 'is-action')">
-                    <span><i t-att-class="'fa ' + ('fa-clock-o' if b2b_open_company_request else 'fa-building-o')"/></span>
+                <section t-if="not b2b_has_linked_company" t-att-class="'lt-company-onboarding-card ' + ('is-pending' if b2b_open_company_request or b2b_registration_application.state == 'pending' else 'is-action')">
+                    <span><i t-att-class="'fa ' + ('fa-clock-o' if b2b_open_company_request or b2b_registration_application.state == 'pending' else 'fa-building-o')"/></span>
                     <div>
-                        <strong t-out="'Company request under review' if b2b_open_company_request else 'Connect your company account'"/>
-                        <p t-out="'Our team is reviewing your company information. Your personal account remains unchanged until the review is complete.' if b2b_open_company_request else 'Submit your company information so our team can configure the correct pricing and product access.'"/>
+                        <strong t-if="b2b_registration_application.state == 'pending'">Partner registration under review</strong>
+                        <strong t-elif="b2b_registration_application.state == 'rejected'">Partner registration needs attention</strong>
+                        <strong t-else="" t-out="'Company request under review' if b2b_open_company_request else 'Connect your company account'"/>
+                        <p t-if="b2b_registration_application.state == 'pending'">Your email is verified. Our team is reviewing your company information before Partner Hub access is activated.</p>
+                        <p t-elif="b2b_registration_application.state == 'rejected'">Your application was not approved. <t t-if="b2b_registration_application.rejection_reason">Reason: <t t-out="b2b_registration_application.rejection_reason"/></t> Contact our team if the information needs to be corrected.</p>
+                        <p t-else="" t-out="'Our team is reviewing your company information. Your personal account remains unchanged until the review is complete.' if b2b_open_company_request else 'Submit your company information so our team can configure the correct pricing and product access.'"/>
                     </div>
                     <a t-if="b2b_open_company_request" class="lt-btn lt-btn--outline" t-att-href="'/my/inquiries/%s' % b2b_open_company_request.id">View Request</a>
-                    <a t-else="" class="lt-btn lt-btn--blue" href="/my/company/change">Request Company Setup</a>
+                    <a t-elif="b2b_registration_application.state == 'rejected'" class="lt-btn lt-btn--outline" href="/contact">Contact Support</a>
+                    <a t-elif="not b2b_registration_application" class="lt-btn lt-btn--blue" href="/my/company/change">Request Company Setup</a>
                 </section>
                 <div t-if="b2b_show_company_prompt" class="lt-company-onboarding-dialog" t-att-data-lt-company-onboarding="request.env.user.id" hidden="hidden">
                     <button type="button" class="lt-company-onboarding-dialog__backdrop" data-lt-company-onboarding-close="" aria-label="Close company setup reminder"/>
@@ -41,7 +46,7 @@
                     <a href="/my/orders"><span class="lt-metric-icon lt-metric-icon--blue"><i class="fa fa-clipboard"/></span><strong t-out="order_count or 0"/><b>Orders</b><small>Orders and payment attempts</small></a>
                     <a href="/my/sample-requests"><span class="lt-metric-icon lt-metric-icon--green"><i class="fa fa-flask"/></span><strong t-out="sample_count or 0"/><b>Samples</b><small>Sample requests submitted</small></a>
                     <a href="/my/tickets"><span class="lt-metric-icon lt-metric-icon--orange"><i class="fa fa-comment-o"/></span><strong t-out="ticket_count or 0"/><b>Service</b><small>Support tickets</small></a>
-                    <a href="/my/company"><span class="lt-metric-icon lt-metric-icon--green"><i class="fa fa-building-o"/></span><strong t-out="'Active' if b2b_has_linked_company and company.b2b_approved else ('Review' if b2b_open_company_request or b2b_has_linked_company else 'Setup')"/><b>Account</b><small t-out="'Partner Hub Approved' if b2b_has_linked_company and company.b2b_approved else ('Company request pending' if b2b_open_company_request else ('Approval pending' if b2b_has_linked_company else 'Company not linked'))"/></a>
+                    <a href="/my/company"><span class="lt-metric-icon lt-metric-icon--green"><i class="fa fa-building-o"/></span><strong t-out="'Active' if b2b_has_linked_company and company.b2b_approved else ('Attention' if b2b_registration_application.state == 'rejected' else ('Review' if b2b_open_company_request or b2b_registration_application.state == 'pending' or b2b_has_linked_company else 'Setup'))"/><b>Account</b><small t-out="'Partner Hub Approved' if b2b_has_linked_company and company.b2b_approved else ('Registration needs attention' if b2b_registration_application.state == 'rejected' else ('Partner registration pending' if b2b_registration_application.state == 'pending' else ('Company request pending' if b2b_open_company_request else ('Approval pending' if b2b_has_linked_company else 'Company not linked'))))"/></a>
                 </section>
                 <section class="lt-quick-actions" aria-label="Quick actions">
                     <span>Quick Actions</span><div><a href="/products"><i class="fa fa-cube"/>Browse Products</a><a href="/products"><i class="fa fa-flask"/>Request a Sample</a><a href="/service"><i class="fa fa-ticket"/>New Service Request</a><a href="/contact"><i class="fa fa-commenting-o"/>Contact Support</a></div>
@@ -143,8 +148,21 @@
     </template>
 
     <template id="login_layout_figma" inherit_id="web.login" name="Partner Hub Login">
-        <xpath expr="//form" position="attributes"><attribute name="class" add="lt-login-card" separator=" "/></xpath>
+        <xpath expr="//form" position="attributes"><attribute name="t-attf-class">oe_login_form lt-login-card lt-auth-login-form</attribute></xpath>
         <xpath expr="//form" position="before"><div class="lt-login-heading"><span class="lt-kicker">POWER &amp; GRACE PARTNER HUB</span><h1>Sign in to your account</h1><p>Access pricing, orders, samples and support.</p></div></xpath>
+        <xpath expr="//div[hasclass('o_caps_lock_warning')]" position="after">
+            <label class="lt-remember-me"><input type="checkbox" name="remember" value="1"/><span>Remember me</span></label>
+        </xpath>
+    </template>
+
+    <template id="login_signup_link_figma" inherit_id="auth_signup.login" name="Partner Hub Login Signup Link">
+        <xpath expr="//a[@t-if='signup_enabled']" position="replace">
+            <p t-if="signup_enabled" class="lt-login-create-account">Don't have an account? <a t-attf-href="/web/signup?{{ keep_query() }}">Create an account</a></p>
+        </xpath>
+    </template>
+
+    <template id="login_oauth_divider_figma" inherit_id="web.login_oauth" name="Partner Hub Login Divider">
+        <xpath expr="//em" position="replace"><div class="lt-login-divider"><span>or</span></div></xpath>
     </template>
 
     <template id="website_login_shell_figma" inherit_id="website.login_layout" name="Partner Hub Authentication Shell" priority="90">
@@ -152,12 +170,96 @@
     </template>
 
     <template id="signup_figma" inherit_id="auth_signup.signup" name="Partner Hub Registration">
-        <xpath expr="//form" position="attributes"><attribute name="class" add="lt-login-card" separator=" "/></xpath>
-        <xpath expr="//form" position="before"><div class="lt-login-heading"><span class="lt-kicker">POWER &amp; GRACE PARTNER HUB</span><h1>Create your partner account</h1><p>Register your contact details to begin the partner approval process.</p></div></xpath>
+        <xpath expr="//form" position="replace">
+            <section t-if="message" class="lt-registration-result" role="status">
+                <span class="lt-registration-result__icon"><i class="fa fa-envelope-o"/></span>
+                <span class="lt-kicker">POWER &amp; GRACE PARTNER HUB</span>
+                <h1>Verify your business email</h1>
+                <p t-out="message"/>
+                <p t-if="signup_email"><strong t-out="signup_email"/></p>
+                <form t-if="signup_email" action="/web/signup/resend" method="post" class="lt-resend-form">
+                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                    <input type="hidden" name="email" t-att-value="signup_email"/>
+                    <button type="submit" class="lt-btn lt-btn--outline">Resend verification email</button>
+                </form>
+                <a class="lt-auth-text-link" href="/web/login">Return to sign in</a>
+            </section>
+
+            <form t-elif="token" class="oe_signup_form lt-login-card" role="form" method="post" data-captcha="signup">
+                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                <div class="lt-login-heading"><span class="lt-kicker">POWER &amp; GRACE PARTNER HUB</span><h1>Activate your invited account</h1><p>Set your password to accept the portal invitation.</p></div>
+                <div class="mb-3 field-name"><label for="name" class="form-label">Name</label><input type="text" name="name" t-att-value="name" id="name" class="form-control" required="required"/></div>
+                <div class="mb-3 field-login"><label for="login" class="form-label">Email</label><input type="email" name="login" t-att-value="login" id="login" class="form-control" required="required" readonly="readonly"/></div>
+                <t t-call="auth_signup.fields"><t t-set="autofocus" t-value="1"/></t>
+                <p class="alert alert-danger" t-if="error" role="alert"><t t-esc="error"/></p>
+                <input type="hidden" name="redirect" t-att-value="redirect"/>
+                <input type="hidden" name="token" t-att-value="token"/>
+                <div class="oe_login_buttons d-grid pt-3"><button type="submit" class="btn btn-primary">Activate account</button></div>
+            </form>
+
+            <form t-else="" class="oe_signup_form lt-registration-form" role="form" method="post" data-captcha="signup">
+                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                <header class="lt-registration-heading">
+                    <span class="lt-kicker">POWER &amp; GRACE PARTNER HUB</span>
+                    <h1>Create Your Partner Account</h1>
+                    <p>Tell us a little about you and your company.<br/>Your account will be reviewed before partner access is activated.</p>
+                </header>
+                <div class="lt-registration-body">
+                    <section>
+                        <h2>Contact &amp; Company Information</h2>
+                        <div class="lt-registration-grid">
+                            <div class="lt-field"><label for="name">Full Name <b>*</b></label><input type="text" name="name" t-att-value="name" id="name" placeholder="John Doe" maxlength="160" autocomplete="name" required="required"/></div>
+                            <div class="lt-field"><label for="job_title">Job Title <b>*</b></label><input type="text" name="job_title" t-att-value="job_title" id="job_title" placeholder="Sales Manager" maxlength="160" autocomplete="organization-title" required="required"/></div>
+                            <div class="lt-field"><label for="company_name">Company Name <b>*</b></label><input type="text" name="company_name" t-att-value="company_name" id="company_name" placeholder="Company name" maxlength="200" autocomplete="organization" required="required"/></div>
+                            <div class="lt-field"><label for="country_id">Country / Region <b>*</b></label><select name="country_id" id="country_id" autocomplete="country" required="required"><option value="">Select country</option><option t-foreach="countries" t-as="country" t-att-value="country.id" t-att-selected="str(country.id) == str(country_id or '')" t-out="country.name"/></select></div>
+                            <div class="lt-field"><label for="login">Business Email <b>*</b></label><input type="email" name="login" t-att-value="login" id="login" placeholder="name@company.com" maxlength="254" autocomplete="email" autocapitalize="off" required="required"/></div>
+                            <div class="lt-field"><label for="company_phone">Company Phone</label><input type="tel" name="company_phone" t-att-value="company_phone" id="company_phone" placeholder="+1 000 000 0000" maxlength="64" autocomplete="tel"/></div>
+                            <div class="lt-field"><label for="mobile">Mobile / WhatsApp <b>*</b></label><input type="tel" name="mobile" t-att-value="mobile" id="mobile" placeholder="+1 000 000 0000" maxlength="64" autocomplete="tel" required="required"/></div>
+                            <div class="lt-field"><label for="customer_type_id">Business Type <b>*</b></label><select name="customer_type_id" id="customer_type_id" required="required"><option value="">Select business type</option><option t-foreach="customer_types" t-as="customer_type" t-att-value="customer_type.id" t-att-selected="str(customer_type.id) == str(customer_type_id or '')" t-out="customer_type.name"/></select></div>
+                            <div class="lt-field"><label for="company_website">Company Website</label><input type="text" name="company_website" t-att-value="company_website" id="company_website" placeholder="www.company.com" maxlength="500" autocomplete="url"/></div>
+                            <div class="lt-field"><label for="product_interest_id">Products of Interest</label><select name="product_interest_id" id="product_interest_id"><option value="">Select products</option><option t-foreach="product_interests" t-as="interest" t-att-value="interest.id" t-att-selected="str(interest.id) == str(product_interest_id or '')" t-out="interest.name"/></select></div>
+                        </div>
+                    </section>
+                    <section class="lt-registration-security">
+                        <h2>Account Security</h2>
+                        <div class="lt-registration-grid">
+                            <div class="lt-field o_caps_lock_warning"><label for="password">Password <b>*</b></label><div class="lt-password-field"><input type="password" name="password" id="password" placeholder="••••••••••••" required="required" autocomplete="new-password" maxlength="4096"/><button type="button" class="o_show_password" aria-label="Show password"><i class="fa fa-eye"/></button></div></div>
+                            <div class="lt-field"><label for="confirm_password">Confirm Password <b>*</b></label><div class="lt-password-field"><input type="password" name="confirm_password" id="confirm_password" placeholder="••••••••••••" required="required" autocomplete="new-password" maxlength="4096"/><button type="button" class="o_show_password" aria-label="Show password"><i class="fa fa-eye"/></button></div></div>
+                        </div>
+                    </section>
+                    <div class="lt-registration-actions">
+                        <label class="lt-registration-terms"><input type="checkbox" name="terms" value="1" t-att-checked="terms == '1'" required="required"/><span>I agree to the <a href="/terms" target="_blank">Terms of Use</a> and <a href="/privacy" target="_blank">Privacy Policy</a>.</span></label>
+                        <p class="alert alert-danger" t-if="error" role="alert"><t t-esc="error"/></p>
+                        <input type="hidden" name="redirect" t-att-value="redirect"/>
+                        <button type="submit" class="lt-registration-submit">Submit for Approval</button>
+                        <p class="lt-registration-email-note"><i class="fa fa-envelope-o"/><span>We'll send a verification link to your email.<br/>Please confirm your email to complete registration.</span></p>
+                    </div>
+                </div>
+                <footer class="lt-registration-footer">
+                    <p>Already have an account? <a href="/web/login">Sign in</a></p>
+                    <ol class="lt-registration-progress">
+                        <li><b>1</b><span>Submit</span></li><li><b>2</b><span>Verify Email</span></li><li><b>3</b><span>Partner Review</span></li><li><b>4</b><span>Access Activated</span></li>
+                    </ol>
+                </footer>
+            </form>
+        </xpath>
     </template>
 
     <template id="reset_password_figma" inherit_id="auth_signup.reset_password" name="Partner Hub Password Reset">
         <xpath expr="//form" position="attributes"><attribute name="class" add="lt-login-card" separator=" "/></xpath>
         <xpath expr="//form" position="before"><div class="lt-login-heading"><span class="lt-kicker">POWER &amp; GRACE PARTNER HUB</span><h1>Reset your password</h1><p>We will send recovery instructions to your registered email.</p></div></xpath>
+    </template>
+
+    <template id="registration_status" name="Partner Registration Status">
+        <t t-call="b2b_website.partner_auth_layout">
+            <section class="lt-registration-result" role="status">
+                <span t-att-class="'lt-registration-result__icon ' + ('is-success' if status == 'verified' else '')"><i t-att-class="'fa ' + ('fa-check' if status == 'verified' else 'fa-envelope-o')"/></span>
+                <span class="lt-kicker">POWER &amp; GRACE PARTNER HUB</span>
+                <t t-if="status == 'verified'"><h1>Email verified</h1><p>Your account is active and your application is ready for partner review. You can sign in now to follow its status.</p><a class="lt-btn lt-btn--blue" href="/web/login?redirect=/my">Sign in</a></t>
+                <t t-elif="status == 'expired'"><h1>Verification link expired</h1><p>Request a new link to continue your registration.</p><form action="/web/signup/resend" method="post" class="lt-resend-form"><input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/><input type="hidden" name="email" t-att-value="email"/><button type="submit" class="lt-btn lt-btn--blue">Send a new link</button></form></t>
+                <t t-elif="status == 'resent'"><h1>Check your email</h1><p t-out="message"/><a class="lt-auth-text-link" href="/web/login">Return to sign in</a></t>
+                <t t-else=""><h1>Verification link unavailable</h1><p>This link is invalid or has already been used. If your email was already verified, sign in to continue.</p><a class="lt-btn lt-btn--blue" href="/web/login">Sign in</a></t>
+            </section>
+        </t>
     </template>
 </odoo>

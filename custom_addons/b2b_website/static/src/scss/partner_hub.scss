@@ -1191,13 +1191,102 @@ form[aria-busy="true"] button[type="submit"] { cursor: wait; opacity: .72; }
 .lt-legal-content h2 { margin: 30px 0 10px; color: var(--lt-ink); font-size: 22px; }
 .lt-legal-content h2:first-child { margin-top: 0; }
 .lt-legal-content p { color: var(--lt-muted); line-height: 1.75; }
-.lt-auth-page { min-height: 100vh; background: #f8fafc; color: var(--lt-ink); font-family: Inter, "DM Sans", "Segoe UI", sans-serif; }
-.lt-auth-main { min-height: 570px; padding: 64px 0 80px; }
-.lt-auth-card { width: 100%; max-width: 460px; margin: 0 auto; padding: 30px; border: 1px solid var(--lt-line); border-radius: 10px; background: #fff; box-shadow: 0 12px 35px rgba(15,23,42,.08); }
-.lt-auth-card .oe_website_login_container { width: 100%; }
-.lt-auth-card .lt-login-heading { margin: 0 0 24px; }
+.lt-auth-page { min-height: 100vh; background: #f8f8f7; color: var(--lt-ink); font-family: Inter, "DM Sans", "Segoe UI", sans-serif; }
+.lt-auth-main { min-height: 570px; padding: 40px 0 72px; }
+.lt-auth-card { width: 100%; max-width: 480px; margin: 0 auto; padding: 30px; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; box-shadow: 0 9px 30px rgba(15,23,42,.07); }
+.lt-auth-card .oe_website_login_container { width: 100%; max-width: none; }
+.lt-auth-card .lt-login-heading { margin: 0; text-align: center; }
 .lt-auth-card .lt-login-card { max-width: none; margin: 0; padding: 0 !important; border: 0; border-radius: 0; box-shadow: none; }
 .lt-auth-card .o_database_list { max-width: none !important; }
+.lt-auth-card .o_user_switch { display: none !important; }
+.lt-auth-card:has(.lt-registration-form) { max-width: 840px; padding: 0; overflow: hidden; }
+.lt-auth-card:has(.lt-registration-result) { max-width: 560px; }
+.lt-auth-card .oe_signup_form.lt-registration-form { max-width: none; margin: 0; }
+.lt-auth-card:has(.lt-auth-login-form) { padding: 0; overflow: hidden; }
+.lt-auth-page .lt-auth-card .oe_website_login_container form.lt-auth-login-form.d-none { display: block !important; }
+.lt-auth-card:has(.lt-auth-login-form) .lt-login-heading { padding: 35px 32px 27px; border-bottom: 1px solid rgba(232,56,12,.2); }
+.lt-auth-card:has(.lt-auth-login-form) .lt-auth-login-form { margin: 0; padding: 28px 32px 32px !important; }
+.lt-login-heading .lt-kicker { display: block; color: #e8380c; font-size: 11px; font-weight: 750; letter-spacing: .19em; }
+.lt-login-heading h1 { margin: 11px 0 8px; color: #111827; font-size: 30px; font-weight: 750; letter-spacing: -.025em; }
+.lt-login-heading p { margin: 0; color: #6b7280; font-size: 14px; line-height: 1.5; }
+.lt-auth-login-form .field-login { margin-bottom: 18px !important; }
+.lt-auth-login-form .form-label { margin-bottom: 7px; color: #111827; font-size: 14px; font-weight: 600; }
+.lt-auth-login-form .form-control { min-height: 46px; border-color: #d1d5db; border-radius: 6px; }
+.lt-auth-login-form .form-control:focus { border-color: #e8380c !important; box-shadow: 0 0 0 3px rgba(232,56,12,.1) !important; }
+.lt-auth-login-form .input-group .form-control { border-radius: 6px 0 0 6px; }
+.lt-auth-login-form .input-group .o_show_password { width: 46px; border-color: #d1d5db !important; border-radius: 0 6px 6px 0; color: #9ca3af; background: #fff; }
+.lt-auth-login-form .btn-primary { min-height: 46px; border-color: #e8380c !important; background-color: #e8380c !important; color: #fff !important; font-weight: 700; }
+.lt-auth-login-form .btn-primary:hover { border-color: #c92f08 !important; background-color: #c92f08 !important; }
+.lt-auth-login-form .btn-link, .lt-auth-login-form a { color: #e8380c; }
+.lt-auth-login-form .o_user_switch_btn, .lt-auth-login-form button[name="redirect"][value="/web/become"] { display: none !important; }
+.lt-login-create-account { margin: 17px 0 0; color: #4b5563; font-size: 14px; text-align: center; }
+.lt-login-create-account a { font-weight: 650; text-decoration: none; }
+.lt-login-divider { display: flex; align-items: center; gap: 12px; margin: 22px 0; color: #9ca3af; font-size: 12px; }
+.lt-login-divider::before, .lt-login-divider::after { height: 1px; flex: 1; background: rgba(232,56,12,.2); content: ""; }
+.lt-auth-login-form .passkey_login_link { min-height: 46px; border: 1px solid #d1d5db; border-radius: 6px; color: #111827; }
+.lt-auth-login-form .passkey_login_link:hover { border-color: #e8380c; background: #fff7f4; }
+.lt-remember-me { display: inline-flex; align-items: center; gap: 9px; margin-top: 15px; color: #374151; font-size: 14px; cursor: pointer; }
+.lt-remember-me input, .lt-registration-terms input { width: 17px; height: 17px; accent-color: #e8380c; }
+
+.lt-registration-form { width: 100%; background: #fff; }
+.lt-registration-heading { padding: 35px 32px 28px; border-bottom: 1px solid rgba(232,56,12,.22); text-align: center; }
+.lt-registration-heading .lt-kicker, .lt-registration-result .lt-kicker { color: #e8380c; letter-spacing: .17em; }
+.lt-registration-heading h1, .lt-registration-result h1 { margin: 11px 0 8px; color: #111827; font-size: 31px; font-weight: 750; letter-spacing: -.025em; }
+.lt-registration-heading p { margin: 0; color: #6b7280; font-size: 14px; line-height: 1.55; }
+.lt-registration-body { padding: 30px 32px 22px; }
+.lt-registration-body section + section { margin-top: 28px; padding-top: 25px; border-top: 1px solid rgba(232,56,12,.22); }
+.lt-registration-body h2 { margin: 0 0 22px; color: #111827; font-size: 17px; font-weight: 750; }
+.lt-registration-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 18px 24px; }
+.lt-registration-form .lt-field { display: grid; gap: 7px; }
+.lt-registration-form .lt-field label { margin: 0; color: #111827; font-size: 14px; font-weight: 600; }
+.lt-registration-form .lt-field label b { color: #e8380c; }
+.lt-registration-form .lt-field > input, .lt-registration-form .lt-field select, .lt-password-field { width: 100%; min-height: 45px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; color: #111827; }
+.lt-registration-form .lt-field > input, .lt-registration-form .lt-field select { padding: 9px 12px; }
+.lt-registration-form .lt-field > input:focus, .lt-registration-form .lt-field select:focus, .lt-password-field:focus-within { border-color: #e8380c; outline: 0; box-shadow: 0 0 0 3px rgba(232,56,12,.1); }
+.lt-password-field { display: flex; overflow: hidden; }
+.lt-password-field input { flex: 1; min-width: 0; padding: 9px 12px; border: 0; outline: 0; }
+.lt-password-field button { width: 44px; border: 0; background: #fff; color: #6b7280; }
+.lt-registration-actions { display: grid; gap: 15px; margin-top: 22px; }
+.lt-registration-actions > .s_turnstile_container { order: 1; max-width: 100%; justify-self: center; overflow: hidden; }
+.lt-registration-actions > .lt-registration-terms { order: 2; }
+.lt-registration-actions > .alert { order: 3; }
+.lt-registration-actions > .lt-registration-submit { order: 4; }
+.lt-registration-actions > .lt-registration-email-note { order: 5; }
+.lt-registration-terms { display: flex; align-items: flex-start; justify-content: center; gap: 9px; color: #4b5563; font-size: 13px; }
+.lt-registration-terms input { flex: 0 0 auto; margin-top: 1px; }
+.lt-registration-terms a, .lt-auth-text-link { color: #e8380c; font-weight: 650; }
+.lt-registration-submit { width: 100%; min-height: 47px; border: 1px solid #e8380c; border-radius: 6px; background: #e8380c; color: #fff; font-weight: 750; transition: background .15s ease, border-color .15s ease; }
+.lt-registration-submit:hover { border-color: #c92f08; background: #c92f08; }
+.lt-registration-submit:disabled { opacity: .65; }
+.lt-registration-submit.disabled { opacity: .65; pointer-events: none; }
+.lt-registration-email-note { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 0; color: #6b7280; font-size: 12px; line-height: 1.45; text-align: left; }
+.lt-registration-email-note i { color: #e8380c; font-size: 28px; }
+.lt-registration-footer { padding: 18px 32px 26px; border-top: 1px solid rgba(232,56,12,.22); text-align: center; }
+.lt-registration-footer > p { margin: 0 0 22px; color: #6b7280; font-size: 13px; }
+.lt-registration-footer a { color: #e8380c; font-weight: 700; }
+.lt-registration-progress { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); margin: 0; padding: 0; list-style: none; }
+.lt-registration-progress li { position: relative; display: grid; justify-items: center; gap: 7px; color: #6b7280; font-size: 11px; }
+.lt-registration-progress li:not(:last-child)::after { position: absolute; top: 13px; left: calc(50% + 18px); width: calc(100% - 36px); border-top: 1px dashed rgba(232,56,12,.55); content: ""; }
+.lt-registration-progress b { z-index: 1; display: grid; width: 27px; height: 27px; place-items: center; border-radius: 50%; background: #e8380c; color: #fff; }
+.lt-registration-result { display: grid; justify-items: center; gap: 14px; padding: 18px 4px; text-align: center; }
+.lt-registration-result__icon { display: grid; width: 62px; height: 62px; place-items: center; border-radius: 50%; background: #fff0eb; color: #e8380c; font-size: 28px; }
+.lt-registration-result__icon.is-success { background: #dcfce7; color: #15803d; }
+.lt-registration-result p { max-width: 480px; margin: 0; color: #6b7280; line-height: 1.6; }
+.lt-resend-form { margin: 2px 0; }
+
+@media (max-width: 767.98px) {
+    .lt-auth-main { padding: 24px 12px 48px; }
+    .lt-auth-card:has(.lt-registration-form) { border-radius: 8px; }
+    .lt-auth-card:has(.lt-auth-login-form) .lt-login-heading { padding: 28px 20px 23px; }
+    .lt-auth-card:has(.lt-auth-login-form) .lt-auth-login-form { padding: 24px 20px 27px !important; }
+    .lt-login-heading h1 { font-size: 26px; }
+    .lt-registration-heading { padding: 28px 20px 24px; }
+    .lt-registration-heading h1 { font-size: 26px; }
+    .lt-registration-body { padding: 24px 20px 18px; }
+    .lt-registration-grid { grid-template-columns: 1fr; gap: 16px; }
+    .lt-registration-footer { padding: 18px 15px 24px; }
+    .lt-registration-progress span { max-width: 68px; }
+}
 .lt-stat-strip article { grid-template-columns: 34px 1fr; align-items: center; }
 .lt-stat-strip article > i { color: var(--lt-blue); font-size: 20px; }
 .lt-stat-strip article > div { display: grid; gap: 3px; }

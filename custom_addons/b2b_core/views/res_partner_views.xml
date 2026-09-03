@@ -13,10 +13,15 @@
                             <field name="commercial_partner_id" string="Company Account" readonly="1" invisible="b2b_is_commercial_entity"/>
                             <field name="b2b_approved" readonly="1" invisible="not b2b_is_commercial_entity"/>
                             <field name="b2b_effective_approved" string="Partner Hub Approved" readonly="1" invisible="b2b_is_commercial_entity"/>
+                            <field name="b2b_customer_type_id" groups="b2b_core.group_b2b_manager" readonly="not b2b_is_commercial_entity" invisible="not b2b_is_commercial_entity"/>
+                            <field name="b2b_customer_type_id" readonly="1" groups="b2b_core.group_b2b_operator,!b2b_core.group_b2b_manager" invisible="not b2b_is_commercial_entity"/>
+                            <field name="b2b_effective_customer_type_id" readonly="1" invisible="b2b_is_commercial_entity"/>
                             <field name="b2b_segment_ids" widget="many2many_tags" groups="b2b_core.group_b2b_manager" invisible="not b2b_is_commercial_entity"/>
                             <field name="b2b_effective_segment_ids" string="B2B Segments" widget="many2many_tags" readonly="1" invisible="b2b_is_commercial_entity"/>
-                            <field name="property_product_pricelist" groups="b2b_core.group_b2b_manager,b2b_core.group_b2b_special_price_manager" readonly="not b2b_is_commercial_entity"/>
+                            <field name="property_product_pricelist" string="Effective Default Pricelist" groups="b2b_core.group_b2b_manager,b2b_core.group_b2b_special_price_manager" readonly="not b2b_is_commercial_entity or b2b_customer_type_id"/>
                             <field name="property_product_pricelist" readonly="1" groups="b2b_core.group_b2b_operator,!b2b_core.group_b2b_manager,!b2b_core.group_b2b_special_price_manager"/>
+                            <field name="b2b_base_pricelist_ids" widget="many2many_tags" readonly="1"/>
+                            <field name="b2b_effective_pricelist_ids" widget="many2many_tags" readonly="1"/>
                         </group>
                         <group>
                             <field name="b2b_erp_customer_id" invisible="not b2b_is_commercial_entity"/>
@@ -25,7 +30,29 @@
                             <field name="b2b_effective_approval_date" invisible="b2b_is_commercial_entity"/>
                             <field name="b2b_approved_by_id" invisible="not b2b_is_commercial_entity"/>
                             <field name="b2b_effective_approved_by_id" invisible="b2b_is_commercial_entity"/>
+                            <field name="b2b_product_interest_id" readonly="1" invisible="b2b_is_commercial_entity"/>
+                            <field name="b2b_mobile_whatsapp" readonly="1" invisible="b2b_is_commercial_entity"/>
                         </group>
+                    </group>
+                    <group string="Company Price Overrides" invisible="not b2b_is_commercial_entity">
+                        <field name="b2b_pricelist_override_ids" groups="b2b_core.group_b2b_special_price_manager" context="{'default_partner_id': id}">
+                            <list editable="bottom">
+                                <field name="priority" widget="handle"/>
+                                <field name="website_id"/>
+                                <field name="currency_id" readonly="1"/>
+                                <field name="pricelist_id" domain="[('b2b_effective_partner_id', '=', False)]"/>
+                                <field name="active" widget="boolean_toggle"/>
+                            </list>
+                        </field>
+                        <field name="b2b_pricelist_override_ids" readonly="1" groups="b2b_core.group_b2b_operator,!b2b_core.group_b2b_special_price_manager">
+                            <list>
+                                <field name="priority"/>
+                                <field name="website_id"/>
+                                <field name="currency_id"/>
+                                <field name="pricelist_id"/>
+                                <field name="active"/>
+                            </list>
+                        </field>
                     </group>
                     <group groups="b2b_core.group_b2b_manager">
                         <button name="action_b2b_approve" type="object" string="Approve Partner Hub Access" class="btn-primary" invisible="not b2b_is_commercial_entity or b2b_approved"/>

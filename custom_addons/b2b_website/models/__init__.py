@@ -8,3 +8,4 @@ from . import web_submission
 from . import homepage_product
 from . import website_track
 from . import faq
+from . import registration_application
