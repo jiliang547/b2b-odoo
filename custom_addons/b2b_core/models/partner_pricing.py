@@ -1,9 +1,19 @@
-from odoo import _, api, fields, models
+from odoo import Command, _, api, fields, models
 from odoo.exceptions import ValidationError
 
 
 class ResPartnerPricing(models.Model):
     _inherit = "res.partner"
+
+    @api.model
+    def _b2b_enable_native_pricelist_feature(self):
+        """Enable Odoo's native pricelist feature on install and upgrade."""
+        feature = self.env.ref("product.group_product_pricelist")
+        self.env.ref("base.group_user")._apply_group(feature)
+        root = self.env.ref("base.user_root")
+        if feature not in root.group_ids:
+            root.write({"group_ids": [Command.link(feature.id)]})
+        return True
 
     b2b_customer_type_id = fields.Many2one(
         "b2b.customer.type",

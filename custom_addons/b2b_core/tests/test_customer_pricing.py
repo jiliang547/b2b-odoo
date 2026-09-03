@@ -91,6 +91,13 @@ class TestB2BCustomerPricing(TransactionCase):
         self.assertEqual(self.effective.currency_id, self.base_pricelist.currency_id)
         self.assertEqual(self.company.property_product_pricelist, self.effective)
 
+    def test_native_pricelist_feature_is_enabled(self):
+        self.assertTrue(
+            self.env["res.groups"]._is_feature_enabled(
+                "product.group_product_pricelist"
+            )
+        )
+
     def test_contact_inherits_company_effective_pricing(self):
         contact = self.env["res.partner"].create({
             "name": "Customer Pricing Contact",
