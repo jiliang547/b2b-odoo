@@ -55,11 +55,26 @@ class Website(models.Model):
         )
 
     def _get_and_cache_current_pricelist(self):
+        session_pricelist = self.env["product.pricelist"]
+        if request:
+            session_pricelist_id = request.session.get(PRICELIST_SESSION_CACHE_KEY)
+            session_pricelist = (
+                request.env["product.pricelist"]
+                .sudo()
+                .browse(session_pricelist_id)
+                .exists()
+            )
         pricelist = super()._get_and_cache_current_pricelist()
         if not request or request.env.user._is_public() or not request.env.user.share:
             return pricelist
 
         company = request.env.user.partner_id.commercial_partner_id.sudo()
+        # Keep the requested currency independently from the selected record.
+        # The native partner property can legitimately be empty in a fresh or
+        # neutralized database, but we still need the currency to resolve this
+        # company's generated effective pricelist.
+        pricing_source = pricelist or session_pricelist
+        pricing_currency = pricing_source.currency_id if pricing_source else False
         selected_id = request.session.get(PRICELIST_SELECTED_SESSION_CACHE_KEY)
         selected = request.env["product.pricelist"].sudo().browse(selected_id).exists()
         if (
@@ -70,10 +85,12 @@ class Website(models.Model):
             # technical ID was submitted directly to the native selector.
             request.session.pop(PRICELIST_SESSION_CACHE_KEY, None)
             pricelist = company.property_product_pricelist.sudo()
+            if not pricing_currency and pricelist:
+                pricing_currency = pricelist.currency_id
 
         effective = (
-            company._b2b_get_effective_pricelist(self, pricelist.currency_id)
-            if pricelist and pricelist.currency_id else request.env["product.pricelist"]
+            company._b2b_get_effective_pricelist(self, pricing_currency)
+            if pricing_currency else request.env["product.pricelist"]
         )
         assigned = effective or company.property_product_pricelist.sudo()
         if (
