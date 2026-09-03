@@ -7,6 +7,7 @@ from odoo.addons.mail.tests.common import mail_new_test_user
 from odoo.exceptions import AccessError, UserError
 from odoo.fields import Datetime
 from odoo.tests import HttpCase, TransactionCase, tagged
+from odoo.tools import mute_logger
 
 
 @tagged("post_install", "-at_install")
@@ -384,6 +385,7 @@ class TestB2BRegistrationHttpFlow(HttpCase):
             1,
         )
 
+    @mute_logger("odoo.http")
     def test_turnstile_rejection_stops_registration_before_account_creation(self):
         self.authenticate(None, None)
         email = "registration-http-turnstile-rejected@example.test"
