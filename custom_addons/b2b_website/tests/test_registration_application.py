@@ -238,6 +238,26 @@ class TestB2BRegistrationApplication(TransactionCase):
 
 
 @tagged("post_install", "-at_install")
+class TestB2BAuthTemplateHttp(HttpCase):
+    def test_auth_templates_keep_native_password_toggle_and_signup_only_captcha(self):
+        self.authenticate(None, None)
+
+        signup = self.url_open("/web/signup")
+        self.assertEqual(signup.status_code, 200)
+        self.assertIn('class="input-group lt-password-field"', signup.text)
+        self.assertIn('data-captcha="signup"', signup.text)
+        self.assertIn(
+            'data-lt-validation-message="Please accept the Terms of Use and Privacy Policy."',
+            signup.text,
+        )
+
+        login = self.url_open("/web/login")
+        self.assertEqual(login.status_code, 200)
+        self.assertIn("lt-auth-login-form", login.text)
+        self.assertNotIn('data-captcha="login"', login.text)
+
+
+@tagged("post_install", "-at_install")
 class TestB2BRegistrationHttpFlow(HttpCase):
     @classmethod
     def setUpClass(cls):
@@ -283,7 +303,7 @@ class TestB2BRegistrationHttpFlow(HttpCase):
             "_verify_request_recaptcha_token",
             captcha_ok,
         ), patch.object(MailTemplate, "send_mail", autospec=True, return_value=1):
-            return self.url_open("/en/web/signup", data=payload)
+            return self.url_open("/web/signup", data=payload)
 
     def test_submit_verify_review_and_activate(self):
         self.authenticate(None, None)
@@ -301,7 +321,7 @@ class TestB2BRegistrationHttpFlow(HttpCase):
         self.assertEqual(application.company_website, "https://closure.example.test")
 
         verification = self.url_open(
-            "/en/web/signup/verify?token=%s" % application.verification_token
+            "/web/signup/verify?token=%s" % application.verification_token
         )
         self.assertEqual(verification.status_code, 200)
         self.assertIn("Email verified", verification.text)
@@ -401,7 +421,7 @@ class TestB2BRegistrationHttpFlow(HttpCase):
             "_verify_turnstile_token",
             reject_turnstile,
         ):
-            response = self.url_open("/en/web/signup", data=self._payload(email))
+            response = self.url_open("/web/signup", data=self._payload(email))
 
         self.assertEqual(response.status_code, 422)
         self.assertIn("human validation failed", response.text)

@@ -47,7 +47,7 @@
                                 <p t-else="">The payment response was received, but order confirmation is taking longer than expected. You can safely leave this page while automatic processing continues.</p>
                                 <div class="lt-actions">
                                     <a class="lt-btn lt-btn--primary" href="/my/orders">View my orders</a>
-                                    <button class="lt-btn lt-btn--ghost-dark" type="button" data-lt-payment-recheck="">Check again</button>
+                                    <button class="lt-btn lt-btn--ghost-dark" type="button" data-lt-payment-recheck="">Continue waiting</button>
                                     <a class="lt-btn lt-btn--ghost-dark" href="/contact">Contact support</a>
                                 </div>
                             </div>

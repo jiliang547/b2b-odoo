@@ -1220,7 +1220,7 @@ form[aria-busy="true"] button[type="submit"] { cursor: wait; opacity: .72; }
 .lt-auth-login-form .btn-link, .lt-auth-login-form a { color: #e8380c; }
 .lt-auth-login-form .o_user_switch_btn, .lt-auth-login-form button[name="redirect"][value="/web/become"] { display: none !important; }
 .lt-login-create-account { margin: 17px 0 0; color: #4b5563; font-size: 14px; text-align: center; }
-.lt-login-create-account a { font-weight: 650; text-decoration: none; }
+.lt-login-create-account a { display: inline-block; font-weight: 650; text-decoration: none; white-space: nowrap; }
 .lt-login-divider { display: flex; align-items: center; gap: 12px; margin: 22px 0; color: #9ca3af; font-size: 12px; }
 .lt-login-divider::before, .lt-login-divider::after { height: 1px; flex: 1; background: rgba(232,56,12,.2); content: ""; }
 .lt-auth-login-form .passkey_login_link { min-height: 46px; border: 1px solid #d1d5db; border-radius: 6px; color: #111827; }

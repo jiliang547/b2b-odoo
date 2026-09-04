@@ -559,7 +559,66 @@ function initializeFeaturedProducts() {
     });
 }
 
+function initializeEnglishValidationMessages() {
+    const language = document.documentElement.lang?.toLocaleLowerCase() || "";
+    if (!language.startsWith("en")) {
+        return;
+    }
+
+    const fieldTypes = [HTMLInputElement, HTMLSelectElement, HTMLTextAreaElement];
+    const isFormField = (field) => fieldTypes.some((fieldType) => field instanceof fieldType);
+    const clearManagedMessage = (field) => {
+        if (!isFormField(field) || field.dataset.ltManagedValidity !== "1") {
+            return;
+        }
+        field.setCustomValidity("");
+        delete field.dataset.ltManagedValidity;
+    };
+
+    document.addEventListener("input", (event) => clearManagedMessage(event.target), true);
+    document.addEventListener("change", (event) => clearManagedMessage(event.target), true);
+    document.addEventListener("invalid", (event) => {
+        const field = event.target;
+        if (!isFormField(field)) {
+            return;
+        }
+
+        field.setCustomValidity("");
+        if (field.validity.valid) {
+            return;
+        }
+
+        let message = field.dataset.ltValidationMessage;
+        if (!message && field.validity.valueMissing) {
+            if (field instanceof HTMLSelectElement) {
+                message = "Please select an item from the list.";
+            } else if (field.type === "checkbox") {
+                message = "Please select this option.";
+            } else if (field.type === "radio") {
+                message = "Please select an option.";
+            } else {
+                message = "Please fill out this field.";
+            }
+        } else if (!message && field.validity.typeMismatch) {
+            message = field.type === "email"
+                ? "Please enter a valid email address."
+                : "Please enter a valid value.";
+        } else if (!message && field.validity.patternMismatch) {
+            message = field.title || "Please match the requested format.";
+        } else if (!message && field.validity.rangeUnderflow) {
+            message = `Value must be greater than or equal to ${field.min}.`;
+        } else if (!message && field.validity.rangeOverflow) {
+            message = `Value must be less than or equal to ${field.max}.`;
+        } else if (!message && field.validity.stepMismatch) {
+            message = "Please enter a valid value.";
+        }
+        field.setCustomValidity(message || "Please enter a valid value.");
+        field.dataset.ltManagedValidity = "1";
+    }, true);
+}
+
 function initializePartnerHub() {
+    initializeEnglishValidationMessages();
     initializeNavigation();
     initializeFilters();
     initializeCatalogView();
@@ -685,7 +744,7 @@ function initializePaymentStatus() {
     }
     const startedAt = Date.now();
     const provider = statusPage.dataset.providerCode;
-    const thresholdSeconds = provider === "demo" ? 8 : 45;
+    const thresholdSeconds = provider === "demo" ? 30 : 60;
     const elapsed = statusPage.querySelector("[data-lt-payment-elapsed]");
     const liveStatus = statusPage.querySelector("[data-lt-payment-live]");
     const processing = statusPage.querySelector("[data-lt-payment-processing]");
@@ -716,7 +775,12 @@ function initializePaymentStatus() {
     }, 1000);
 
     statusPage.querySelector("[data-lt-payment-recheck]")?.addEventListener("click", () => {
-        window.location.reload();
+        processing?.removeAttribute("hidden");
+        pending?.setAttribute("hidden", "hidden");
+        statusPage.classList.remove("is-pending");
+        if (liveStatus) {
+            liveStatus.textContent = "Automatic payment checks are continuing.";
+        }
     });
 }
 

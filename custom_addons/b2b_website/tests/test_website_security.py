@@ -251,12 +251,12 @@ class TestPartnerHubCartBrowser(HttpCase):
 
     def test_catalog_card_add_uses_native_cart_service(self):
         self._assert_add_to_cart_succeeds(
-            "/en/products?search=BROWSER-CART-REGRESSION"
+            "/products?search=BROWSER-CART-REGRESSION"
         )
 
     def test_product_detail_add_uses_native_cart_service(self):
         slug = self.env["ir.http"]._slug(self.product.product_tmpl_id)
-        self._assert_add_to_cart_succeeds("/en/products/%s" % slug)
+        self._assert_add_to_cart_succeeds("/products/%s" % slug)
 
 @tagged("post_install", "-at_install")
 class TestWebsiteIDOR(HttpCase):
@@ -291,7 +291,7 @@ class TestWebsiteIDOR(HttpCase):
         self.assertTrue(self.portal_user.has_group("base.group_portal"))
         self.authenticate("portal-http", "portal-http")
         slug = self.env["ir.http"]._slug(self.restricted_product)
-        response = self.url_open("/en/products/%s" % slug)
+        response = self.url_open("/products/%s" % slug)
         # Both statuses disclose no record data. The standalone HttpCase web
         # worker can return 403 while rendering Odoo's 404 without a website
         # ACL context; the real localized portal route is browser-checked as 404.
@@ -300,7 +300,7 @@ class TestWebsiteIDOR(HttpCase):
     def test_other_company_erp_status_returns_not_found(self):
         self.assertTrue(self.portal_user.has_group("base.group_portal"))
         self.authenticate("portal-http", "portal-http")
-        response = self.url_open("/en/my/orders/%s/erp-status" % self.other_order.id)
+        response = self.url_open("/my/orders/%s/erp-status" % self.other_order.id)
         self.assertIn(response.status_code, (403, 404), response.text[:500])
 
 
@@ -326,12 +326,12 @@ class TestCompanyOnboardingHttp(HttpCase):
 
     def test_unlinked_contact_sees_setup_prompt_and_form(self):
         self._authenticate()
-        dashboard = self.url_open("/en/my")
+        dashboard = self.url_open("/my")
         self.assertEqual(dashboard.status_code, 200)
         self.assertIn("Connect your company account", dashboard.text)
         self.assertIn("Request Company Setup", dashboard.text)
 
-        company_form = self.url_open("/en/my/company/change")
+        company_form = self.url_open("/my/company/change")
         self.assertEqual(company_form.status_code, 200)
         self.assertIn("Request Company Setup", company_form.text)
         self.assertIn("Submit the company you represent", company_form.text)
@@ -348,12 +348,12 @@ class TestCompanyOnboardingHttp(HttpCase):
         })
         self._authenticate()
 
-        dashboard = self.url_open("/en/my")
+        dashboard = self.url_open("/my")
         self.assertEqual(dashboard.status_code, 200)
         self.assertIn("Company request under review", dashboard.text)
         self.assertIn("/my/inquiries/%s" % request_record.id, dashboard.text)
 
-        company_form = self.url_open("/en/my/company/change")
+        company_form = self.url_open("/my/company/change")
         self.assertEqual(company_form.status_code, 200)
         self.assertIn("Company request under review", company_form.text)
         self.assertNotIn("name=\"company_name\"", company_form.text)
@@ -367,7 +367,7 @@ class TestCompanyOnboardingHttp(HttpCase):
         self.contact.parent_id = company
         self._authenticate()
 
-        company_profile = self.url_open("/en/my/company")
+        company_profile = self.url_open("/my/company")
         self.assertEqual(company_profile.status_code, 200)
         self.assertIn("Effective Portal Company", company_profile.text)
         self.assertIn("Partner Hub Approved", company_profile.text)
@@ -376,11 +376,11 @@ class TestCompanyOnboardingHttp(HttpCase):
     def test_native_profile_navigation_highlights_current_page(self):
         self._authenticate()
 
-        profile = self.url_open("/en/my/account")
+        profile = self.url_open("/my/account")
         self.assertEqual(profile.status_code, 200)
         self.assertIn('title="Personal profile" class="is-active"', profile.text)
 
-        addresses = self.url_open("/en/my/addresses")
+        addresses = self.url_open("/my/addresses")
         self.assertEqual(addresses.status_code, 200)
         self.assertIn('title="Addresses" class="is-active"', addresses.text)
 

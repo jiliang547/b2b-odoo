@@ -148,7 +148,10 @@
     </template>
 
     <template id="login_layout_figma" inherit_id="web.login" name="Partner Hub Login">
-        <xpath expr="//form" position="attributes"><attribute name="t-attf-class">oe_login_form lt-login-card lt-auth-login-form</attribute></xpath>
+        <xpath expr="//form" position="attributes">
+            <attribute name="t-attf-class">oe_login_form #{'' if login else 'd-none'} lt-login-card lt-auth-login-form</attribute>
+            <attribute name="data-captcha"/>
+        </xpath>
         <xpath expr="//form" position="before"><div class="lt-login-heading"><span class="lt-kicker">POWER &amp; GRACE PARTNER HUB</span><h1>Sign in to your account</h1><p>Access pricing, orders, samples and support.</p></div></xpath>
         <xpath expr="//div[hasclass('o_caps_lock_warning')]" position="after">
             <label class="lt-remember-me"><input type="checkbox" name="remember" value="1"/><span>Remember me</span></label>
@@ -223,12 +226,12 @@
                     <section class="lt-registration-security">
                         <h2>Account Security</h2>
                         <div class="lt-registration-grid">
-                            <div class="lt-field o_caps_lock_warning"><label for="password">Password <b>*</b></label><div class="lt-password-field"><input type="password" name="password" id="password" placeholder="••••••••••••" required="required" autocomplete="new-password" maxlength="4096"/><button type="button" class="o_show_password" aria-label="Show password"><i class="fa fa-eye"/></button></div></div>
-                            <div class="lt-field"><label for="confirm_password">Confirm Password <b>*</b></label><div class="lt-password-field"><input type="password" name="confirm_password" id="confirm_password" placeholder="••••••••••••" required="required" autocomplete="new-password" maxlength="4096"/><button type="button" class="o_show_password" aria-label="Show password"><i class="fa fa-eye"/></button></div></div>
+                            <div class="lt-field o_caps_lock_warning"><label for="password">Password <b>*</b></label><div class="input-group lt-password-field"><input type="password" name="password" id="password" placeholder="••••••••••••" required="required" autocomplete="new-password" maxlength="4096"/><button type="button" class="o_show_password" aria-label="Show password"><i class="fa fa-eye"/></button></div></div>
+                            <div class="lt-field"><label for="confirm_password">Confirm Password <b>*</b></label><div class="input-group lt-password-field"><input type="password" name="confirm_password" id="confirm_password" placeholder="••••••••••••" required="required" autocomplete="new-password" maxlength="4096"/><button type="button" class="o_show_password" aria-label="Show password"><i class="fa fa-eye"/></button></div></div>
                         </div>
                     </section>
                     <div class="lt-registration-actions">
-                        <label class="lt-registration-terms"><input type="checkbox" name="terms" value="1" t-att-checked="terms == '1'" required="required"/><span>I agree to the <a href="/terms" target="_blank">Terms of Use</a> and <a href="/privacy" target="_blank">Privacy Policy</a>.</span></label>
+                        <label class="lt-registration-terms"><input type="checkbox" name="terms" value="1" t-att-checked="terms == '1'" required="required" data-lt-validation-message="Please accept the Terms of Use and Privacy Policy."/><span>I agree to the <a href="/terms" target="_blank">Terms of Use</a> and <a href="/privacy" target="_blank">Privacy Policy</a>.</span></label>
                         <p class="alert alert-danger" t-if="error" role="alert"><t t-esc="error"/></p>
                         <input type="hidden" name="redirect" t-att-value="redirect"/>
                         <button type="submit" class="lt-registration-submit">Submit for Approval</button>
