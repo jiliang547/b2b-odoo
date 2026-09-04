@@ -350,7 +350,7 @@ class PartnerHubWebsite(WebsiteController):
             {"page_name": "partner_privacy"},
         )
 
-    @route("/terms", type="http", auth="public", website=True, sitemap=True)
+    @route("/terms-of-use", type="http", auth="public", website=True, sitemap=True)
     def terms(self, **kwargs):
         return request.render(
             "b2b_website.partner_terms",

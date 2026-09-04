@@ -256,6 +256,32 @@ class TestB2BAuthTemplateHttp(HttpCase):
         self.assertIn("lt-auth-login-form", login.text)
         self.assertNotIn('data-captcha="login"', login.text)
 
+    def test_registration_links_to_complete_public_legal_pages(self):
+        self.authenticate(None, None)
+
+        signup = self.url_open("/web/signup")
+        self.assertIn('href="/terms-of-use"', signup.text)
+        self.assertIn('href="/privacy"', signup.text)
+
+        terms = self.url_open("/terms-of-use")
+        self.assertEqual(terms.status_code, 200)
+        self.assertIn("1. Acceptance of these Terms", terms.text)
+        self.assertIn('href="#law"', terms.text)
+        self.assertIn('href="/privacy"', terms.text)
+        self.assertIn('class="lt-btn lt-btn--legal" href="/contact"', terms.text)
+
+        privacy = self.url_open("/privacy")
+        self.assertEqual(privacy.status_code, 200)
+        self.assertIn("1. Who we are and scope", privacy.text)
+        self.assertIn('href="#rights"', privacy.text)
+        self.assertIn('href="/terms-of-use"', privacy.text)
+        self.assertIn('class="lt-btn lt-btn--legal" href="/contact"', privacy.text)
+
+        for response in (terms, privacy):
+            self.assertNotIn("Before launch", response.text)
+            self.assertNotIn("insert full registered legal entity", response.text)
+            self.assertNotIn("legal@yourdomain.com", response.text)
+
 
 @tagged("post_install", "-at_install")
 class TestB2BRegistrationHttpFlow(HttpCase):

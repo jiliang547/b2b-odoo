@@ -231,7 +231,7 @@
                         </div>
                     </section>
                     <div class="lt-registration-actions">
-                        <label class="lt-registration-terms"><input type="checkbox" name="terms" value="1" t-att-checked="terms == '1'" required="required" data-lt-validation-message="Please accept the Terms of Use and Privacy Policy."/><span>I agree to the <a href="/terms" target="_blank">Terms of Use</a> and <a href="/privacy" target="_blank">Privacy Policy</a>.</span></label>
+                        <label class="lt-registration-terms"><input type="checkbox" name="terms" value="1" t-att-checked="terms == '1'" required="required" data-lt-validation-message="Please accept the Terms of Use and Privacy Policy."/><span>I agree to the <a href="/terms-of-use" target="_blank">Terms of Use</a> and <a href="/privacy" target="_blank">Privacy Policy</a>.</span></label>
                         <p class="alert alert-danger" t-if="error" role="alert"><t t-esc="error"/></p>
                         <input type="hidden" name="redirect" t-att-value="redirect"/>
                         <button type="submit" class="lt-registration-submit">Submit for Approval</button>
