@@ -1,5 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <template id="registration_phone" name="Registration phone input">
+        <div class="lt-field">
+            <label t-att-for="phone_field"><t t-out="phone_label"/> <b t-if="phone_field == 'mobile'">*</b></label>
+            <div class="lt-phone-input" data-lt-phone="">
+                <div class="lt-phone-country">
+                    <select class="lt-phone-country-native" t-att-name="phone_field + '_country'" t-att-id="phone_field + '_country'" t-att-aria-label="phone_label + ' country code'" t-att-data-default-country="'1' if phone_country_defaulted else None" autocomplete="tel-country-code" tabindex="-1" aria-hidden="true">
+                        <option value="">+</option>
+                        <option t-foreach="countries.filtered('phone_code')" t-as="pc" t-att-value="pc.id" t-att-data-code="pc.phone_code" t-att-data-flag="pc.image_url" t-att-data-country-name="pc.name" t-att-selected="str(pc.id) == str(phone_country or '')">+<t t-out="pc.phone_code"/></option>
+                    </select>
+                    <button class="lt-phone-country-trigger" type="button" data-lt-phone-trigger="" aria-haspopup="listbox" aria-expanded="false" t-att-aria-controls="phone_field + '_country_list'" t-att-aria-label="phone_label + ' country code'">
+                        <img class="lt-phone-flag" data-lt-phone-flag="" src="/base/static/img/country_flags/us.png" alt=""/>
+                        <span class="lt-phone-code" data-lt-phone-code="">+1</span>
+                        <i class="fa fa-chevron-down" aria-hidden="true"/>
+                    </button>
+                    <div class="lt-phone-country-menu" data-lt-phone-menu="" t-att-id="phone_field + '_country_list'" role="listbox" t-att-aria-label="phone_label + ' country code options'" hidden="hidden">
+                        <button t-foreach="countries.filtered('phone_code')" t-as="pc" type="button" class="lt-phone-country-option" data-lt-phone-option="" t-att-data-country-id="pc.id" t-att-data-code="pc.phone_code" t-att-data-flag="pc.image_url" t-att-data-country-name="pc.name" role="option" t-att-aria-selected="'true' if str(pc.id) == str(phone_country or '') else 'false'">
+                            <img class="lt-phone-country-option__flag" t-att-src="pc.image_url" alt="" loading="lazy" decoding="async"/>
+                            <span class="lt-phone-country-option__name" t-out="pc.name"/>
+                            <span class="lt-phone-country-option__code">+<t t-out="pc.phone_code"/></span>
+                        </button>
+                    </div>
+                </div>
+                <input class="lt-phone-number" type="tel" inputmode="numeric" t-att-name="phone_field" t-att-id="phone_field" t-att-value="phone_value" placeholder="000 000 0000" t-att-required="phone_field == 'mobile'" maxlength="64" autocomplete="tel-national" t-att-aria-describedby="phone_field + '_error'"/>
+            </div>
+            <small class="lt-field-error" t-att-id="phone_field + '_error'" aria-live="polite"/>
+        </div>
+    </template>
     <template id="portal_layout_figma" inherit_id="portal.portal_layout" name="Partner Hub Portal Layout">
         <xpath expr="//t[@t-set='is_portal']" position="before"><t t-set="no_header" t-value="True"/><t t-set="no_footer" t-value="True"/><t t-set="no_breadcrumbs" t-value="True"/></xpath>
         <xpath expr="//div[@id='wrap']" position="before"><t t-call="b2b_website.partner_topbar"/></xpath>
@@ -214,12 +241,12 @@
                             <div class="lt-field"><label for="name">Full Name <b>*</b></label><input type="text" name="name" t-att-value="name" id="name" placeholder="John Doe" maxlength="160" autocomplete="name" required="required"/></div>
                             <div class="lt-field"><label for="job_title">Job Title <b>*</b></label><input type="text" name="job_title" t-att-value="job_title" id="job_title" placeholder="Sales Manager" maxlength="160" autocomplete="organization-title" required="required"/></div>
                             <div class="lt-field"><label for="company_name">Company Name <b>*</b></label><input type="text" name="company_name" t-att-value="company_name" id="company_name" placeholder="Company name" maxlength="200" autocomplete="organization" required="required"/></div>
-                            <div class="lt-field"><label for="country_id">Country / Region <b>*</b></label><select name="country_id" id="country_id" autocomplete="country" required="required"><option value="">Select country</option><option t-foreach="countries" t-as="country" t-att-value="country.id" t-att-selected="str(country.id) == str(country_id or '')" t-out="country.name"/></select></div>
+                            <div class="lt-field"><label for="country_id">Country / Region <b>*</b></label><select name="country_id" id="country_id" autocomplete="country" required="required"><option value="" t-translation="off">Select country</option><option t-foreach="countries" t-as="country" t-att-value="country.id" t-att-selected="str(country.id) == str(country_id or '')" t-out="country.name"/></select></div>
                             <div class="lt-field"><label for="login">Business Email <b>*</b></label><input type="email" name="login" t-att-value="login" id="login" placeholder="name@company.com" maxlength="254" autocomplete="email" autocapitalize="off" required="required"/></div>
-                            <div class="lt-field"><label for="company_phone">Company Phone</label><input type="tel" name="company_phone" t-att-value="company_phone" id="company_phone" placeholder="+1 000 000 0000" maxlength="64" autocomplete="tel"/></div>
-                            <div class="lt-field"><label for="mobile">Mobile / WhatsApp <b>*</b></label><input type="tel" name="mobile" t-att-value="mobile" id="mobile" placeholder="+1 000 000 0000" maxlength="64" autocomplete="tel" required="required"/></div>
+                            <t t-call="b2b_website.registration_phone"><t t-set="phone_field" t-value="'company_phone'"/><t t-set="phone_label" t-value="'Company Phone'"/><t t-set="phone_value" t-value="company_phone"/><t t-set="phone_country" t-value="company_phone_country"/><t t-set="phone_country_defaulted" t-value="company_phone_country_defaulted"/></t>
+                            <t t-call="b2b_website.registration_phone"><t t-set="phone_field" t-value="'mobile'"/><t t-set="phone_label" t-value="'Mobile / WhatsApp'"/><t t-set="phone_value" t-value="mobile"/><t t-set="phone_country" t-value="mobile_country"/><t t-set="phone_country_defaulted" t-value="mobile_country_defaulted"/></t>
                             <div class="lt-field"><label for="customer_type_id">Business Type <b>*</b></label><select name="customer_type_id" id="customer_type_id" required="required"><option value="">Select business type</option><option t-foreach="customer_types" t-as="customer_type" t-att-value="customer_type.id" t-att-selected="str(customer_type.id) == str(customer_type_id or '')" t-out="customer_type.name"/></select></div>
-                            <div class="lt-field"><label for="company_website">Company Website</label><input type="text" name="company_website" t-att-value="company_website" id="company_website" placeholder="www.company.com" maxlength="500" autocomplete="url"/></div>
+                            <div class="lt-field"><label for="company_website">Company Website</label><input type="text" name="company_website" t-att-value="company_website" id="company_website" placeholder="www.company.com" maxlength="500" autocomplete="url" aria-describedby="company_website_error"/><small id="company_website_error" class="lt-field-error" aria-live="polite"/></div>
                             <div class="lt-field"><label for="product_interest_id">Products of Interest</label><select name="product_interest_id" id="product_interest_id"><option value="">Select products</option><option t-foreach="product_interests" t-as="interest" t-att-value="interest.id" t-att-selected="str(interest.id) == str(product_interest_id or '')" t-out="interest.name"/></select></div>
                         </div>
                     </section>

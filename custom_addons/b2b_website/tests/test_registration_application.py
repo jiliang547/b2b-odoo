@@ -250,6 +250,10 @@ class TestB2BAuthTemplateHttp(HttpCase):
             'data-lt-validation-message="Please accept the Terms of Use and Privacy Policy."',
             signup.text,
         )
+        self.assertIn('class="lt-phone-country-trigger"', signup.text)
+        self.assertIn('class="lt-phone-country-option"', signup.text)
+        self.assertIn('data-country-name="United States"', signup.text)
+        self.assertIn('class="lt-phone-number"', signup.text)
 
         login = self.url_open("/web/login")
         self.assertEqual(login.status_code, 200)
@@ -306,8 +310,8 @@ class TestB2BRegistrationHttpFlow(HttpCase):
             "company_name": "HTTP Closure Company",
             "country_id": str(self.env.ref("base.us").id),
             "login": email,
-            "company_phone": "+1 555 0200",
-            "mobile": "+1 555 0299",
+            "company_phone": "+1 202 555 0100",
+            "mobile": "+1 202 555 0199",
             "customer_type_id": str(self.customer_type.id),
             "company_website": "closure.example.test",
             "product_interest_id": str(
@@ -345,6 +349,7 @@ class TestB2BRegistrationHttpFlow(HttpCase):
         self.assertEqual(application.state, "awaiting_email")
         self.assertFalse(application.user_id.with_context(active_test=False).active)
         self.assertEqual(application.company_website, "https://closure.example.test")
+        self.assertEqual(application.mobile, "+12025550199")
 
         verification = self.url_open(
             "/web/signup/verify?token=%s" % application.verification_token
@@ -365,6 +370,28 @@ class TestB2BRegistrationHttpFlow(HttpCase):
         self.assertEqual(application.partner_id.parent_id, application.company_id)
         self.assertTrue(application.company_id.b2b_approved)
         self.assertEqual(application.company_id.b2b_customer_type_id, self.customer_type)
+
+    def test_invalid_contact_details_are_rejected_and_inputs_preserved(self):
+        self.authenticate(None, None)
+        for field, value in (("company_website", "abcdef"), ("company_website", "name@company.com"),
+                             ("mobile", "123abc"), ("company_phone", "123")):
+            with self.subTest(field=field, value=value):
+                email = "invalid-contact@example.test"
+                response = self._submit(self._payload(email, **{field: value}))
+                self.assertEqual(response.status_code, 200)
+                self.assertIn("Please enter a valid", response.text)
+                self.assertIn(value, response.text)
+                self.assertFalse(self.env["b2b.registration.application"].search([("business_email", "=", email)]))
+
+    def test_selected_phone_country_overrides_company_country(self):
+        self.authenticate(None, None)
+        email = "uk-mobile@example.test"
+        response = self._submit(self._payload(email, mobile="07911 123456",
+            mobile_country=str(self.env.ref("base.uk").id), company_phone=""))
+        self.assertIn("Check your email", response.text)
+        application = self.env["b2b.registration.application"].search([("business_email", "=", email)])
+        self.assertEqual(application.mobile, "+447911123456")
+        self.assertEqual(application.country_id, self.env.ref("base.us"))
 
     def test_terms_are_enforced_server_side(self):
         self.authenticate(None, None)

@@ -559,6 +559,184 @@ function initializeFeaturedProducts() {
     });
 }
 
+function initializeRegistrationContacts() {
+    const form = document.querySelector(".lt-registration-form");
+    if (!form) return;
+    const country = form.querySelector("#country_id");
+    const validators = [];
+    const show = (input, message) => {
+        input.setCustomValidity(message);
+        input.dataset.ltContactValidity = message;
+        input.setAttribute("aria-invalid", String(Boolean(message)));
+        document.getElementById(input.id + "_error").textContent = message;
+    };
+    form.querySelectorAll("[data-lt-phone]").forEach((group) => {
+        const select = group.querySelector("select");
+        const input = group.querySelector("input");
+        const trigger = group.querySelector("[data-lt-phone-trigger]");
+        const menu = group.querySelector("[data-lt-phone-menu]");
+        const menuOptions = [...group.querySelectorAll("[data-lt-phone-option]")];
+        const flag = group.querySelector("[data-lt-phone-flag]");
+        const codeLabel = group.querySelector("[data-lt-phone-code]");
+        const triggerLabel = trigger.getAttribute("aria-label");
+        let manual = Boolean(select.value) && select.dataset.defaultCountry !== "1";
+        const selectedMenuOption = () => menuOptions.find(
+            (option) => option.dataset.countryId === select.value
+        );
+        const updateDisplay = () => {
+            const option = select.selectedOptions[0];
+            const code = option?.dataset.code || "";
+            const countryName = option?.dataset.countryName || "";
+            const flagUrl = option?.dataset.flag || "";
+            flag.src = flagUrl;
+            flag.hidden = !flagUrl;
+            codeLabel.textContent = code ? `+${code}` : "+";
+            trigger.setAttribute(
+                "aria-label",
+                countryName && code ? `${triggerLabel}: ${countryName}, +${code}` : triggerLabel
+            );
+            menuOptions.forEach((menuOption) => {
+                const selected = menuOption.dataset.countryId === select.value;
+                menuOption.classList.toggle("is-selected", selected);
+                menuOption.setAttribute("aria-selected", String(selected));
+            });
+        };
+        const closeMenu = (restoreFocus = false) => {
+            menu.hidden = true;
+            trigger.setAttribute("aria-expanded", "false");
+            if (restoreFocus) trigger.focus();
+        };
+        const openMenu = () => {
+            menu.hidden = false;
+            trigger.setAttribute("aria-expanded", "true");
+            const selected = selectedMenuOption() || menuOptions[0];
+            selected?.focus();
+            selected?.scrollIntoView({block: "nearest"});
+        };
+        const moveMenuFocus = (step) => {
+            const activeIndex = menuOptions.indexOf(document.activeElement);
+            const nextIndex = activeIndex < 0
+                ? 0
+                : (activeIndex + step + menuOptions.length) % menuOptions.length;
+            menuOptions[nextIndex]?.focus();
+        };
+        const sync = () => {
+            if (
+                !manual && country.value
+                && [...select.options].some((option) => option.value === country.value)
+            ) {
+                select.value = country.value;
+            }
+            updateDisplay();
+        };
+        sync();
+        const validate = () => {
+            let value = input.value.trim();
+            if (/^[+0-9\s().-]*$/.test(value)) {
+                value = value.replace(/[\s().-]/g, "");
+                if (value.startsWith("00")) value = "+" + value.slice(2);
+                if (value.startsWith("+")) {
+                    const matches = [...select.options].filter(o => o.dataset.code && value.slice(1).startsWith(o.dataset.code))
+                        .sort((a, b) => b.dataset.code.length - a.dataset.code.length);
+                    const chosen = matches.find(o => o.value === select.value) || matches[0];
+                    if (chosen) {
+                        select.value = chosen.value;
+                        manual = true;
+                        updateDisplay();
+                        value = value.slice(chosen.dataset.code.length + 1);
+                    }
+                }
+                input.value = value;
+            }
+            const code = select.selectedOptions[0]?.dataset.code || "";
+            const invalid = value ? (!code || !/^[0-9]+$/.test(value) || value.length < 4 || code.length + value.length > 15) : input.required;
+            show(input, invalid ? "Please enter a valid number and select its country code." : "");
+            return !invalid;
+        };
+        country.addEventListener("change", () => { sync(); if (input.value) validate(); });
+        select.addEventListener("change", () => {
+            manual = true;
+            delete select.dataset.defaultCountry;
+            updateDisplay();
+            if (input.value) validate();
+        });
+        trigger.addEventListener("click", () => {
+            if (menu.hidden) openMenu();
+            else closeMenu();
+        });
+        trigger.addEventListener("keydown", (event) => {
+            if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+            event.preventDefault();
+            openMenu();
+            if (event.key === "Home") menuOptions[0]?.focus();
+            if (event.key === "End") menuOptions.at(-1)?.focus();
+        });
+        menu.addEventListener("click", (event) => {
+            const option = event.target.closest("[data-lt-phone-option]");
+            if (!option) return;
+            select.value = option.dataset.countryId;
+            select.dispatchEvent(new Event("change", {bubbles: true}));
+            closeMenu(true);
+        });
+        menu.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") {
+                event.preventDefault();
+                closeMenu(true);
+            } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                event.preventDefault();
+                moveMenuFocus(event.key === "ArrowDown" ? 1 : -1);
+            } else if (event.key === "Home" || event.key === "End") {
+                event.preventDefault();
+                menuOptions[event.key === "Home" ? 0 : menuOptions.length - 1]?.focus();
+            }
+        });
+        document.addEventListener("pointerdown", (event) => {
+            if (!menu.hidden && !group.contains(event.target)) closeMenu();
+        });
+        group.addEventListener("focusout", () => {
+            window.setTimeout(() => {
+                if (!group.contains(document.activeElement)) closeMenu();
+            });
+        });
+        input.addEventListener("blur", validate);
+        input.addEventListener("input", () => show(input, ""));
+        validators.push(validate);
+    });
+    const website = form.querySelector("#company_website");
+    const validateWebsite = () => {
+        let value = website.value.trim();
+        let valid = !value;
+        if (value) {
+            if (!value.includes("://")) value = "https://" + value;
+            try {
+                const url = new URL(value);
+                const host = url.hostname;
+                const labels = host.split(".");
+                valid = value.length <= 500 && !/[\s\\]/.test(value)
+                    && ["http:", "https:"].includes(url.protocol) && !url.username && !url.password
+                    && !value.split("/")[2]?.includes("@")
+                    && host.length <= 253 && labels.length >= 2
+                    && labels.every(label => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i.test(label))
+                    && (/^[a-z]{2,63}$/i.test(labels.at(-1)) || labels.at(-1).startsWith("xn--"));
+            } catch { valid = false; }
+        }
+        if (valid) website.value = value;
+        show(website, valid ? "" : "Please enter a valid company website, such as www.company.com.");
+        return valid;
+    };
+    website.addEventListener("blur", validateWebsite);
+    website.addEventListener("input", () => show(website, ""));
+    validators.push(validateWebsite);
+    form.addEventListener("submit", (event) => {
+        const results = validators.map(validate => validate());
+        if (results.includes(false)) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            form.reportValidity();
+        }
+    }, true);
+}
+
 function initializeEnglishValidationMessages() {
     const language = document.documentElement.lang?.toLocaleLowerCase() || "";
     if (!language.startsWith("en")) {
@@ -582,6 +760,7 @@ function initializeEnglishValidationMessages() {
         if (!isFormField(field)) {
             return;
         }
+        if (field.dataset.ltContactValidity) return;
 
         field.setCustomValidity("");
         if (field.validity.valid) {
@@ -619,6 +798,7 @@ function initializeEnglishValidationMessages() {
 
 function initializePartnerHub() {
     initializeEnglishValidationMessages();
+    initializeRegistrationContacts();
     initializeNavigation();
     initializeFilters();
     initializeCatalogView();

@@ -1,4 +1,5 @@
 import logging
+import re
 from urllib.parse import urlparse
 
 import werkzeug
@@ -6,6 +7,7 @@ import werkzeug
 from odoo import _, fields, http, tools
 from odoo.addons.auth_signup.controllers.main import AuthSignupHome
 from odoo.addons.auth_signup.models.res_users import SignupError
+from odoo.addons.phone_validation.tools import phone_validation
 from odoo.exceptions import UserError, ValidationError
 from odoo.http import request
 from odoo.tools import email_normalize
@@ -27,8 +29,9 @@ class PartnerHubAuth(AuthSignupHome):
             "b2b_website.partner_category_product_interests",
             raise_if_not_found=False,
         )
+        countries = request.env["res.country"].sudo().with_context(lang="en_US").search([], order="name")
         qcontext.update({
-            "countries": request.env["res.country"].sudo().search([], order="name"),
+            "countries": countries,
             "customer_types": request.env["b2b.customer.type"].sudo().search(
                 [("active", "=", True)], order="sequence, name"
             ),
@@ -42,8 +45,14 @@ class PartnerHubAuth(AuthSignupHome):
         for key in (
             "job_title", "company_name", "country_id", "company_phone", "mobile",
             "customer_type_id", "company_website", "product_interest_id", "terms",
+            "company_phone_country", "mobile_country",
         ):
             qcontext[key] = request.params.get(key)
+        default_phone_country = countries.filtered(lambda country: country.code == "US")[:1]
+        if default_phone_country:
+            for field_name in ("company_phone_country", "mobile_country"):
+                qcontext[f"{field_name}_defaulted"] = not qcontext[field_name]
+                qcontext[field_name] = qcontext[field_name] or str(default_phone_country.id)
         return qcontext
 
     @staticmethod
@@ -62,13 +71,9 @@ class PartnerHubAuth(AuthSignupHome):
         login = email_normalize((qcontext.get("login") or "").strip())
         job_title = (qcontext.get("job_title") or "").strip()[:160]
         company_name = (qcontext.get("company_name") or "").strip()[:200]
-        company_phone = (qcontext.get("company_phone") or "").strip()[:64]
-        mobile = (qcontext.get("mobile") or "").strip()[:64]
-        company_website = (qcontext.get("company_website") or "").strip()[:500]
-        if company_website and not urlparse(company_website).scheme:
-            company_website = "https://" + company_website
-        if company_website and urlparse(company_website).scheme not in ("http", "https"):
-            raise ValidationError(_("Please enter a valid company website."))
+        company_phone = self._registration_phone(qcontext, "company_phone")
+        mobile = self._registration_phone(qcontext, "mobile")
+        company_website = self._registration_website(qcontext.get("company_website"))
 
         country = request.env["res.country"].sudo().browse(
             self._integer_param(qcontext.get("country_id"))
@@ -109,6 +114,54 @@ class PartnerHubAuth(AuthSignupHome):
             "terms_version": qcontext["terms_version"],
         }
         return values, application_values
+
+    @staticmethod
+    def _registration_website(value):
+        value = (value or "").strip()
+        if not value:
+            return ""
+        if "://" not in value:
+            value = "https://" + value
+        try:
+            parsed = urlparse(value)
+            host = (parsed.hostname or "").encode("idna").decode("ascii")
+            labels = host.split(".")
+            valid = (
+                len(value) <= 500 and not re.search(r"[\s\\]", value)
+                and parsed.scheme in ("http", "https")
+                and not parsed.username and not parsed.password and "@" not in parsed.netloc
+                and len(host) <= 253 and len(labels) >= 2
+                and all(re.fullmatch(r"[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?", label) for label in labels)
+                and (re.fullmatch(r"[a-zA-Z]{2,63}", labels[-1]) or labels[-1].startswith("xn--"))
+                and (parsed.port is None or 1 <= parsed.port <= 65535)
+            )
+        except (ValueError, UnicodeError):
+            valid = False
+        if not valid:
+            raise ValidationError(_("Please enter a valid company website, such as www.company.com."))
+        return value
+
+    def _registration_phone(self, qcontext, field):
+        value = (qcontext.get(field) or "").strip()
+        if not value:
+            return ""
+        message = _("Please enter a valid company phone number with its country code.") if field == "company_phone" else _("Please enter a valid mobile number with its country code.")
+        if len(value) > 64 or not re.fullmatch(r"\+?[0-9\s().-]+", value):
+            raise ValidationError(message)
+        selected = qcontext.get(field + "_country") or qcontext.get("country_id")
+        country = request.env["res.country"].sudo().browse(self._integer_param(selected)).exists()
+        if not country or not country.phone_code:
+            raise ValidationError(message)
+        value = re.sub(r"[\s().-]", "", value)
+        if value.startswith("00"):
+            value = "+" + value[2:]
+        # Some Odoo country codes include the NANP area code (e.g. +1684).
+        if not value.startswith("+") and len(str(country.phone_code)) > 3 and len(value) == 7:
+            value = "+" + str(country.phone_code) + value
+        try:
+            return phone_validation.phone_format(value, country.code, country.phone_code, force_format="E164")
+        except UserError:
+            raise ValidationError(message) from None
 
     @http.route()
     def web_login(self, *args, **kw):
