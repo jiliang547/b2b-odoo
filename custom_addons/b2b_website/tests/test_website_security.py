@@ -281,6 +281,21 @@ class TestPartnerHubPublicBranding(HttpCase):
         self.assertEqual(bundle.status_code, 200)
         self.assertIn("Your Partner Hub session is no longer active", bundle.text)
 
+    def test_frontend_bundle_contains_turnstile_recovery_ui(self):
+        signup = self.url_open("/web/signup")
+        self.assertEqual(signup.status_code, 200)
+        self.assertIn('data-captcha="signup"', signup.text)
+        asset_paths = re.findall(
+            r'(?:src|data-src)="([^"]*web\.assets_frontend_lazy[^"]*)"',
+            signup.text,
+        )
+        self.assertTrue(asset_paths)
+        bundle = self.url_open(asset_paths[0])
+        self.assertEqual(bundle.status_code, 200)
+        self.assertIn("Completing security check", bundle.text)
+        self.assertIn("Retry verification", bundle.text)
+        self.assertIn("partner-hub:turnstile-error", bundle.text)
+
 
 @tagged("post_install", "-at_install")
 class TestWebsiteIDOR(HttpCase):

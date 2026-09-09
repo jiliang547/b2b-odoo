@@ -1337,6 +1337,7 @@ form[aria-busy="true"] button[type="submit"] { cursor: wait; opacity: .72; }
 .lt-registration-actions > .s_turnstile_container { order: 1; max-width: 100%; justify-self: center; overflow: hidden; }
 .lt-registration-actions > .lt-registration-terms { order: 2; }
 .lt-registration-actions > .alert { order: 3; }
+.lt-registration-actions > .lt-turnstile-feedback { order: 3; }
 .lt-registration-actions > .lt-registration-submit { order: 4; }
 .lt-registration-actions > .lt-registration-email-note { order: 5; }
 .lt-registration-terms { display: flex; align-items: flex-start; justify-content: center; gap: 9px; color: #4b5563; font-size: 13px; }
@@ -1346,6 +1347,16 @@ form[aria-busy="true"] button[type="submit"] { cursor: wait; opacity: .72; }
 .lt-registration-submit:hover { border-color: #c92f08; background: #c92f08; }
 .lt-registration-submit:disabled { opacity: .65; }
 .lt-registration-submit.disabled { opacity: .65; pointer-events: none; }
+.lt-turnstile-feedback { display: flex; min-height: 38px; align-items: center; justify-content: center; gap: 12px; padding: 9px 12px; border: 1px solid #dbe3ec; border-radius: 6px; background: #f8fafc; color: #475569; font-size: 13px; line-height: 1.4; text-align: left; }
+.lt-turnstile-feedback[hidden] { display: none; }
+.lt-turnstile-feedback.is-pending::before { width: 14px; height: 14px; flex: 0 0 14px; border: 2px solid #cbd5e1; border-top-color: #e8380c; border-radius: 50%; animation: lt-turnstile-spin .8s linear infinite; content: ""; }
+.lt-turnstile-feedback.is-success { border-color: #bbf7d0; background: #f0fdf4; color: #166534; }
+.lt-turnstile-feedback.is-success::before { content: "\2713"; font-weight: 800; }
+.lt-turnstile-feedback.is-error { flex-wrap: wrap; border-color: #fecaca; background: #fef2f2; color: #991b1b; }
+.lt-turnstile-retry { min-height: 30px; padding: 4px 10px; border: 1px solid currentColor; border-radius: 5px; background: #fff; color: #b42318; font-size: 12px; font-weight: 700; cursor: pointer; }
+.lt-turnstile-retry:hover, .lt-turnstile-retry:focus-visible { background: #fff7f5; outline: 2px solid rgba(232,56,12,.22); outline-offset: 1px; }
+@keyframes lt-turnstile-spin { to { transform: rotate(360deg); } }
+.lt-login-card > .lt-turnstile-feedback, .lt-auth-login-form > .lt-turnstile-feedback { margin-top: 12px; }
 .lt-registration-email-note { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 0; color: #6b7280; font-size: 12px; line-height: 1.45; text-align: left; }
 .lt-registration-email-note i { color: #e8380c; font-size: 28px; }
 .lt-registration-footer { padding: 18px 32px 26px; border-top: 1px solid rgba(232,56,12,.22); text-align: center; }

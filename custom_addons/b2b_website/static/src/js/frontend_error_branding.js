@@ -50,6 +50,12 @@ function exceptionName(originalError) {
     return originalError?.exceptionName || originalError?.data?.name || "";
 }
 
+function getTurnstileError(error, originalError) {
+    return [originalError, error?.event?.error, error].find(
+        (candidate) => candidate?.message?.includes("Turnstile Error")
+    );
+}
+
 function addNotification(env, message, options = {}) {
     env.services.notification.add(message, {
         type: "warning",
@@ -99,6 +105,17 @@ const notificationTitles = {
 };
 
 function partnerHubErrorHandler(env, error, originalError) {
+    const turnstileError = getTurnstileError(error, originalError);
+    if (turnstileError) {
+        preventUnhandled(error);
+        document.dispatchEvent(
+            new CustomEvent("partner-hub:turnstile-error", {
+                detail: { code: turnstileError.code || error?.event?.error?.code || "" },
+            })
+        );
+        return true;
+    }
+
     if (originalError instanceof ConnectionLostError) {
         preventUnhandled(error);
         if (connectionNotificationRemove) {
