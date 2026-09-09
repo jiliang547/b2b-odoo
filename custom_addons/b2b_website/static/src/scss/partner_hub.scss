@@ -1266,7 +1266,7 @@ form[aria-busy="true"] button[type="submit"] { cursor: wait; opacity: .72; }
 .lt-auth-card .oe_signup_form.lt-registration-form { max-width: none; margin: 0; }
 .lt-auth-card:has(.lt-auth-login-form) { padding: 0; overflow: hidden; }
 .lt-auth-page .lt-auth-card .oe_website_login_container form.lt-auth-login-form.d-none { display: block !important; }
-.lt-auth-card:has(.lt-auth-login-form) .lt-login-heading { padding: 35px 32px 27px; border-bottom: 1px solid rgba(232,56,12,.2); }
+.lt-auth-card:has(.lt-auth-login-form) .lt-login-heading { width: 100%; max-width: none; padding: 35px 32px 27px; border-bottom: 1px solid rgba(232,56,12,.2); }
 .lt-auth-card:has(.lt-auth-login-form) .lt-auth-login-form { margin: 0; padding: 28px 32px 32px !important; }
 .lt-login-heading .lt-kicker { display: block; color: #e8380c; font-size: 11px; font-weight: 750; letter-spacing: .19em; }
 .lt-login-heading h1 { margin: 11px 0 8px; color: #111827; font-size: 30px; font-weight: 750; letter-spacing: -.025em; }

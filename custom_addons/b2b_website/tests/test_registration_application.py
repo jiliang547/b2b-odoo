@@ -239,6 +239,19 @@ class TestB2BRegistrationApplication(TransactionCase):
 
 @tagged("post_install", "-at_install")
 class TestB2BAuthTemplateHttp(HttpCase):
+    def test_email_login_accepts_uppercase_input(self):
+        password = "Email-Case-Login-2026!"
+        user = mail_new_test_user(
+            self.env,
+            login="case-login@example.test",
+            password=password,
+            groups="base.group_portal",
+        )
+
+        self.authenticate("CASE-LOGIN@EXAMPLE.TEST", password)
+
+        self.assertEqual(user.login, "case-login@example.test")
+
     def test_auth_templates_keep_native_password_toggle_and_signup_only_captcha(self):
         self.authenticate(None, None)
 
