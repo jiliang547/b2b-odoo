@@ -570,6 +570,21 @@ function initializeRegistrationContacts() {
         input.setAttribute("aria-invalid", String(Boolean(message)));
         document.getElementById(input.id + "_error").textContent = message;
     };
+    const email = form.querySelector("#login");
+    const validateEmail = () => {
+        const invalid = Boolean(email.value.trim()) && email.validity.typeMismatch;
+        show(
+            email,
+            invalid
+                ? "Please enter a valid business email address, such as name@company.com."
+                : ""
+        );
+        return !invalid;
+    };
+    email.addEventListener("blur", validateEmail);
+    email.addEventListener("invalid", validateEmail);
+    email.addEventListener("input", () => show(email, ""));
+    validators.push(validateEmail);
     form.querySelectorAll("[data-lt-phone]").forEach((group) => {
         const select = group.querySelector("select");
         const input = group.querySelector("input");

@@ -18,6 +18,22 @@ _logger = logging.getLogger(__name__)
 
 class PartnerHubAuth(AuthSignupHome):
     @staticmethod
+    def _human_validation_error():
+        return _(
+            "Human verification could not be completed. Please refresh the page and try again."
+        )
+
+    @staticmethod
+    def _set_auth_response_headers(response):
+        response.headers["Cache-Control"] = "no-cache"
+        response.headers["X-Frame-Options"] = "SAMEORIGIN"
+        response.headers["Content-Security-Policy"] = "frame-ancestors 'self'"
+        return response
+
+    def _render_auth_template(self, template, qcontext):
+        return self._set_auth_response_headers(request.render(template, qcontext))
+
+    @staticmethod
     def _integer_param(value):
         try:
             return int(value or 0)
@@ -68,7 +84,13 @@ class PartnerHubAuth(AuthSignupHome):
     def _validated_registration_values(self, qcontext):
         values = self._prepare_signup_values(qcontext)
         full_name = (qcontext.get("name") or "").strip()[:160]
-        login = email_normalize((qcontext.get("login") or "").strip())
+        raw_login = (qcontext.get("login") or "").strip()
+        login = email_normalize(raw_login)
+        if raw_login and not login:
+            qcontext["login_error"] = _(
+                "Please enter a valid business email address, such as name@company.com."
+            )
+            raise ValidationError(qcontext["login_error"])
         job_title = (qcontext.get("job_title") or "").strip()[:160]
         company_name = (qcontext.get("company_name") or "").strip()[:200]
         company_phone = self._registration_phone(qcontext, "company_phone")
@@ -165,7 +187,20 @@ class PartnerHubAuth(AuthSignupHome):
 
     @http.route()
     def web_login(self, *args, **kw):
-        response = super().web_login(*args, **kw)
+        try:
+            response = super().web_login(*args, **kw)
+        except (UserError, ValidationError):
+            # Odoo validates password logins before authentication.  Keep a
+            # failed or expired Turnstile challenge inside the branded login
+            # page instead of letting the validation exception reach the
+            # generic HTTP error page.
+            qcontext = self.get_auth_signup_config()
+            qcontext.update({
+                "login": (request.params.get("login") or "").strip(),
+                "redirect": request.params.get("redirect"),
+                "error": self._human_validation_error(),
+            })
+            return self._render_auth_template("web.login", qcontext)
         if (
             request.httprequest.method == "POST"
             and request.session.uid
@@ -178,10 +213,16 @@ class PartnerHubAuth(AuthSignupHome):
             )
         return response
 
-    @http.route()
+    @http.route(captcha=None)
     def web_auth_signup(self, *args, **kw):
         qcontext = self.get_auth_signup_qcontext()
         if qcontext.get("token"):
+            if request.httprequest.method == "POST":
+                try:
+                    request.env["ir.http"]._verify_request_recaptcha_token("signup")
+                except (UserError, ValidationError):
+                    qcontext["error"] = self._human_validation_error()
+                    return self._render_auth_template("auth_signup.signup", qcontext)
             return super().web_auth_signup(*args, **kw)
         if not qcontext.get("signup_enabled"):
             raise werkzeug.exceptions.NotFound()
@@ -189,6 +230,11 @@ class PartnerHubAuth(AuthSignupHome):
 
         if "error" not in qcontext and request.httprequest.method == "POST":
             try:
+                try:
+                    request.env["ir.http"]._verify_request_recaptcha_token("signup")
+                except (UserError, ValidationError):
+                    qcontext["human_validation_failed"] = True
+                    raise
                 user_values, application_values = self._validated_registration_values(qcontext)
                 with request.env.cr.savepoint():
                     if self._account_exists(user_values["login"]):
@@ -220,7 +266,10 @@ class PartnerHubAuth(AuthSignupHome):
                 qcontext.pop("password", None)
                 qcontext.pop("confirm_password", None)
             except (UserError, ValidationError) as error:
-                qcontext["error"] = error.args[0]
+                if qcontext.pop("human_validation_failed", False):
+                    qcontext["error"] = self._human_validation_error()
+                elif not qcontext.get("login_error"):
+                    qcontext["error"] = error.args[0]
             except (SignupError, AssertionError, ValueError) as error:
                 if self._account_exists(qcontext.get("login")):
                     qcontext["error"] = _(
@@ -230,10 +279,22 @@ class PartnerHubAuth(AuthSignupHome):
                     _logger.warning("Partner registration failed: %s", error)
                     qcontext["error"] = _("Could not create a new account.")
 
-        response = request.render("auth_signup.signup", qcontext)
-        response.headers["X-Frame-Options"] = "SAMEORIGIN"
-        response.headers["Content-Security-Policy"] = "frame-ancestors 'self'"
-        return response
+        return self._render_auth_template("auth_signup.signup", qcontext)
+
+    @http.route(captcha=None)
+    def web_auth_reset_password(self, *args, **kw):
+        if request.httprequest.method == "POST":
+            try:
+                request.env["ir.http"]._verify_request_recaptcha_token(
+                    "password_reset"
+                )
+            except (UserError, ValidationError):
+                qcontext = self.get_auth_signup_qcontext()
+                qcontext["error"] = self._human_validation_error()
+                return self._render_auth_template(
+                    "auth_signup.reset_password", qcontext
+                )
+        return super().web_auth_reset_password(*args, **kw)
 
     @http.route(
         "/web/signup/verify",

@@ -1,13 +1,13 @@
 from datetime import timedelta
+import re
 from unittest.mock import patch
 
 from odoo import http
 from odoo.addons.mail.models.mail_template import MailTemplate
 from odoo.addons.mail.tests.common import mail_new_test_user
-from odoo.exceptions import AccessError, UserError
+from odoo.exceptions import AccessError, UserError, ValidationError
 from odoo.fields import Datetime
 from odoo.tests import HttpCase, TransactionCase, tagged
-from odoo.tools import mute_logger
 
 
 @tagged("post_install", "-at_install")
@@ -239,6 +239,12 @@ class TestB2BRegistrationApplication(TransactionCase):
 
 @tagged("post_install", "-at_install")
 class TestB2BAuthTemplateHttp(HttpCase):
+    def _csrf_token(self, path):
+        response = self.url_open(path)
+        match = re.search(r'name="csrf_token" value="([^"]+)"', response.text)
+        self.assertTrue(match, "CSRF token is missing from %s" % path)
+        return match.group(1)
+
     def test_email_login_accepts_uppercase_input(self):
         password = "Email-Case-Login-2026!"
         user = mail_new_test_user(
@@ -252,7 +258,7 @@ class TestB2BAuthTemplateHttp(HttpCase):
 
         self.assertEqual(user.login, "case-login@example.test")
 
-    def test_auth_templates_keep_native_password_toggle_and_signup_only_captcha(self):
+    def test_auth_templates_keep_native_password_toggle_and_captcha(self):
         self.authenticate(None, None)
 
         signup = self.url_open("/web/signup")
@@ -267,11 +273,60 @@ class TestB2BAuthTemplateHttp(HttpCase):
         self.assertIn('class="lt-phone-country-option"', signup.text)
         self.assertIn('data-country-name="United States"', signup.text)
         self.assertIn('class="lt-phone-number"', signup.text)
+        self.assertIn('id="login_error"', signup.text)
 
         login = self.url_open("/web/login")
         self.assertEqual(login.status_code, 200)
         self.assertIn("lt-auth-login-form", login.text)
-        self.assertNotIn('data-captcha="login"', login.text)
+        self.assertIn('data-captcha="login"', login.text)
+
+    def test_login_turnstile_failure_stays_on_branded_login_page(self):
+        self.authenticate(None, None)
+
+        def reject_captcha(_record, action):
+            self.assertEqual(action, "login")
+            raise ValidationError("The CloudFlare human validation failed.")
+
+        with patch.object(
+            self.env.registry["ir.http"],
+            "_verify_request_recaptcha_token",
+            reject_captcha,
+        ):
+            response = self.url_open("/web/login", data={
+                "login": "pending@example.test",
+                "password": "invalid-password",
+                "csrf_token": self._csrf_token("/web/login"),
+            })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Sign in to your account", response.text)
+        self.assertIn("Human verification could not be completed", response.text)
+        self.assertNotIn("Oops! Something went wrong", response.text)
+
+    def test_password_reset_turnstile_failure_stays_on_branded_page(self):
+        self.authenticate(None, None)
+        self.env["ir.config_parameter"].sudo().set_param(
+            "auth_signup.reset_password", "True"
+        )
+
+        def reject_captcha(_record, action):
+            self.assertEqual(action, "password_reset")
+            raise ValidationError("The CloudFlare human validation failed.")
+
+        with patch.object(
+            self.env.registry["ir.http"],
+            "_verify_request_recaptcha_token",
+            reject_captcha,
+        ):
+            response = self.url_open("/web/reset_password", data={
+                "login": "pending@example.test",
+                "csrf_token": self._csrf_token("/web/reset_password"),
+            })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Reset your password", response.text)
+        self.assertIn("Human verification could not be completed", response.text)
+        self.assertNotIn("Oops! Something went wrong", response.text)
 
     def test_registration_links_to_complete_public_legal_pages(self):
         self.authenticate(None, None)
@@ -374,6 +429,28 @@ class TestB2BRegistrationHttpFlow(HttpCase):
         self.assertTrue(application.user_id.with_context(active_test=False).active)
         self.assertTrue(application.activity_ids)
 
+        def captcha_ok(_record, action):
+            self.assertEqual(action, "login")
+
+        with patch.object(
+            self.env.registry["ir.http"],
+            "_verify_request_recaptcha_token",
+            captcha_ok,
+        ):
+            pending_login = self.url_open("/web/login?redirect=/my", data={
+                "login": email,
+                "password": "Registration-Test-2026!",
+                "redirect": "/my",
+                "csrf_token": re.search(
+                    r'name="csrf_token" value="([^"]+)"',
+                    self.url_open("/web/login?redirect=/my").text,
+                ).group(1),
+            })
+
+        self.assertEqual(pending_login.status_code, 200)
+        self.assertIn("Partner registration under review", pending_login.text)
+        self.assertNotIn("Oops! Something went wrong", pending_login.text)
+
         application.write({"company_resolution": "create"})
         application.with_user(self.manager).with_context(
             b2b_skip_registration_email=True
@@ -386,7 +463,8 @@ class TestB2BRegistrationHttpFlow(HttpCase):
 
     def test_invalid_contact_details_are_rejected_and_inputs_preserved(self):
         self.authenticate(None, None)
-        for field, value in (("company_website", "abcdef"), ("company_website", "name@company.com"),
+        for field, value in (("login", "not-an-email"),
+                             ("company_website", "abcdef"), ("company_website", "name@company.com"),
                              ("mobile", "123abc"), ("company_phone", "123")):
             with self.subTest(field=field, value=value):
                 email = "invalid-contact@example.test"
@@ -394,6 +472,12 @@ class TestB2BRegistrationHttpFlow(HttpCase):
                 self.assertEqual(response.status_code, 200)
                 self.assertIn("Please enter a valid", response.text)
                 self.assertIn(value, response.text)
+                if field == "login":
+                    self.assertIn('id="login_error"', response.text)
+                    self.assertNotIn(
+                        "Please complete all required registration fields",
+                        response.text,
+                    )
                 self.assertFalse(self.env["b2b.registration.application"].search([("business_email", "=", email)]))
 
     def test_selected_phone_country_overrides_company_country(self):
@@ -471,7 +555,6 @@ class TestB2BRegistrationHttpFlow(HttpCase):
             1,
         )
 
-    @mute_logger("odoo.http")
     def test_turnstile_rejection_stops_registration_before_account_creation(self):
         self.authenticate(None, None)
         email = "registration-http-turnstile-rejected@example.test"
@@ -489,8 +572,10 @@ class TestB2BRegistrationHttpFlow(HttpCase):
         ):
             response = self.url_open("/web/signup", data=self._payload(email))
 
-        self.assertEqual(response.status_code, 422)
-        self.assertIn("human validation failed", response.text)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Create Your Partner Account", response.text)
+        self.assertIn("Human verification could not be completed", response.text)
+        self.assertNotIn("Oops! Something went wrong", response.text)
         self.assertFalse(self.env["b2b.registration.application"].search([
             ("business_email", "=", email),
         ]))

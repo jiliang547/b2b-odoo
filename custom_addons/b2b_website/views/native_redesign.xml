@@ -120,7 +120,7 @@
 
     <template id="sale_order_figma" inherit_id="sale.sale_order_portal_template" name="Partner Order Detail Layout" priority="90">
         <xpath expr="//div[hasclass('o_portal_sale_sidebar')]" position="attributes"><attribute name="class" add="lt-order-detail" separator=" "/></xpath>
-        <xpath expr="//div[hasclass('o_portal_sale_sidebar')]" position="before"><nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span><a href="/my/orders">Orders</a><span>/</span><t t-out="sale_order.name"/></nav><header class="lt-portal-heading"><h1><t t-out="sale_order.name"/></h1><p>Native Odoo order data, payment actions and fulfilment tracking.</p></header></xpath>
+        <xpath expr="//div[hasclass('o_portal_sale_sidebar')]" position="before"><nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span><a href="/my/orders">Orders</a><span>/</span><t t-out="sale_order.name"/></nav><header class="lt-portal-heading"><h1><t t-out="sale_order.name"/></h1><p>Order details, payment actions and fulfilment tracking.</p></header></xpath>
     </template>
 
     <template id="helpdesk_list_figma" inherit_id="helpdesk.portal_helpdesk_ticket" name="Partner Service Ticket List">
@@ -177,7 +177,6 @@
     <template id="login_layout_figma" inherit_id="web.login" name="Partner Hub Login">
         <xpath expr="//form" position="attributes">
             <attribute name="t-attf-class">oe_login_form #{'' if login else 'd-none'} lt-login-card lt-auth-login-form</attribute>
-            <attribute name="data-captcha"/>
         </xpath>
         <xpath expr="//form" position="before"><div class="lt-login-heading"><span class="lt-kicker">POWER &amp; GRACE PARTNER HUB</span><h1>Sign in to your account</h1><p>Access pricing, orders, samples and support.</p></div></xpath>
         <xpath expr="//div[hasclass('o_caps_lock_warning')]" position="after">
@@ -242,7 +241,7 @@
                             <div class="lt-field"><label for="job_title">Job Title <b>*</b></label><input type="text" name="job_title" t-att-value="job_title" id="job_title" placeholder="Sales Manager" maxlength="160" autocomplete="organization-title" required="required"/></div>
                             <div class="lt-field"><label for="company_name">Company Name <b>*</b></label><input type="text" name="company_name" t-att-value="company_name" id="company_name" placeholder="Company name" maxlength="200" autocomplete="organization" required="required"/></div>
                             <div class="lt-field"><label for="country_id">Country / Region <b>*</b></label><select name="country_id" id="country_id" autocomplete="country" required="required"><option value="" t-translation="off">Select country</option><option t-foreach="countries" t-as="country" t-att-value="country.id" t-att-selected="str(country.id) == str(country_id or '')" t-out="country.name"/></select></div>
-                            <div class="lt-field"><label for="login">Business Email <b>*</b></label><input type="email" name="login" t-att-value="login" id="login" placeholder="name@company.com" maxlength="254" autocomplete="email" autocapitalize="off" required="required"/></div>
+                            <div class="lt-field"><label for="login">Business Email <b>*</b></label><input type="email" name="login" t-att-value="login" id="login" placeholder="name@company.com" maxlength="254" autocomplete="email" autocapitalize="off" required="required" aria-describedby="login_error"/><small class="lt-field-error" id="login_error" aria-live="polite" t-out="login_error or ''"/></div>
                             <t t-call="b2b_website.registration_phone"><t t-set="phone_field" t-value="'company_phone'"/><t t-set="phone_label" t-value="'Company Phone'"/><t t-set="phone_value" t-value="company_phone"/><t t-set="phone_country" t-value="company_phone_country"/><t t-set="phone_country_defaulted" t-value="company_phone_country_defaulted"/></t>
                             <t t-call="b2b_website.registration_phone"><t t-set="phone_field" t-value="'mobile'"/><t t-set="phone_label" t-value="'Mobile / WhatsApp'"/><t t-set="phone_value" t-value="mobile"/><t t-set="phone_country" t-value="mobile_country"/><t t-set="phone_country_defaulted" t-value="mobile_country_defaulted"/></t>
                             <div class="lt-field"><label for="customer_type_id">Business Type <b>*</b></label><select name="customer_type_id" id="customer_type_id" required="required"><option value="">Select business type</option><option t-foreach="customer_types" t-as="customer_type" t-att-value="customer_type.id" t-att-selected="str(customer_type.id) == str(customer_type_id or '')" t-out="customer_type.name"/></select></div>

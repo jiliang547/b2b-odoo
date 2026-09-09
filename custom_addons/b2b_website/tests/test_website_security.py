@@ -1,3 +1,5 @@
+import re
+
 from odoo import Command
 from odoo.addons.mail.tests.common import mail_new_test_user
 from odoo.addons.website_sale.tests.common import MockRequest
@@ -257,6 +259,28 @@ class TestPartnerHubCartBrowser(HttpCase):
     def test_product_detail_add_uses_native_cart_service(self):
         slug = self.env["ir.http"]._slug(self.product.product_tmpl_id)
         self._assert_add_to_cart_succeeds("/products/%s" % slug)
+
+@tagged("post_install", "-at_install")
+class TestPartnerHubPublicBranding(HttpCase):
+    def test_public_page_body_does_not_advertise_framework_brand(self):
+        for path in ("/", "/solutions", "/faq"):
+            with self.subTest(path=path):
+                response = self.url_open(path)
+                self.assertEqual(response.status_code, 200)
+                body = re.split(r"<body(?:\s[^>]*)?>", response.text, maxsplit=1)[-1]
+                self.assertNotRegex(body, r"(?i)\bodoo\b")
+
+    def test_frontend_bundle_contains_partner_hub_session_copy(self):
+        homepage = self.url_open("/")
+        asset_paths = re.findall(
+            r'(?:src|data-src)="([^"]*web\.assets_frontend_lazy[^"]*)"',
+            homepage.text,
+        )
+        self.assertTrue(asset_paths)
+        bundle = self.url_open(asset_paths[0])
+        self.assertEqual(bundle.status_code, 200)
+        self.assertIn("Your Partner Hub session is no longer active", bundle.text)
+
 
 @tagged("post_install", "-at_install")
 class TestWebsiteIDOR(HttpCase):
