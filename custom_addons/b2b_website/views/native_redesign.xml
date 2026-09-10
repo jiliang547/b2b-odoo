@@ -27,6 +27,37 @@
             <small class="lt-field-error" t-att-id="phone_field + '_error'" aria-live="polite"/>
         </div>
     </template>
+
+    <!-- Keep Odoo's portal search/filter query contract while presenting it
+         with the Partner Hub controls instead of the native portal navbar. -->
+    <template id="portal_list_toolbar" name="Partner Hub Portal List Toolbar">
+        <form class="lt-portal-toolbar" t-att-action="default_url" method="get">
+            <div t-if="searchbar_inputs" class="lt-portal-search">
+                <i class="fa fa-search" aria-hidden="true"/>
+                <label class="visually-hidden" for="lt-portal-list-search">Search tickets</label>
+                <input id="lt-portal-list-search" type="search" name="search" t-att-value="search" placeholder="Search tickets…"/>
+            </div>
+            <label t-if="searchbar_inputs" class="visually-hidden" for="lt-portal-search-in">Search in</label>
+            <select t-if="searchbar_inputs" id="lt-portal-search-in" name="search_in" aria-label="Search in">
+                <option t-foreach="searchbar_inputs.items()" t-as="search_option" t-att-value="search_option[0]" t-att-selected="search_option[0] == search_in" t-out="search_option[1].get('label')"/>
+            </select>
+            <label t-if="searchbar_sortings" class="visually-hidden" for="lt-portal-sort-by">Sort by</label>
+            <select t-if="searchbar_sortings" id="lt-portal-sort-by" name="sortby" aria-label="Sort by">
+                <option t-foreach="searchbar_sortings.items()" t-as="sort_option" t-att-value="sort_option[0]" t-att-selected="sort_option[0] == sortby" t-out="sort_option[1].get('label')"/>
+            </select>
+            <label t-if="searchbar_filters" class="visually-hidden" for="lt-portal-filter-by">Filter by</label>
+            <select t-if="searchbar_filters" id="lt-portal-filter-by" name="filterby" aria-label="Filter by">
+                <option t-foreach="searchbar_filters.items()" t-as="filter_option" t-att-value="filter_option[0]" t-att-selected="filter_option[0] == filterby" t-out="filter_option[1].get('label')"/>
+            </select>
+            <label t-if="searchbar_groupby" class="visually-hidden" for="lt-portal-group-by">Group by</label>
+            <select t-if="searchbar_groupby" id="lt-portal-group-by" name="groupby" aria-label="Group by">
+                <option t-foreach="searchbar_groupby.items()" t-as="group_option" t-att-value="group_option[0]" t-att-selected="group_option[0] == groupby" t-out="group_option[1].get('label')"/>
+            </select>
+            <button class="lt-btn lt-btn--blue lt-btn--small" type="submit">Apply</button>
+            <a class="lt-btn lt-btn--outline lt-btn--small" t-att-href="default_url">Reset</a>
+        </form>
+    </template>
+
     <template id="portal_layout_figma" inherit_id="portal.portal_layout" name="Partner Hub Portal Layout">
         <xpath expr="//t[@t-set='is_portal']" position="before"><t t-set="no_header" t-value="True"/><t t-set="no_footer" t-value="True"/><t t-set="no_breadcrumbs" t-value="True"/></xpath>
         <xpath expr="//div[@id='wrap']" position="before"><t t-call="b2b_website.partner_topbar"/></xpath>
@@ -93,14 +124,16 @@
     </template>
 
     <template id="portal_orders_figma" inherit_id="sale.portal_my_orders" name="Partner Orders Layout">
-        <xpath expr="//t[@t-call='portal.portal_searchbar']" position="replace"><section class="lt-portal-list"><nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span>Orders</nav><header class="lt-portal-heading"><h1>Orders</h1><p>Track confirmed orders, payment attempts and actions still requiring payment.</p></header><div class="lt-portal-tabs"><a class="is-active" href="/my/orders">Orders &amp; Payments</a><a href="/my/quotes">Quotations</a></div><t t-call="portal.portal_searchbar"><t t-set="title" t-value="''"/></t></section></xpath>
+        <xpath expr="//t[@t-call='portal.portal_searchbar']" position="replace"><section class="lt-portal-list"><nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span>Orders</nav><header class="lt-portal-heading"><h1>Orders</h1><p>Track confirmed orders, payment attempts and actions still requiring payment.</p></header><div class="lt-portal-tabs"><a class="is-active" href="/my/orders">Orders &amp; Payments</a><a href="/my/quotes">Quotations</a></div></section></xpath>
+        <xpath expr="//div[@t-if='not orders']" position="replace"><div t-if="not orders" class="lt-empty lt-portal-card"><h2>No orders yet</h2><p>Confirmed orders and payment activity will appear here.</p><a class="lt-btn lt-btn--blue" href="/products">Browse products</a></div></xpath>
         <xpath expr="//t[@t-if='orders'][@t-call='portal.portal_table']" position="replace">
             <div t-if="orders" class="lt-portal-card lt-table-card"><div class="table-responsive"><table class="lt-data-table"><thead><tr><th>Order No.</th><th>Date</th><th>Amount</th><th>Status</th><th/></tr></thead><tbody><tr t-foreach="orders" t-as="order"><t t-set="current_tx" t-value="order.get_portal_last_transaction()"/><td><a t-att-href="order.get_portal_url()"><strong t-out="order.name"/></a></td><td><span t-field="order.date_order" t-options="{'widget':'date'}"/></td><td><strong t-field="order.amount_total"/></td><td><span t-if="order.state == 'sale'" class="lt-status-badge lt-status-badge--sale">Confirmed</span><span t-elif="order.state == 'cancel'" class="lt-status-badge lt-status-badge--payment_cancelled">Order Cancelled</span><span t-elif="current_tx and current_tx.state in ('pending', 'authorized')" class="lt-status-badge lt-status-badge--payment_pending">Payment Pending</span><span t-elif="current_tx and current_tx.state == 'error'" class="lt-status-badge lt-status-badge--payment_failed">Payment Failed</span><span t-elif="current_tx and current_tx.state == 'cancel'" class="lt-status-badge lt-status-badge--payment_cancelled">Payment Cancelled</span><span t-else="" class="lt-status-badge lt-status-badge--awaiting_payment">Awaiting Payment</span></td><td class="text-end"><a class="lt-table-link" t-att-href="order.get_portal_url()"><t t-if="order.state in ('draft', 'sent') and current_tx and current_tx.state in ('error', 'cancel', 'draft')">Complete payment →</t><t t-elif="order.state in ('draft', 'sent') and current_tx and current_tx.state in ('pending', 'authorized')">View status →</t><t t-else="">View →</t></a></td></tr></tbody></table></div></div>
         </xpath>
     </template>
 
     <template id="portal_quotes_figma" inherit_id="sale.portal_my_quotations" name="Partner Quotations Layout">
-        <xpath expr="//t[@t-call='portal.portal_searchbar']" position="replace"><section class="lt-portal-list"><nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span>Orders</nav><header class="lt-portal-heading"><h1>Orders</h1><p>View your sales orders and quotations.</p></header><div class="lt-portal-tabs"><a href="/my/orders">Sales Orders</a><a class="is-active" href="/my/quotes">Quotations</a></div><t t-call="portal.portal_searchbar"><t t-set="title" t-value="''"/></t></section></xpath>
+        <xpath expr="//t[@t-call='portal.portal_searchbar']" position="replace"><section class="lt-portal-list"><nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span>Orders</nav><header class="lt-portal-heading"><h1>Orders</h1><p>View your sales orders and quotations.</p></header><div class="lt-portal-tabs"><a href="/my/orders">Sales Orders</a><a class="is-active" href="/my/quotes">Quotations</a></div></section></xpath>
+        <xpath expr="//div[@t-if='not quotations']" position="replace"><div t-if="not quotations" class="lt-empty lt-portal-card"><h2>No quotations yet</h2><p>Quotations prepared for your account will appear here.</p><a class="lt-btn lt-btn--outline" href="/contact">Contact sales</a></div></xpath>
     </template>
 
     <template id="portal_personal_profile_figma" inherit_id="portal.portal_my_details" name="Partner Personal Profile" priority="90">
@@ -124,7 +157,8 @@
     </template>
 
     <template id="helpdesk_list_figma" inherit_id="helpdesk.portal_helpdesk_ticket" name="Partner Service Ticket List">
-        <xpath expr="//t[@t-call='portal.portal_searchbar']" position="replace"><section class="lt-portal-list"><nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span>Service Tickets</nav><header class="lt-portal-heading lt-portal-heading--action"><div><h1>Service Tickets</h1><p>Track your after-sales support and technical helpdesk requests.</p></div><a class="lt-btn lt-btn--blue" href="/service">+ New Request</a></header><t t-call="portal.portal_searchbar"><t t-set="title" t-value="''"/></t></section></xpath>
+        <xpath expr="//t[@t-call='portal.portal_searchbar']" position="replace"><section class="lt-portal-list"><nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span>Service Tickets</nav><header class="lt-portal-heading lt-portal-heading--action"><div><h1>Service Tickets</h1><p>Track your after-sales support and technical helpdesk requests.</p></div><a class="lt-btn lt-btn--blue" href="/service">+ New Request</a></header><t t-call="b2b_website.portal_list_toolbar"/></section></xpath>
+        <xpath expr="//div[@t-if='not grouped_tickets']" position="replace"><div t-if="not grouped_tickets" class="lt-empty lt-portal-card"><h2>No service tickets found</h2><p>Open a new request or adjust the current filters.</p><a class="lt-btn lt-btn--blue" href="/service">New service request</a></div></xpath>
     </template>
 
     <template id="helpdesk_detail_figma" inherit_id="helpdesk.tickets_followup" name="Partner Service Ticket Detail">
@@ -223,7 +257,7 @@
                 <p class="alert alert-danger" t-if="error" role="alert"><t t-esc="error"/></p>
                 <input type="hidden" name="redirect" t-att-value="redirect"/>
                 <input type="hidden" name="token" t-att-value="token"/>
-                <div class="oe_login_buttons d-grid pt-3"><button type="submit" class="btn btn-primary">Activate account</button></div>
+                <div class="oe_login_buttons d-grid pt-3"><button type="submit" class="lt-btn lt-btn--blue lt-btn--wide">Activate account</button></div>
             </form>
 
             <form t-else="" class="oe_signup_form lt-registration-form" role="form" method="post" data-captcha="signup">

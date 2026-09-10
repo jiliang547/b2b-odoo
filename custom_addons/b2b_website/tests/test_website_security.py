@@ -423,6 +423,21 @@ class TestCompanyOnboardingHttp(HttpCase):
         self.assertEqual(addresses.status_code, 200)
         self.assertIn('title="Addresses" class="is-active"', addresses.text)
 
+    def test_portal_lists_do_not_render_the_native_odoo_navbar(self):
+        self._authenticate()
+
+        for path in ("/my/orders", "/my/quotes", "/my/tickets"):
+            with self.subTest(path=path):
+                response = self.url_open(path)
+                self.assertEqual(response.status_code, 200)
+                self.assertNotIn("o_portal_navbar", response.text)
+                self.assertNotIn('class="alert alert-', response.text)
+
+        tickets = self.url_open("/my/tickets")
+        self.assertIn("lt-portal-toolbar", tickets.text)
+        self.assertIn('name="filterby"', tickets.text)
+        self.assertIn('name="sortby"', tickets.text)
+
     def test_footer_after_sales_uses_native_ticket_portal(self):
         homepage = self.url_open("/en")
         self.assertEqual(homepage.status_code, 200)
