@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <!-- Native optional Promo Code view: hide its shared cart/checkout entry,
+         without removing pricelist codes or changing discount calculations. -->
+    <record id="website_sale.reduction_code" model="ir.ui.view">
+        <field name="active" eval="False"/>
+    </record>
     <template id="checkout_layout_partner_style" inherit_id="website_sale.checkout_layout" name="Partner Hub Checkout Style">
         <xpath expr="//div[@id='wrap']" position="attributes"><attribute name="class" add="lt-checkout" separator=" "/></xpath>
     </template>
@@ -7,6 +12,23 @@
         <t t-call="b2b_website.partner_layout"><t t-set="no_index" t-value="True"/>
             <section class="lt-section"><div class="container lt-narrow"><div class="lt-state-card"><i class="fa fa-lock"/><span class="lt-kicker">ACCOUNT ACCESS</span><h1>Ordering is not enabled yet</h1><p>Your account may need approval or price access before products can be added to an order.</p><div class="lt-actions"><a class="lt-btn lt-btn--primary" href="/my">Open my account</a><a class="lt-btn lt-btn--ghost-dark" href="/contact">Contact us</a></div></div></div></section>
         </t>
+    </template>
+
+    <template id="payment_submit_for_review" inherit_id="website_sale.payment" name="Submit Order for Review">
+        <xpath expr="//div[@id='address_on_payment']" position="before">
+            <section class="card border-primary-subtle mb-4" aria-labelledby="b2b_review_checkout_title">
+                <div class="card-body">
+                    <h4 id="b2b_review_checkout_title">Need us to adjust the order first?</h4>
+                    <p class="text-muted mb-3">Submit the order without payment. Our team can update products, quantities, pricing, or shipping, then release the final order for you to review and pay.</p>
+                    <form action="/shop/submit-for-review" method="post">
+                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                        <button type="submit" class="btn btn-outline-primary w-100" data-lt-stable-submit="">
+                            <i class="fa fa-comments-o me-2"/>Submit for Review — Pay Later
+                        </button>
+                    </form>
+                </div>
+            </section>
+        </xpath>
     </template>
 
     <template id="payment_status_partner_hub" inherit_id="payment.payment_status" name="Partner Hub Payment Status" priority="90">
@@ -54,7 +76,7 @@
                             <dl class="lt-payment-summary">
                                 <div><dt>Reference</dt><dd t-out="tx.reference"/></div>
                                 <div><dt>Amount</dt><dd><span t-field="tx.amount" t-options="{'widget': 'monetary', 'display_currency': tx.currency_id}"/></dd></div>
-                                <div><dt>Current state</dt><dd t-out="{'draft': 'Draft', 'pending': 'Pending', 'authorized': 'Authorized', 'done': 'Paid', 'cancel': 'Cancelled', 'error': 'Error'}.get(tx.state, tx.state)"/></div>
+                                <div><dt>Current state</dt><dd t-out="dict(tx._fields['state']._description_selection(request.env)).get(tx.state, tx.state)"/></div>
                                 <div><dt>Waiting time</dt><dd data-lt-payment-elapsed="">0s</dd></div>
                             </dl>
                             <p class="lt-help">Do not submit another payment while this transaction is pending.</p>

@@ -1,7 +1,7 @@
 {
     "name": "Lucky Tone Partner Hub Website",
     "summary": "B2B catalog, portal, ordering, samples, service, and ERP tracking",
-    "version": "19.0.1.13.7",
+    "version": "19.0.1.15.4",
     "category": "Website/Website",
     "license": "LGPL-3",
     "author": "Lucky Tone",
@@ -21,6 +21,7 @@
     "data": [
         "security/b2b_role_security.xml",
         "security/b2b_contact_request_security.xml",
+        "security/b2b_order_change_security.xml",
         "security/ir.model.access.csv",
         "data/ir_sequence_data.xml",
         "data/registration_data.xml",
@@ -30,9 +31,12 @@
         "views/helpdesk_ticket_views.xml",
         "views/contact_request_views.xml",
         "views/registration_application_views.xml",
+        "views/order_change_views.xml",
+        "views/sale_order_views.xml",
         "views/homepage_product_views.xml",
         "views/faq_views.xml",
         "views/website_templates.xml",
+        "views/vendor_branding.xml",
         "views/portal_hardening_templates.xml",
         "views/homepage_redesign.xml",
         "views/contact_templates.xml",
@@ -45,6 +49,8 @@
         "views/sale_portal_templates.xml",
         "views/checkout_templates.xml",
         "views/information_templates.xml",
+        "views/portal_presentation.xml",
+        "data/export_language.xml",
     ],
     "assets": {
         "web.assets_frontend": [
@@ -52,6 +58,7 @@
             "b2b_website/static/src/js/frontend_error_branding.js",
             "b2b_website/static/src/js/turnstile_ux.js",
             "b2b_website/static/src/js/partner_hub.js",
+            "b2b_website/static/src/js/payment_form.js",
         ],
     },
     "installable": True,

@@ -1,0 +1,571 @@
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 19.0+e-20260805\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-11 02:04+0000\n"
+"PO-Revision-Date: 2026-09-11 02:04+0000\n"
+"Last-Translator: Partner Hub AI translation\n"
+"Language-Team: \n"
+"Language: ar\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 && n%100<=99 ? 4 : 5;\n"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__message_needaction
+msgid "Action Needed"
+msgstr "إجراء مطلوب"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__activity_ids
+msgid "Activities"
+msgstr "الأنشطة"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__activity_exception_decoration
+msgid "Activity Exception Decoration"
+msgstr "زخرفة استثناء النشاط"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__activity_state
+msgid "Activity State"
+msgstr "حالة النشاط"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__activity_type_icon
+msgid "Activity Type Icon"
+msgstr "أيقونة نوع النشاط"
+
+#. module: b2b_sample
+#: model:ir.model.fields.selection,name:b2b_sample.selection__b2b_sample_request__state__approved
+msgid "Approved"
+msgstr "تمت الموافقة"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__message_attachment_count
+msgid "Attachment Count"
+msgstr "عدد المرفقات"
+
+#. module: b2b_sample
+#: model_terms:ir.ui.view,arch_db:b2b_sample.view_b2b_sample_request_form
+msgid "Cancel"
+msgstr "إلغاء"
+
+#. module: b2b_sample
+#: model:ir.model.fields.selection,name:b2b_sample.selection__b2b_sample_request__state__cancelled
+msgid "Cancelled"
+msgstr "تم الإلغاء"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__commercial_partner_id
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request_line__commercial_partner_id
+msgid "Commercial Partner"
+msgstr "الشريك التجاري"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__company_name
+msgid "Company Name"
+msgstr "اسم الشركة"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__contact_id
+msgid "Contact"
+msgstr "جهة الاتصال"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__contact_name
+msgid "Contact Name"
+msgstr "اسم جهة الاتصال"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__create_uid
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request_line__create_uid
+msgid "Created by"
+msgstr "أنشئ بواسطة"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__create_date
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request_line__create_date
+msgid "Created on"
+msgstr "أنشئ في"
+
+#. module: b2b_sample
+#: model_terms:ir.ui.view,arch_db:b2b_sample.view_b2b_sample_request_search
+msgid "Customer"
+msgstr "العميل"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__display_name
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request_line__display_name
+#: model:ir.model.fields,field_description:b2b_sample.field_sale_order__display_name
+msgid "Display Name"
+msgstr "اسم العرض"
+
+#. module: b2b_sample
+#: model:ir.model.fields.selection,name:b2b_sample.selection__b2b_sample_request__state__draft
+msgid "Draft"
+msgstr "مسودة"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__email
+msgid "Email"
+msgstr "البريد الإلكتروني"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__message_follower_ids
+msgid "Followers"
+msgstr "المتابعين"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__message_partner_ids
+msgid "Followers (Partners)"
+msgstr "المتابعين (الشركاء)"
+
+#. module: b2b_sample
+#: model:ir.model.fields,help:b2b_sample.field_b2b_sample_request__activity_type_icon
+msgid "Font awesome icon e.g. fa-tasks"
+msgstr "أيقونة من Font awesome مثال: fa-tasks"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__has_message
+msgid "Has Message"
+msgstr "يحتوي على رسالة"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__id
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request_line__id
+#: model:ir.model.fields,field_description:b2b_sample.field_sale_order__id
+msgid "ID"
+msgstr "المُعرف"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__activity_exception_icon
+msgid "Icon"
+msgstr "الأيقونة"
+
+#. module: b2b_sample
+#: model:ir.model.fields,help:b2b_sample.field_b2b_sample_request__activity_exception_icon
+msgid "Icon to indicate an exception activity."
+msgstr "الأيقونة للإشارة إلى النشاط المستثنى."
+
+#. module: b2b_sample
+#: model:ir.model.fields,help:b2b_sample.field_b2b_sample_request__message_needaction
+msgid "If checked, new messages require your attention."
+msgstr "إذا كان محددًا، فهناك رسائل جديدة عليك رؤيتها."
+
+#. module: b2b_sample
+#: model:ir.model.fields,help:b2b_sample.field_b2b_sample_request__message_has_error
+#: model:ir.model.fields,help:b2b_sample.field_b2b_sample_request__message_has_sms_error
+msgid "If checked, some messages have a delivery error."
+msgstr "إذا كان محددًا، فقد حدث خطأ في تسليم بعض الرسائل."
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__message_is_follower
+msgid "Is Follower"
+msgstr "متابع"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__write_uid
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request_line__write_uid
+msgid "Last Updated by"
+msgstr "آخر تحديث بواسطة"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__write_date
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request_line__write_date
+msgid "Last Updated on"
+msgstr "آخر تحديث في"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__message_has_error
+msgid "Message Delivery error"
+msgstr "خطأ في تسليم الرسائل"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__message_ids
+msgid "Messages"
+msgstr "الرسائل"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__my_activity_date_deadline
+msgid "My Activity Deadline"
+msgstr "الموعد النهائي لنشاطاتي"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__name
+msgid "Name"
+msgstr "الاسم"
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "New"
+msgstr "جديد"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__activity_calendar_event_id
+msgid "Next Activity Calendar Event"
+msgstr "الفعالية التالية في تقويم الأنشطة"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__activity_date_deadline
+msgid "Next Activity Deadline"
+msgstr "الموعد النهائي للنشاط التالي"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__activity_summary
+msgid "Next Activity Summary"
+msgstr "ملخص النشاط التالي"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__activity_type_id
+msgid "Next Activity Type"
+msgstr "نوع النشاط التالي"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__notes
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request_line__notes
+msgid "Notes"
+msgstr "الملاحظات"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__message_needaction_counter
+msgid "Number of Actions"
+msgstr "عدد الإجراءات"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__message_has_error_counter
+msgid "Number of errors"
+msgstr "عدد الأخطاء"
+
+#. module: b2b_sample
+#: model:ir.model.fields,help:b2b_sample.field_b2b_sample_request__message_needaction_counter
+msgid "Number of messages requiring action"
+msgstr "عدد الرسائل التي تتطلب اتخاذ إجراء"
+
+#. module: b2b_sample
+#: model:ir.model.fields,help:b2b_sample.field_b2b_sample_request__message_has_error_counter
+msgid "Number of messages with delivery error"
+msgstr "عدد الرسائل الحادث بها خطأ في التسليم"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__partner_id
+msgid "Partner"
+msgstr "الشريك"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__phone
+msgid "Phone"
+msgstr "رقم الهاتف"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request_line__product_id
+msgid "Product"
+msgstr "المنتج"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request_line__quantity
+msgid "Quantity"
+msgstr "الكمية"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__rating_ids
+msgid "Ratings"
+msgstr "التقييمات"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__reason
+msgid "Reason"
+msgstr "السبب"
+
+#. module: b2b_sample
+#: model_terms:ir.ui.view,arch_db:b2b_sample.view_b2b_sample_request_form
+msgid "Reject"
+msgstr "رفض"
+
+#. module: b2b_sample
+#: model:ir.model.fields.selection,name:b2b_sample.selection__b2b_sample_request__state__rejected
+msgid "Rejected"
+msgstr "تم الرفض"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request_line__request_id
+#: model_terms:ir.ui.view,arch_db:b2b_sample.view_b2b_sample_request_form
+msgid "Request"
+msgstr "طلب"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__activity_user_id
+msgid "Responsible User"
+msgstr "المستخدم المسؤول"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__review_date
+msgid "Review Date"
+msgstr "تاريخ التقييم"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__message_has_sms_error
+msgid "SMS Delivery error"
+msgstr "خطأ في تسليم الرسائل النصية القصيرة"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__sale_order_id
+msgid "Sale Order"
+msgstr "أمر البيع"
+
+#. module: b2b_sample
+#: model:ir.model,name:b2b_sample.model_sale_order
+msgid "Sales Order"
+msgstr "أمر البيع"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__shipping_address
+msgid "Shipping Address"
+msgstr "عنوان الشحن"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__state
+#: model_terms:ir.ui.view,arch_db:b2b_sample.view_b2b_sample_request_search
+msgid "State"
+msgstr "المحافظة"
+
+#. module: b2b_sample
+#: model:ir.model.fields.selection,name:b2b_sample.selection__b2b_sample_request__state__submitted
+msgid "Submitted"
+msgstr "تم الإرسال"
+
+#. module: b2b_sample
+#: model_terms:ir.ui.view,arch_db:b2b_sample.view_b2b_sample_request_search
+msgid "To Review"
+msgstr "بانتظار المراجعة"
+
+#. module: b2b_sample
+#: model:ir.model.fields,help:b2b_sample.field_b2b_sample_request__activity_exception_decoration
+msgid "Type of the exception activity on record."
+msgstr "نوع النشاط المستثنى في السجل."
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__website_message_ids
+msgid "Website Messages"
+msgstr "رسائل الموقع الإلكتروني"
+
+#. module: b2b_sample
+#: model:ir.model.fields,help:b2b_sample.field_b2b_sample_request__website_message_ids
+msgid "Website communication history"
+msgstr "سجل تواصل الموقع الإلكتروني"
+
+#. module: b2b_sample
+#: model:ir.model.fields.selection,name:b2b_sample.selection__b2b_sample_request__state__quotation
+msgid "Awaiting Payment"
+msgstr "بانتظار الدفع"
+
+#. module: b2b_sample
+#: model:ir.model.fields.selection,name:b2b_sample.selection__b2b_sample_request__state__erp_failed
+#: model_terms:ir.ui.view,arch_db:b2b_sample.view_b2b_sample_request_search
+msgid "ERP Failed"
+msgstr "فشل ERP"
+
+#. module: b2b_sample
+#: model:ir.model.fields.selection,name:b2b_sample.selection__b2b_sample_request__state__erp_pending
+msgid "ERP Pending"
+msgstr "ERP قيد الانتظار"
+
+#. module: b2b_sample
+#: model:ir.model.fields.selection,name:b2b_sample.selection__b2b_sample_request__state__erp_synced
+msgid "ERP Synced"
+msgstr "تمت مزامنة ERP"
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "No quotation has been created yet."
+msgstr "لم يتم إنشاء عرض سعر بعد."
+
+#. module: b2b_sample
+#: model:ir.model.fields.selection,name:b2b_sample.selection__b2b_sample_request__state__order_confirmed
+msgid "Order Confirmed"
+msgstr "تم تأكيد الطلب"
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "Paid sample request %s"
+msgstr "طلب عينة مدفوع %s"
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "Please complete all required sample request fields."
+msgstr "يرجى إكمال جميع حقول طلب العينة المطلوبة."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "Please enter a valid email address."
+msgstr "يرجى إدخال عنوان بريد إلكتروني صالح."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "Please sign in before requesting a sample."
+msgstr "يرجى تسجيل الدخول قبل طلب عينة."
+
+#. module: b2b_sample
+#: model:ir.actions.act_window,name:b2b_sample.action_b2b_sample_requests
+msgid "Sample Requests"
+msgstr "طلبات العينات"
+
+#. module: b2b_sample
+#: model_terms:ir.ui.view,arch_db:b2b_sample.view_b2b_sample_request_form
+msgid "Start Review"
+msgstr "بدء المراجعة"
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "The selected shipping address is not available to this company."
+msgstr "عنوان الشحن المحدد غير متاح لهذه الشركة."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "The selected shipping address is not available to your company."
+msgstr "عنوان الشحن المحدد غير متاح لشركتك."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "This sample request cannot move to the requested state."
+msgstr "لا يمكن نقل طلب العينة إلى الحالة المطلوبة."
+
+#. module: b2b_sample
+#: model:ir.model.fields.selection,name:b2b_sample.selection__b2b_sample_request__state__under_review
+msgid "Under Review"
+msgstr "قيد المراجعة"
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "A quotation already exists for this sample request."
+msgstr "يوجد عرض سعر بالفعل لطلب العينة هذا."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "A sample request field exceeds the allowed length."
+msgstr "يتجاوز أحد حقول طلب العينة الطول المسموح."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "A sample request requires at least one product."
+msgstr "يتطلب طلب العينة منتجًا واحدًا على الأقل."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "A selected product is not available to your account."
+msgstr "أحد المنتجات المحددة غير متاح لحسابك."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "Each sample line requires a valid product and quantity."
+msgstr "يتطلب كل بند عينة منتجًا وكمية صالحين."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "New internal sample requests must start in Draft."
+msgstr "يجب أن تبدأ طلبات العينات الداخلية الجديدة كمسودة."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "No failed ERP job is available."
+msgstr "لا توجد مهمة ERP فاشلة متاحة."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "Only ERP-failed sample requests can be retried."
+msgstr "يمكن إعادة محاولة طلبات العينات ذات فشل ERP فقط."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "Only a B2B Manager can approve sample requests."
+msgstr "يمكن لمدير B2B فقط اعتماد طلبات العينات."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "Only a B2B Manager can reject sample requests."
+msgstr "يمكن لمدير B2B فقط رفض طلبات العينات."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "Portal users cannot modify a submitted sample request."
+msgstr "لا يمكن لمستخدمي البوابة تعديل طلب عينة مقدّم."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "Sample order %s was confirmed after payment."
+msgstr "تم تأكيد طلب العينة %s بعد الدفع."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "Sample quantities must be between 0 and 10,000."
+msgstr "يجب أن تكون كميات العينات بين 0 و10,000."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "Sample quotation %s was created and is awaiting customer payment."
+msgstr "أُنشئ عرض سعر العينة %s وهو بانتظار دفع العميل."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid ""
+"The sample quotation total must be greater than zero. Configure a product or"
+" pricelist price before approval."
+msgstr ""
+"يجب أن يكون إجمالي عرض سعر العينة أكبر من صفر. اضبط سعر المنتج أو القائمة "
+"قبل الموافقة."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "Unsupported sample request line operation."
+msgstr "إجراء بند طلب العينة غير مدعوم."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "Use the sample workflow actions to change state."
+msgstr "استخدم إجراءات مسار العينات لتغيير الحالة."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "You are not allowed to retry ERP synchronization."
+msgstr "غير مسموح لك بإعادة محاولة مزامنة ERP."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "You are not allowed to review sample requests."
+msgstr "غير مسموح لك بمراجعة طلبات العينات."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "Your Partner Hub account is not approved for sample requests."
+msgstr "حسابك غير معتمد لطلبات العينات."

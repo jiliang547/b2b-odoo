@@ -1,0 +1,680 @@
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 19.0+e-20260805\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-11 02:04+0000\n"
+"PO-Revision-Date: 2026-09-11 02:04+0000\n"
+"Last-Translator: Partner Hub AI translation\n"
+"Language-Team: \n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. module: b2b_core
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_segment__active
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_type__active
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_type_pricelist__active
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_partner_pricelist_override__active
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_application__active
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_brand__active
+msgid "Active"
+msgstr "Activo"
+
+#. module: b2b_core
+#: model:ir.model.fields,field_description:b2b_core.field_product_product__b2b_application_ids
+#: model:ir.model.fields,field_description:b2b_core.field_product_template__b2b_application_ids
+msgid "Applications"
+msgstr "Solicitudes"
+
+#. module: b2b_core
+#: model:ir.model.fields,field_description:b2b_core.field_res_partner__b2b_effective_approval_date
+#: model:ir.model.fields,field_description:b2b_core.field_res_users__b2b_effective_approval_date
+msgid "Approval Date"
+msgstr "Fecha de aprobación"
+
+#. module: b2b_core
+#: model:ir.model.fields,field_description:b2b_core.field_res_partner__b2b_effective_approved_by_id
+#: model:ir.model.fields,field_description:b2b_core.field_res_users__b2b_effective_approved_by_id
+msgid "Approved By"
+msgstr "Aprobado por"
+
+#. module: b2b_core
+#: model_terms:ir.ui.view,arch_db:b2b_core.view_b2b_customer_segment_form
+#: model_terms:ir.ui.view,arch_db:b2b_core.view_b2b_customer_type_form
+msgid "Archived"
+msgstr "Archivado"
+
+#. module: b2b_core
+#: model:ir.model.fields,field_description:b2b_core.field_product_product__b2b_brand_id
+#: model:ir.model.fields,field_description:b2b_core.field_product_template__b2b_brand_id
+msgid "Brand"
+msgstr "Marca"
+
+#. module: b2b_core
+#: model_terms:ir.ui.view,arch_db:b2b_core.product_template_form_b2b
+msgid "Catalog"
+msgstr "Catálogo"
+
+#. module: b2b_core
+#: model:ir.model.fields.selection,name:b2b_core.selection__product_document__b2b_resource_type__certificate
+msgid "Certificate"
+msgstr "Certificado"
+
+#. module: b2b_core
+#: model_terms:ir.ui.view,arch_db:b2b_core.view_b2b_customer_type_form
+msgid "Companies"
+msgstr "Compañías"
+
+#. module: b2b_core
+#: model:ir.model,name:b2b_core.model_res_config_settings
+msgid "Config Settings"
+msgstr "Opciones de configuración"
+
+#. module: b2b_core
+#: model:ir.model,name:b2b_core.model_res_partner
+msgid "Contact"
+msgstr "Contacto"
+
+#. module: b2b_core
+#: model:ir.model.fields.selection,name:b2b_core.selection__website__b2b_guest_price_state__contact
+#: model:ir.model.fields.selection,name:b2b_core.selection__website__b2b_no_price_state__contact
+msgid "Contact Us"
+msgstr "Contáctanos"
+
+#. module: b2b_core
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_brand__cover_image
+msgid "Cover Image"
+msgstr "Imagen de portada"
+
+#. module: b2b_core
+#: model:ir.model,website_form_label:b2b_core.model_res_partner
+msgid "Create a Customer"
+msgstr "Crear un cliente"
+
+#. module: b2b_core
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_segment__create_uid
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_type__create_uid
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_type_pricelist__create_uid
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_partner_pricelist_override__create_uid
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_application__create_uid
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_brand__create_uid
+msgid "Created by"
+msgstr "Creado por"
+
+#. module: b2b_core
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_segment__create_date
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_type__create_date
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_type_pricelist__create_date
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_partner_pricelist_override__create_date
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_application__create_date
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_brand__create_date
+msgid "Created on"
+msgstr "Creado el"
+
+#. module: b2b_core
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_type_pricelist__currency_id
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_partner_pricelist_override__currency_id
+msgid "Currency"
+msgstr "Moneda"
+
+#. module: b2b_core
+#: model_terms:ir.ui.view,arch_db:b2b_core.view_b2b_customer_segment_form
+msgid "Customers"
+msgstr "Clientes"
+
+#. module: b2b_core
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_segment__description
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_type__description
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_application__description
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_brand__description
+msgid "Description"
+msgstr "Descripción"
+
+#. module: b2b_core
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_segment__display_name
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_type__display_name
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_type_pricelist__display_name
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_partner_pricelist_override__display_name
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_price_write_mixin__display_name
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_application__display_name
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_brand__display_name
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_service__display_name
+#: model:ir.model.fields,field_description:b2b_core.field_product_document__display_name
+#: model:ir.model.fields,field_description:b2b_core.field_product_pricelist__display_name
+#: model:ir.model.fields,field_description:b2b_core.field_product_pricelist_item__display_name
+#: model:ir.model.fields,field_description:b2b_core.field_product_product__display_name
+#: model:ir.model.fields,field_description:b2b_core.field_product_template__display_name
+#: model:ir.model.fields,field_description:b2b_core.field_res_config_settings__display_name
+#: model:ir.model.fields,field_description:b2b_core.field_res_partner__display_name
+#: model:ir.model.fields,field_description:b2b_core.field_res_users__display_name
+#: model:ir.model.fields,field_description:b2b_core.field_website__display_name
+msgid "Display Name"
+msgstr "Nombre para mostrar"
+
+#. module: b2b_core
+#: model:ir.model.fields.selection,name:b2b_core.selection__product_document__b2b_resource_type__drawing
+msgid "Drawing"
+msgstr "Retiro"
+
+#. module: b2b_core
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_segment__id
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_type__id
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_type_pricelist__id
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_partner_pricelist_override__id
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_price_write_mixin__id
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_application__id
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_brand__id
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_service__id
+#: model:ir.model.fields,field_description:b2b_core.field_product_document__id
+#: model:ir.model.fields,field_description:b2b_core.field_product_pricelist__id
+#: model:ir.model.fields,field_description:b2b_core.field_product_pricelist_item__id
+#: model:ir.model.fields,field_description:b2b_core.field_product_product__id
+#: model:ir.model.fields,field_description:b2b_core.field_product_template__id
+#: model:ir.model.fields,field_description:b2b_core.field_res_config_settings__id
+#: model:ir.model.fields,field_description:b2b_core.field_res_partner__id
+#: model:ir.model.fields,field_description:b2b_core.field_res_users__id
+#: model:ir.model.fields,field_description:b2b_core.field_website__id
+msgid "ID"
+msgstr "ID"
+
+#. module: b2b_core
+#: model:ir.model.fields.selection,name:b2b_core.selection__product_document__b2b_resource_type__image
+msgid "Image"
+msgstr "Imagen"
+
+#. module: b2b_core
+#: model_terms:ir.ui.view,arch_db:b2b_core.view_b2b_product_brand_form
+msgid "Internal Notes"
+msgstr "Notas internas"
+
+#. module: b2b_core
+#: model:ir.model.fields,field_description:b2b_core.field_product_document__b2b_language
+msgid "Language"
+msgstr "Idioma"
+
+#. module: b2b_core
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_segment__write_uid
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_type__write_uid
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_type_pricelist__write_uid
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_partner_pricelist_override__write_uid
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_application__write_uid
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_brand__write_uid
+msgid "Last Updated by"
+msgstr "Última actualización por"
+
+#. module: b2b_core
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_segment__write_date
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_type__write_date
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_type_pricelist__write_date
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_partner_pricelist_override__write_date
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_application__write_date
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_brand__write_date
+msgid "Last Updated on"
+msgstr "Última actualización el"
+
+#. module: b2b_core
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_brand__logo
+msgid "Logo"
+msgstr "Logotipo"
+
+#. module: b2b_core
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_segment__name
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_type__name
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_application__name
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_brand__name
+msgid "Name"
+msgstr "Nombre"
+
+#. module: b2b_core
+#: model_terms:ir.ui.view,arch_db:b2b_core.view_b2b_product_brand_form
+msgid "Not Published"
+msgstr "No publicado"
+
+#. module: b2b_core
+#: model:b2b.customer.type,name:b2b_core.customer_type_other
+#: model:ir.model.fields.selection,name:b2b_core.selection__product_document__b2b_resource_type__other
+msgid "Other"
+msgstr "Otro"
+
+#. module: b2b_core
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_partner_pricelist_override__partner_id
+msgid "Partner"
+msgstr "Socio"
+
+#. module: b2b_core
+#: model:ir.model,name:b2b_core.model_product_pricelist
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_type_pricelist__pricelist_id
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_partner_pricelist_override__pricelist_id
+msgid "Pricelist"
+msgstr "Lista de precios"
+
+#. module: b2b_core
+#: model:ir.model,name:b2b_core.model_product_pricelist_item
+msgid "Pricelist Rule"
+msgstr "Regla de la lista de precios"
+
+#. module: b2b_core
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_segment__priority
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_partner_pricelist_override__priority
+msgid "Priority"
+msgstr "Prioridad"
+
+#. module: b2b_core
+#: model:ir.model,name:b2b_core.model_product_template
+#: model_terms:ir.ui.view,arch_db:b2b_core.view_product_image_b2b_media_search
+msgid "Product"
+msgstr "Producto"
+
+#. module: b2b_core
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_application__product_count
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_brand__product_count
+msgid "Product Count"
+msgstr "Número de productos"
+
+#. module: b2b_core
+#: model:ir.model,name:b2b_core.model_product_document
+msgid "Product Document"
+msgstr "Documento del producto"
+
+#. module: b2b_core
+#: model:ir.model,name:b2b_core.model_product_product
+msgid "Product Variant"
+msgstr "Variante de producto"
+
+#. module: b2b_core
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_application__product_ids
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_brand__product_ids
+msgid "Products"
+msgstr "Productos"
+
+#. module: b2b_core
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_segment__sequence
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_type__sequence
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_application__sequence
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_brand__sequence
+msgid "Sequence"
+msgstr "Secuencia"
+
+#. module: b2b_core
+#: model:ir.model.fields.selection,name:b2b_core.selection__product_document__b2b_resource_type__software
+msgid "Software"
+msgstr "Software"
+
+#. module: b2b_core
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_brand__tagline
+msgid "Tagline"
+msgstr "Lema"
+
+#. module: b2b_core
+#: model:ir.model,name:b2b_core.model_res_users
+msgid "User"
+msgstr "Usuario"
+
+#. module: b2b_core
+#: model:ir.model.fields,field_description:b2b_core.field_product_document__b2b_version
+msgid "Version"
+msgstr "Versión"
+
+#. module: b2b_core
+#: model:ir.model.fields.selection,name:b2b_core.selection__product_document__b2b_resource_type__video
+msgid "Video"
+msgstr "Video"
+
+#. module: b2b_core
+#: model_terms:ir.ui.view,arch_db:b2b_core.view_product_image_b2b_media_search
+msgid "Videos"
+msgstr "Vídeos"
+
+#. module: b2b_core
+#: model_terms:ir.ui.view,arch_db:b2b_core.product_template_form_b2b
+msgid "Visibility"
+msgstr "Visibilidad"
+
+#. module: b2b_core
+#: model:ir.model,name:b2b_core.model_website
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_customer_type_pricelist__website_id
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_partner_pricelist_override__website_id
+msgid "Website"
+msgstr "Sitio web"
+
+#. module: b2b_core
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_brand__website_description
+msgid "Website Description"
+msgstr "Descripción del sitio web"
+
+#. module: b2b_core
+#: model:ir.model.fields.selection,name:b2b_core.selection__product_template__b2b_visibility_mode__all
+msgid "All Website Visitors"
+msgstr "Todos los visitantes del sitio"
+
+#. module: b2b_core
+#: model:ir.model.fields.selection,name:b2b_core.selection__product_document__b2b_visibility_mode__product
+msgid "Anyone Who Can View the Product"
+msgstr "Cualquiera que pueda ver el producto"
+
+#. module: b2b_core
+#: model:ir.model.fields.selection,name:b2b_core.selection__product_document__b2b_visibility_mode__approved
+#: model:ir.model.fields.selection,name:b2b_core.selection__product_template__b2b_visibility_mode__approved
+msgid "Approved B2B Customers"
+msgstr "Clientes B2B aprobados"
+
+#. module: b2b_core
+#: model:ir.model.fields.selection,name:b2b_core.selection__website__b2b_price_display_mode__approved
+msgid "Approved B2B Customers Only"
+msgstr "Solo clientes B2B aprobados"
+
+#. module: b2b_core
+#: model:ir.model.fields.selection,name:b2b_core.selection__website__b2b_price_display_mode__authenticated
+msgid "Authenticated Customers Only"
+msgstr "Solo clientes autenticados"
+
+#. module: b2b_core
+#: model:b2b.customer.type,name:b2b_core.customer_type_brand_owner_oem
+msgid "Brand Owner / OEM Customer"
+msgstr "Propietario de marca / Cliente OEM"
+
+#. module: b2b_core
+#: model:b2b.customer.type,name:b2b_core.customer_type_consultant_designer
+msgid "Consultant / Designer"
+msgstr "Consultor / Diseñador"
+
+#. module: b2b_core
+#: model:b2b.customer.type,name:b2b_core.customer_type_distributor_importer
+msgid "Distributor / Importer"
+msgstr "Distribuidor / Importador"
+
+#. module: b2b_core
+#: model:b2b.customer.type,name:b2b_core.customer_type_end_user_project_owner
+msgid "End User / Project Owner"
+msgstr "Usuario final / Propietario de proyecto"
+
+#. module: b2b_core
+#: model:ir.model.fields.selection,name:b2b_core.selection__product_document__b2b_resource_type__installation
+msgid "Installation Guide"
+msgstr "Guía de instalación"
+
+#. module: b2b_core
+#: model:b2b.customer.type,name:b2b_core.customer_type_installer_contractor
+msgid "Installer / Contractor"
+msgstr "Instalador / Contratista"
+
+#. module: b2b_core
+#: model:ir.model.fields.selection,name:b2b_core.selection__product_document__b2b_visibility_mode__internal
+msgid "Internal Users Only"
+msgstr "Solo usuarios internos"
+
+#. module: b2b_core
+#: model:ir.model.fields.selection,name:b2b_core.selection__website__b2b_guest_price_state__login
+msgid "Login to View Price"
+msgstr "Inicia sesión para ver el precio"
+
+#. module: b2b_core
+#: model:ir.model.fields,field_description:b2b_core.field_res_partner__b2b_mobile_whatsapp
+#: model:ir.model.fields,field_description:b2b_core.field_res_users__b2b_mobile_whatsapp
+msgid "Mobile / WhatsApp"
+msgstr "Móvil / WhatsApp"
+
+#. module: b2b_core
+#: model:ir.model.fields.selection,name:b2b_core.selection__website__b2b_price_display_mode__never
+msgid "Never Show a Numeric Price"
+msgstr "No mostrar nunca un precio numérico"
+
+#. module: b2b_core
+#: model:ir.model.fields,field_description:b2b_core.field_b2b_product_brand__product_focus
+msgid "Product Focus"
+msgstr "Especialidades de producto"
+
+#. module: b2b_core
+#: model:ir.model.fields,field_description:b2b_core.field_res_partner__b2b_product_interest_id
+#: model:ir.model.fields,field_description:b2b_core.field_res_users__b2b_product_interest_id
+msgid "Products of Interest"
+msgstr "Productos de interés"
+
+#. module: b2b_core
+#: model:ir.model.fields.selection,name:b2b_core.selection__website__b2b_guest_price_state__quote
+#: model:ir.model.fields.selection,name:b2b_core.selection__website__b2b_no_price_state__quote
+msgid "Request Quote"
+msgstr "Solicitar presupuesto"
+
+#. module: b2b_core
+#: model_terms:ir.ui.view,arch_db:b2b_core.product_document_form_b2b
+#: model_terms:ir.ui.view,arch_db:b2b_core.product_template_form_b2b
+#: model_terms:ir.ui.view,arch_db:b2b_core.res_config_settings_view_form_b2b
+#: model_terms:ir.ui.view,arch_db:b2b_core.view_partner_form_b2b
+msgid "Partner Hub"
+msgstr "Partner Hub"
+
+#. module: b2b_core
+#: model:ir.model.fields.selection,name:b2b_core.selection__product_document__b2b_resource_type__datasheet
+msgid "Datasheet"
+msgstr "Ficha técnica"
+
+#. module: b2b_core
+#: model:ir.model.fields.selection,name:b2b_core.selection__product_template__b2b_visibility_mode__hidden
+msgid "Hidden from Partner Hub"
+msgstr "Oculto en el portal de socios"
+
+#. module: b2b_core
+#. odoo-python
+#: code:addons/b2b_core/services/product_service.py:0
+msgid "Please enter a valid quantity."
+msgstr "Introduce una cantidad válida."
+
+#. module: b2b_core
+#: model:b2b.customer.type,name:b2b_core.customer_type_retailer_ecommerce
+msgid "Retailer / E-commerce"
+msgstr "Minorista / Comercio electrónico"
+
+#. module: b2b_core
+#: model:ir.model.fields.selection,name:b2b_core.selection__product_document__b2b_visibility_mode__segments
+#: model:ir.model.fields.selection,name:b2b_core.selection__product_template__b2b_visibility_mode__segments
+msgid "Selected B2B Segments"
+msgstr "Segmentos B2B seleccionados"
+
+#. module: b2b_core
+#: model:ir.model.fields.selection,name:b2b_core.selection__website__b2b_price_display_mode__always
+msgid "Show Using the Current Website Pricelist"
+msgstr "Mostrar con la tarifa actual del sitio"
+
+#. module: b2b_core
+#: model:b2b.customer.type,name:b2b_core.customer_type_system_integrator
+msgid "System Integrator"
+msgstr "Integrador de sistemas"
+
+#. module: b2b_core
+#. odoo-python
+#: code:addons/b2b_core/services/product_service.py:0
+msgid "The minimum order quantity for this product is %(minimum)g."
+msgstr "La cantidad mínima de pedido de este producto es %(minimum)g."
+
+#. module: b2b_core
+#: model:ir.model.fields.selection,name:b2b_core.selection__product_document__b2b_resource_type__manual
+msgid "User Manual"
+msgstr "Manual de usuario"
+
+#. module: b2b_core
+#. odoo-python
+#: code:addons/b2b_core/models/customer_type.py:0
+msgid ""
+"A generated customer effective pricelist cannot be used as a base pricelist."
+msgstr ""
+"Una tarifa efectiva generada para un cliente no puede usarse como tarifa "
+"base."
+
+#. module: b2b_core
+#. odoo-python
+#: code:addons/b2b_core/models/partner_pricing.py:0
+msgid ""
+"A generated customer effective pricelist cannot be used as an override."
+msgstr ""
+"Una tarifa efectiva generada para un cliente no puede usarse como excepción."
+
+#. module: b2b_core
+#. odoo-python
+#: code:addons/b2b_core/models/customer_type.py:0
+msgid ""
+"Archive customer types instead of deleting types that have base pricelists."
+msgstr ""
+"Archiva los tipos de cliente con tarifas base en lugar de eliminarlos."
+
+#. module: b2b_core
+#. odoo-python
+#: code:addons/b2b_core/models/price_security.py:0
+msgid ""
+"B2B Special Price Managers can update prices, but not product master data."
+msgstr ""
+"Los responsables de precios especiales B2B pueden actualizar precios, pero "
+"no los datos maestros del producto."
+
+#. module: b2b_core
+#. odoo-python
+#: code:addons/b2b_core/models/partner_pricing.py:0
+msgid "Company price overrides must be assigned to the commercial account."
+msgstr ""
+"Las excepciones de precios de empresa deben asignarse a la cuenta comercial."
+
+#. module: b2b_core
+#. odoo-python
+#: code:addons/b2b_core/models/partner_pricing.py:0
+msgid ""
+"Configure a base pricelist for this customer type, website, and currency "
+"before adding a company override."
+msgstr ""
+"Configura una tarifa base para este tipo de cliente, sitio y moneda antes de"
+" añadir una excepción de empresa."
+
+#. module: b2b_core
+#. odoo-python
+#: code:addons/b2b_core/models/price_security.py:0
+msgid ""
+"Deactivate the customer-type base mapping before archiving its pricelist."
+msgstr ""
+"Desactiva la asignación de tarifa base del tipo de cliente antes de archivar"
+" la tarifa."
+
+#. module: b2b_core
+#. odoo-python
+#: code:addons/b2b_core/models/product_template.py:0
+msgid "Default B2B MOQ must be greater than zero."
+msgstr "La cantidad mínima B2B predeterminada debe ser mayor que cero."
+
+#. module: b2b_core
+#. odoo-python
+#: code:addons/b2b_core/models/res_partner.py:0
+msgid "Only a B2B Manager can approve Partner Hub customers."
+msgstr "Solo un B2B Manager puede aprobar clientes del portal."
+
+#. module: b2b_core
+#. odoo-python
+#: code:addons/b2b_core/models/res_partner.py:0
+msgid ""
+"Only a B2B Manager can maintain customer type, segments, and ERP customer "
+"data."
+msgstr ""
+"Solo un B2B Manager puede gestionar tipos, segmentos y datos ERP de "
+"clientes."
+
+#. module: b2b_core
+#. odoo-python
+#: code:addons/b2b_core/models/res_partner.py:0
+msgid "Only a B2B Manager can revoke Partner Hub access."
+msgstr "Solo un B2B Manager puede revocar el acceso al portal."
+
+#. module: b2b_core
+#. odoo-python
+#: code:addons/b2b_core/models/res_partner.py:0
+msgid ""
+"Only a B2B Manager or B2B Special Price Manager can assign customer "
+"pricelists."
+msgstr ""
+"Solo un B2B Manager o B2B Special Price Manager puede asignar tarifas de "
+"clientes."
+
+#. module: b2b_core
+#. odoo-python
+#: code:addons/b2b_core/models/res_partner.py:0
+msgid ""
+"Partner Hub approval must be changed with the Approve or Revoke action."
+msgstr "La aprobación del portal debe cambiarse con Aprobar o Revocar."
+
+#. module: b2b_core
+#. odoo-python
+#: code:addons/b2b_core/models/res_partner.py:0
+msgid ""
+"Partner Hub approval, customer type, segments, and ERP customer data must be"
+" maintained on the commercial company record."
+msgstr ""
+"La aprobación, tipo de cliente, segmentos y datos ERP se gestionan en la "
+"ficha de la empresa comercial."
+
+#. module: b2b_core
+#. odoo-python
+#: code:addons/b2b_core/services/product_service.py:0
+msgid "Quantity must start at %(minimum)g and increase in steps of %(step)g."
+msgstr ""
+"La cantidad debe empezar en %(minimum)g y aumentar en pasos de %(step)g."
+
+#. module: b2b_core
+#. odoo-python
+#: code:addons/b2b_core/models/price_security.py:0
+msgid ""
+"Remove this pricelist from customer-type and company pricing before changing"
+" its currency."
+msgstr ""
+"Retira esta tarifa de tipos de cliente y empresas antes de cambiar su "
+"moneda."
+
+#. module: b2b_core
+#. odoo-python
+#: code:addons/b2b_core/models/customer_type.py:0
+msgid "The base pricelist and website must belong to the same company."
+msgstr "La tarifa base y el sitio deben pertenecer a la misma empresa."
+
+#. module: b2b_core
+#. odoo-python
+#: code:addons/b2b_core/models/partner_pricing.py:0
+msgid "The override pricelist and website must belong to the same company."
+msgstr ""
+"La tarifa de excepción y el sitio deben pertenecer a la misma empresa."
+
+#. module: b2b_core
+#. odoo-python
+#: code:addons/b2b_core/models/partner_pricing.py:0
+msgid ""
+"The selected customer type has no active base pricelist for an existing "
+"company override."
+msgstr ""
+"El tipo de cliente no tiene tarifa base activa para una excepción de empresa"
+" existente."
+
+#. module: b2b_core
+#. odoo-python
+#: code:addons/b2b_core/models/customer_type.py:0
+msgid ""
+"This base pricelist is required by active company overrides. Remove or "
+"deactivate those overrides first."
+msgstr ""
+"Esta tarifa base es necesaria para excepciones activas. Elimínalas o "
+"desactívalas primero."
+
+#. module: b2b_core
+#. odoo-python
+#: code:addons/b2b_core/models/price_security.py:0
+msgid "You are not authorized to maintain B2B prices."
+msgstr "No tienes autorización para mantener precios B2B."
+
+#. module: b2b_core
+#. odoo-python
+#: code:addons/b2b_core/models/partner_pricing.py:0
+msgid "[B2B Effective] %(customer)s / %(currency)s"
+msgstr "[B2B Efectiva] %(customer)s / %(currency)s"
+
+#. module: b2b_core
+#: model:ir.model.fields,field_description:b2b_core.field_res_partner__b2b_approved
+#: model:ir.model.fields,field_description:b2b_core.field_res_users__b2b_approved
+#: model_terms:ir.ui.view,arch_db:b2b_core.view_partner_form_b2b
+msgid "Partner Hub Approved"
+msgstr "Acceso de socio aprobado"

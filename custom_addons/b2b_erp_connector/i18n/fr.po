@@ -1,0 +1,400 @@
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 19.0+e-20260805\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-11 02:05+0000\n"
+"PO-Revision-Date: 2026-09-11 02:05+0000\n"
+"Last-Translator: Partner Hub AI translation\n"
+"Language-Team: \n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__message_needaction
+msgid "Action Needed"
+msgstr "Nécessite une action"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__activity_ids
+msgid "Activities"
+msgstr "Activités"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__activity_exception_decoration
+msgid "Activity Exception Decoration"
+msgstr "Indicateur d’exception d’activité"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__activity_state
+msgid "Activity State"
+msgstr "Statut de l'activité"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__activity_type_icon
+msgid "Activity Type Icon"
+msgstr "Icône de type d'activité"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__message_attachment_count
+msgid "Attachment Count"
+msgstr "Nombre de pièces jointes"
+
+#. module: b2b_erp_connector
+#: model:ir.model,name:b2b_erp_connector.model_res_config_settings
+msgid "Config Settings"
+msgstr "Paramètres de configuration"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__create_uid
+msgid "Created by"
+msgstr "Créé par"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__create_date
+msgid "Created on"
+msgstr "Créé le"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_erp_service__display_name
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__display_name
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_res_config_settings__display_name
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_sale_order__display_name
+msgid "Display Name"
+msgstr "Nom d'affichage"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields.selection,name:b2b_erp_connector.selection__b2b_integration_job__state__failed
+#: model_terms:ir.ui.view,arch_db:b2b_erp_connector.view_b2b_integration_job_search
+msgid "Failed"
+msgstr "Échec"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__message_follower_ids
+msgid "Followers"
+msgstr "Abonnés"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__message_partner_ids
+msgid "Followers (Partners)"
+msgstr "Abonnés (Partenaires)"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,help:b2b_erp_connector.field_b2b_integration_job__activity_type_icon
+msgid "Font awesome icon e.g. fa-tasks"
+msgstr "Icône Font Awesome par ex. fa-tasks"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__has_message
+msgid "Has Message"
+msgstr "A un message"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_erp_service__id
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__id
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_res_config_settings__id
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_sale_order__id
+msgid "ID"
+msgstr "ID"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__activity_exception_icon
+msgid "Icon"
+msgstr "Icône"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,help:b2b_erp_connector.field_b2b_integration_job__activity_exception_icon
+msgid "Icon to indicate an exception activity."
+msgstr "Icône pour indiquer une activité d'exception."
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,help:b2b_erp_connector.field_b2b_integration_job__message_needaction
+msgid "If checked, new messages require your attention."
+msgstr "Si coché, de nouveaux messages demandent votre attention."
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,help:b2b_erp_connector.field_b2b_integration_job__message_has_error
+#: model:ir.model.fields,help:b2b_erp_connector.field_b2b_integration_job__message_has_sms_error
+msgid "If checked, some messages have a delivery error."
+msgstr "Si coché, certains messages ont une erreur de livraison."
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__message_is_follower
+msgid "Is Follower"
+msgstr "Est un abonné"
+
+#. module: b2b_erp_connector
+#. odoo-python
+#: code:addons/b2b_erp_connector/models/integration_job.py:0
+msgid "Job"
+msgstr "Poste"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__last_error
+#: model_terms:ir.ui.view,arch_db:b2b_erp_connector.view_b2b_integration_job_form
+msgid "Last Error"
+msgstr "Dernière erreur"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__write_uid
+msgid "Last Updated by"
+msgstr "Mis à jour par"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__write_date
+msgid "Last Updated on"
+msgstr "Mis à jour le"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__message_has_error
+msgid "Message Delivery error"
+msgstr "Erreur d'envoi du message"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__message_ids
+msgid "Messages"
+msgstr "Messages"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__my_activity_date_deadline
+msgid "My Activity Deadline"
+msgstr "Échéance de mon activité"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__name
+msgid "Name"
+msgstr "Nom"
+
+#. module: b2b_erp_connector
+#. odoo-python
+#: code:addons/b2b_erp_connector/models/integration_job.py:0
+msgid "New"
+msgstr "Nouveau"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__activity_calendar_event_id
+msgid "Next Activity Calendar Event"
+msgstr "Activité suivante de l'événement du calendrier"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__activity_date_deadline
+msgid "Next Activity Deadline"
+msgstr "Échéance de l'activité à venir"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__activity_summary
+msgid "Next Activity Summary"
+msgstr "Résumé de l'activité suivante"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__activity_type_id
+msgid "Next Activity Type"
+msgstr "Type d'activités à venir"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__message_needaction_counter
+msgid "Number of Actions"
+msgstr "Nombre d'actions"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__message_has_error_counter
+msgid "Number of errors"
+msgstr "Nombre d'erreurs"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,help:b2b_erp_connector.field_b2b_integration_job__message_needaction_counter
+msgid "Number of messages requiring action"
+msgstr "Nombre de messages nécessitant une action"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,help:b2b_erp_connector.field_b2b_integration_job__message_has_error_counter
+msgid "Number of messages with delivery error"
+msgstr "Nombre de messages avec des erreurs d'envoi"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields.selection,name:b2b_erp_connector.selection__b2b_integration_job__state__pending
+#: model_terms:ir.ui.view,arch_db:b2b_erp_connector.view_b2b_integration_job_search
+msgid "Pending"
+msgstr "En attente"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields.selection,name:b2b_erp_connector.selection__b2b_integration_job__state__processing
+msgid "Processing"
+msgstr "En cours de traitement"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__rating_ids
+msgid "Ratings"
+msgstr "Évaluations"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__reference_id
+msgid "Reference"
+msgstr "Référence"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__activity_user_id
+msgid "Responsible User"
+msgstr "Utilisateur responsable"
+
+#. module: b2b_erp_connector
+#: model_terms:ir.ui.view,arch_db:b2b_erp_connector.view_b2b_integration_job_form
+msgid "Retry"
+msgstr "Réessayer"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__message_has_sms_error
+msgid "SMS Delivery error"
+msgstr "Erreur d'envoi SMS"
+
+#. module: b2b_erp_connector
+#: model:ir.model,name:b2b_erp_connector.model_sale_order
+#: model:ir.model.fields.selection,name:b2b_erp_connector.selection__b2b_integration_job__job_type__sales_order
+msgid "Sales Order"
+msgstr "Commande client"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__state
+#: model_terms:ir.ui.view,arch_db:b2b_erp_connector.view_b2b_integration_job_search
+msgid "State"
+msgstr "État"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields.selection,name:b2b_erp_connector.selection__b2b_integration_job__state__success
+msgid "Success"
+msgstr "Réussite"
+
+#. module: b2b_erp_connector
+#: model_terms:ir.ui.view,arch_db:b2b_erp_connector.view_b2b_integration_job_search
+msgid "Type"
+msgstr "Type"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,help:b2b_erp_connector.field_b2b_integration_job__activity_exception_decoration
+msgid "Type of the exception activity on record."
+msgstr "Type d'activité d'exception enregistrée."
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,field_description:b2b_erp_connector.field_b2b_integration_job__website_message_ids
+msgid "Website Messages"
+msgstr "Messages du site web"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields,help:b2b_erp_connector.field_b2b_integration_job__website_message_ids
+msgid "Website communication history"
+msgstr "Historique de communication du site web"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields.selection,name:b2b_erp_connector.selection__b2b_integration_job__state__dead
+msgid "Dead Letter"
+msgstr "Échec définitif"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields.selection,name:b2b_erp_connector.selection__res_config_settings__b2b_erp_adapter__mock
+msgid "Mock Adapter"
+msgstr "Adaptateur de simulation"
+
+#. module: b2b_erp_connector
+#: model:ir.model.fields.selection,name:b2b_erp_connector.selection__b2b_integration_job__job_type__sample_request
+msgid "Sample Request"
+msgstr "Demande d’échantillon"
+
+#. module: b2b_erp_connector
+#. odoo-python
+#: code:addons/b2b_erp_connector/models/integration_job.py:0
+msgid "Unknown ERP error"
+msgstr "Erreur ERP inconnue"
+
+#. module: b2b_erp_connector
+#. odoo-python
+#: code:addons/b2b_erp_connector/models/integration_job.py:0
+msgid "ERP job state and payload fields are system-managed."
+msgstr "L’état et les données des tâches ERP sont gérés par le système."
+
+#. module: b2b_erp_connector
+#. odoo-python
+#: code:addons/b2b_erp_connector/services/erp_service.py:0
+msgid "ERP order tracking is temporarily unavailable."
+msgstr "Le suivi de commande ERP est temporairement indisponible."
+
+#. module: b2b_erp_connector
+#. odoo-python
+#: code:addons/b2b_erp_connector/services/erp_service.py:0
+msgid "ERP response is missing its reference."
+msgstr "La référence manque dans la réponse ERP."
+
+#. module: b2b_erp_connector
+#. odoo-python
+#: code:addons/b2b_erp_connector/services/erp_service.py:0
+msgid "ERP returned an invalid order status response."
+msgstr "L’ERP a renvoyé une réponse de statut de commande invalide."
+
+#. module: b2b_erp_connector
+#. odoo-python
+#: code:addons/b2b_erp_connector/services/erp_service.py:0
+msgid "ERP returned an unsuccessful response."
+msgstr "L’ERP a renvoyé une réponse d’échec."
+
+#. module: b2b_erp_connector
+#. odoo-python
+#: code:addons/b2b_erp_connector/models/integration_job.py:0
+msgid "Only failed or dead-letter jobs can be retried."
+msgstr ""
+"Seules les tâches en échec ou en échec définitif peuvent être relancées."
+
+#. module: b2b_erp_connector
+#. odoo-python
+#: code:addons/b2b_erp_connector/models/integration_job.py:0
+msgid "Only internal business workflows can create ERP jobs."
+msgstr "Seuls les processus métier internes peuvent créer des tâches ERP."
+
+#. module: b2b_erp_connector
+#. odoo-python
+#: code:addons/b2b_erp_connector/models/integration_job.py:0
+msgid "The ERP idempotency key is invalid."
+msgstr "La clé d’idempotence ERP est invalide."
+
+#. module: b2b_erp_connector
+#. odoo-python
+#: code:addons/b2b_erp_connector/services/erp_service.py:0
+msgid "The configured ERP adapter is not available."
+msgstr "L’adaptateur ERP configuré est indisponible."
+
+#. module: b2b_erp_connector
+#. odoo-python
+#: code:addons/b2b_erp_connector/models/integration_job.py:0
+msgid "The reference model does not match the ERP job type."
+msgstr "Le modèle de référence ne correspond pas au type de tâche ERP."
+
+#. module: b2b_erp_connector
+#. odoo-python
+#: code:addons/b2b_erp_connector/models/integration_job.py:0
+msgid "The referenced business record no longer exists."
+msgstr "L’enregistrement métier référencé n’existe plus."
+
+#. module: b2b_erp_connector
+#. odoo-python
+#: code:addons/b2b_erp_connector/models/integration_job.py:0
+msgid "Unsupported ERP job reference."
+msgstr "Référence de tâche ERP non prise en charge."
+
+#. module: b2b_erp_connector
+#. odoo-python
+#: code:addons/b2b_erp_connector/services/erp_service.py:0
+msgid "Unsupported ERP job type."
+msgstr "Type de tâche ERP non pris en charge."
+
+#. module: b2b_erp_connector
+#. odoo-python
+#: code:addons/b2b_erp_connector/models/integration_job.py:0
+msgid "You are not allowed to process ERP jobs."
+msgstr "Vous n’êtes pas autorisé à traiter les tâches ERP."
+
+#. module: b2b_erp_connector
+#. odoo-python
+#: code:addons/b2b_erp_connector/models/integration_job.py:0
+msgid "You are not allowed to retry ERP jobs."
+msgstr "Vous n’êtes pas autorisé à relancer les tâches ERP."

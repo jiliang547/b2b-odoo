@@ -3,7 +3,14 @@
     <template id="sample_request_form" name="Partner Sample Request">
         <t t-call="b2b_website.partner_layout">
             <t t-set="no_index" t-value="True"/>
-            <section class="lt-page-head lt-page-head--compact"><div class="container"><span class="lt-kicker">SAMPLE PROGRAM</span><h1>Request a product sample</h1><p>Tell our team what you need for your evaluation or project.</p></div></section>
+            <section class="lt-page-head lt-page-head--compact"><div class="container"><span class="lt-kicker">SAMPLE PROGRAM</span><h1>Request a product sample</h1><p>Tell our team what you need for your evaluation or project.</p>
+                <ol class="lt-sample-steps" aria-label="Sample request process">
+                    <li aria-current="step"><span>1</span><strong>Submit Request</strong></li>
+                    <li><span>2</span><strong>Review &amp; Quotation</strong></li>
+                    <li><span>3</span><strong>Pay Sample Fee</strong></li>
+                    <li><span>4</span><strong>Order Confirmed</strong></li>
+                </ol>
+            </div></section>
             <section class="lt-section"><div class="container lt-form-shell">
                 <div t-if="error" class="lt-alert lt-alert--error" role="alert"><strong>We could not submit your request.</strong><span t-out="error"/></div>
                 <div t-if="not sample_allowed" class="lt-state-card"><i class="fa fa-lock"/><h2>Sample requests are not enabled yet</h2><p>Your Partner Hub company must be approved before requesting samples.</p><a class="lt-btn lt-btn--primary" href="/contact">Contact us</a></div>
@@ -26,7 +33,7 @@
                         <div class="lt-field lt-field--wide"><label for="shipping-address">Shipping address</label><textarea id="shipping-address" name="shipping_address" maxlength="2000" required="required" t-out="post.get('shipping_address', shipping_address)"/></div>
                         <div class="lt-field lt-field--wide"><label for="sample-notes">Additional notes <span>(optional)</span></label><textarea id="sample-notes" name="notes" maxlength="4000" t-out="post.get('notes', '')"/></div>
                     </div></div>
-                    <div class="lt-form-submit"><p>Submitting creates a review request. If approved, you will receive a quotation to review and pay before fulfilment.</p><button class="lt-btn lt-btn--primary" type="submit" data-lt-submitting-label="Submitting…">Submit sample request</button></div>
+                    <div class="lt-form-submit"><p>Submitting creates a review request. If approved, you will receive a quotation to review and pay before fulfilment.</p><button class="lt-btn lt-btn--primary" type="submit" data-lt-submitting-label.translate="Submitting…">Submit sample request</button></div>
                 </form>
             </div></section>
         </t>

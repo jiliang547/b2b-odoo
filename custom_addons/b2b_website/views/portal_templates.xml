@@ -12,10 +12,69 @@
             <t t-call="portal.portal_docs_entry">
                 <t t-set="title">Messages</t><t t-set="text">Track messages from sales and support</t><t t-set="url" t-value="'/my/inquiries'"/><t t-set="placeholder_count" t-value="'inquiry_count'"/>
             </t>
+            <t t-call="portal.portal_docs_entry">
+                <t t-set="title">Order Changes</t><t t-set="text">Track requested revisions, additional payments, and refunds</t><t t-set="url" t-value="'/my/order-changes'"/><t t-set="placeholder_count" t-value="'order_change_count'"/>
+            </t>
         </xpath>
         <xpath expr="//div[hasclass('o_portal_my_home')]" position="inside">
             <div t-if="request.params.get('service_submitted')" hidden="hidden" data-lt-toast="" data-lt-toast-type="success">Your service request was submitted successfully. Track it in Helpdesk.</div>
         </xpath>
+    </template>
+
+    <template id="portal_my_order_changes" name="My Order Changes">
+        <t t-call="portal.portal_layout"><t t-set="no_index" t-value="True"/>
+            <nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span>Order Changes</nav>
+            <header class="lt-portal-heading"><div><h1>Order Changes</h1><p>Track order revision proposals, additional payments, and refunds.</p></div></header>
+            <div t-if="not changes" class="lt-empty lt-portal-card"><h2>No order changes</h2><p>You can request a change from the detail page of an eligible paid order.</p><a class="lt-btn lt-btn--blue" href="/my/orders">View orders</a></div>
+            <div t-else="" class="lt-portal-card lt-table-card"><div class="table-responsive"><table class="lt-data-table"><thead><tr><th>Request</th><th>Order</th><th>Date</th><th>Difference</th><th>Status</th><th/></tr></thead><tbody><tr t-foreach="changes" t-as="change"><td><strong t-out="change.name"/></td><td><a t-att-href="change.order_id.get_portal_url()" t-out="change.order_id.name"/></td><td><span t-field="change.create_date" t-options="{'widget':'date'}"/></td><td><span t-field="change.delta_amount" t-options="{'widget':'monetary','display_currency':change.currency_id}"/></td><td><span t-att-class="'lt-status-badge lt-status-badge--%s' % change.state" t-out="dict(change._fields['state'].selection).get(change.state)"/></td><td class="text-end"><a class="lt-table-link" t-att-href="'/my/order-changes/%s' % change.id">View →</a></td></tr></tbody></table></div></div>
+            <div class="mt-3" t-if="pager"><t t-call="portal.pager"/></div>
+        </t>
+    </template>
+
+    <template id="portal_request_order_change" name="Request an Order Change">
+        <t t-call="portal.portal_layout"><t t-set="no_index" t-value="True"/>
+            <nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my/orders">Orders</a><span>/</span><a t-att-href="sale_order.get_portal_url()" t-out="sale_order.name"/><span>/</span>Request Change</nav>
+            <header class="lt-portal-heading"><div><h1>Request an Order Change</h1><p>Tell us what should change. Your paid order stays unchanged until a proposal is approved and you accept it.</p></div></header>
+            <div class="lt-portal-card">
+                <div t-if="error" class="alert alert-danger" role="alert" t-out="error"/>
+                <dl class="lt-payment-summary"><div><dt>Order</dt><dd t-out="sale_order.name"/></div><div><dt>Paid total</dt><dd><span t-field="sale_order.amount_total" t-options="{'widget':'monetary','display_currency':sale_order.currency_id}"/></dd></div></dl>
+                <form t-if="not error" t-att-action="'/my/orders/%s/request-change' % sale_order.id" method="post" class="mt-4">
+                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                    <div class="mb-3"><label class="form-label" for="requested_changes">What would you like to change?</label><textarea id="requested_changes" name="requested_changes" class="form-control" rows="6" required="required" minlength="10" maxlength="4000" placeholder="Example: Change Product A from 10 to 15 units, remove Product B, and add shipping after review."></textarea></div>
+                    <div class="mb-4"><label class="form-label" for="customer_note">Additional note <span class="text-muted">(optional)</span></label><textarea id="customer_note" name="customer_note" class="form-control" rows="3" maxlength="2000"></textarea></div>
+                    <div class="lt-actions"><button type="submit" class="lt-btn lt-btn--blue" data-lt-stable-submit="">Submit Request</button><a class="lt-btn lt-btn--outline" t-att-href="sale_order.get_portal_url()">Cancel</a></div>
+                </form>
+                <div t-else="" class="lt-actions"><a class="lt-btn lt-btn--blue" t-att-href="sale_order.get_portal_url()">Back to Order</a></div>
+            </div>
+        </t>
+    </template>
+
+    <template id="portal_order_change" name="Order Change Detail">
+        <t t-call="portal.portal_layout"><t t-set="no_index" t-value="True"/>
+            <div t-if="submitted" hidden="hidden" data-lt-toast="" data-lt-toast-type="success">Your order change request was submitted.</div>
+            <div t-if="action_error" hidden="hidden" data-lt-toast="" data-lt-toast-type="warning">This action is no longer available. The order change status has been refreshed.</div>
+            <nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my/order-changes">Order Changes</a><span>/</span><t t-out="change.name"/></nav>
+            <header class="lt-portal-heading lt-portal-heading--action"><div><h1 t-out="change.name"/><p>For order <a t-att-href="change.order_id.get_portal_url()" t-out="change.order_id.name"/> · Revision <t t-out="change.revision_number"/></p></div><span t-att-class="'lt-status-badge lt-status-badge--%s' % change.state" t-out="dict(change._fields['state'].selection).get(change.state)"/></header>
+            <div class="lt-detail-grid">
+                <section class="lt-portal-card lt-order-change-card">
+                    <header><h2>Requested Change</h2></header><div class="lt-card-body"><p class="text-break lt-preserve-lines" t-out="change.requested_changes"/></div>
+                    <t t-if="change.revision_order_id and change.state in ('customer_confirmation', 'balance_due', 'finance_review', 'completed')">
+                        <header class="mt-4"><h2>Proposed Order</h2></header>
+                        <div class="table-responsive"><table class="lt-data-table"><thead><tr><th>Product</th><th>Quantity</th><th>Unit Price</th><th>Subtotal</th></tr></thead><tbody><tr t-foreach="change.revision_order_id.order_line.filtered(lambda line: not line.display_type)" t-as="line"><td t-out="line.name"/><td><t t-out="line.product_uom_qty"/> <t t-out="line.product_uom_id.name"/></td><td><span t-field="line.price_unit" t-options="{'widget':'monetary','display_currency':change.currency_id}"/></td><td><span t-field="line.price_subtotal" t-options="{'widget':'monetary','display_currency':change.currency_id}"/></td></tr></tbody></table></div>
+                    </t>
+                    <div t-if="change.state == 'customer_confirmation'" class="lt-card-body lt-order-change-confirmation">
+                        <div class="alert alert-info">Review the complete proposal before accepting it. Your original paid order has not been changed yet.</div>
+                        <div class="lt-actions"><form t-att-action="'/my/order-changes/%s/accept' % change.id" method="post"><input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/><button class="lt-btn lt-btn--blue" type="submit" data-lt-stable-submit="">Accept Revised Order</button></form><form t-att-action="'/my/order-changes/%s/decline' % change.id" method="post"><input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/><button class="lt-btn lt-btn--outline" type="submit" data-lt-stable-submit="">Decline Proposal</button></form></div>
+                    </div>
+                    <div t-if="change.state == 'balance_due'" class="alert alert-warning mt-4"><h3>Additional payment required</h3><p>Pay the difference to complete this revision.</p><a class="lt-btn lt-btn--blue" t-att-href="change.order_id.get_portal_url(query_string='&amp;payment_amount=%s' % change.delta_amount)">Pay the Difference</a></div>
+                    <div t-if="change.state == 'finance_review' and change.delta_amount &lt; 0" class="alert alert-info mt-4">Your refund of <strong><span t-out="-change.delta_amount" t-options="{'widget':'monetary','display_currency':change.currency_id}"/></strong> is being processed by Finance. You will be notified when it is completed.</div>
+                    <div t-if="change.state == 'completed'" class="alert alert-success mt-4">This order change is complete.<t t-if="change.finance_reference"> Finance reference: <strong t-out="change.finance_reference"/>.</t></div>
+                    <div t-if="change.state == 'rejected'" class="alert alert-danger mt-4">The request was declined. Your original order remains unchanged.<t t-if="change.rejection_reason"><br/><span t-out="change.rejection_reason"/></t></div>
+                    <div t-if="change.state == 'cancelled'" class="alert alert-secondary mt-4">The proposal was declined. Your original order remains unchanged.</div>
+                </section>
+                <aside class="lt-portal-card lt-detail-meta"><header><h2>Amount Summary</h2></header><dl><dt>Original paid total</dt><dd><span t-field="change.original_amount" t-options="{'widget':'monetary','display_currency':change.currency_id}"/></dd><dt>Revised total</dt><dd><span t-if="change.state in ('customer_confirmation', 'balance_due', 'finance_review', 'completed')" t-field="change.proposed_amount" t-options="{'widget':'monetary','display_currency':change.currency_id}"/><span t-else="">Pending review</span></dd><dt>Difference</dt><dd><span t-if="change.state in ('customer_confirmation', 'balance_due', 'finance_review', 'completed')" t-field="change.delta_amount" t-options="{'widget':'monetary','display_currency':change.currency_id}"/><span t-else="">Pending review</span></dd><dt>Main order number</dt><dd t-out="change.order_id.name"/><dt>Revision</dt><dd t-out="change.revision_number"/></dl></aside>
+            </div>
+        </t>
     </template>
 
     <template id="portal_my_inquiries" name="My Inquiries">
@@ -24,7 +83,7 @@
             <header class="lt-portal-heading lt-portal-heading--action"><div><h1>Message Center</h1><p>View sales, support and account conversations in one place.</p></div><a class="lt-btn lt-btn--blue" href="/contact">+ New Message</a></header>
             <form class="lt-portal-toolbar" action="/my/inquiries" method="get"><div class="lt-portal-search"><i class="fa fa-search"/><input type="search" name="search" t-att-value="search" placeholder="Search by request ID, subject or message…"/></div><select name="state" aria-label="Status"><option value="">Status</option><option t-foreach="inquiry_states.items()" t-as="state_item" t-att-value="state_item[0]" t-att-selected="state_item[0] == selected_state" t-out="state_item[1]"/></select><button class="lt-btn lt-btn--outline lt-btn--small" type="submit">Filter</button><span><t t-out="inquiry_total"/> records</span></form>
             <div t-if="not inquiries" class="lt-empty lt-portal-card"><h2>No messages found</h2><p>Send a message to sales or support, or adjust the current filters.</p><a class="lt-btn lt-btn--blue" href="/contact">Contact us</a></div>
-            <div t-else="" class="lt-portal-card lt-table-card"><div class="table-responsive"><table class="lt-data-table"><thead><tr><th>Request No.</th><th>Date</th><th>Type</th><th>Subject</th><th>Status</th><th/></tr></thead><tbody><tr t-foreach="inquiries" t-as="inquiry"><td><a t-att-href="'/my/inquiries/%s' % inquiry.id"><strong t-out="inquiry.name"/></a></td><td><span t-field="inquiry.create_date" t-options="{'widget':'date'}"/></td><td t-out="dict(inquiry._fields['request_type'].selection).get(inquiry.request_type)"/><td class="text-break" t-out="inquiry.subject"/><td><span t-att-class="'lt-status-badge lt-status-badge--%s' % inquiry.state" t-out="dict(inquiry._fields['state'].selection).get(inquiry.state)"/></td><td class="text-end"><a class="lt-table-link" t-att-href="'/my/inquiries/%s' % inquiry.id">View →</a></td></tr></tbody></table></div></div>
+            <div t-else="" class="lt-portal-card lt-table-card"><div class="table-responsive"><table class="lt-data-table"><thead><tr><th>Request No.</th><th>Date</th><th>Type</th><th>Subject</th><th>Status</th><th/></tr></thead><tbody><tr t-foreach="inquiries" t-as="inquiry"><td><a t-att-href="'/my/inquiries/%s' % inquiry.id"><strong t-out="inquiry.name"/></a></td><td><span t-field="inquiry.create_date" t-options="{'widget':'date'}"/></td><td t-out="dict(inquiry._fields['request_type']._description_selection(request.env)).get(inquiry.request_type)"/><td class="text-break" t-out="inquiry.subject"/><td><span t-att-class="'lt-status-badge lt-status-badge--%s' % inquiry.state" t-out="dict(inquiry._fields['state'].selection).get(inquiry.state)"/></td><td class="text-end"><a class="lt-table-link" t-att-href="'/my/inquiries/%s' % inquiry.id">View →</a></td></tr></tbody></table></div></div>
             <div class="mt-3" t-if="pager"><t t-call="portal.pager"/></div>
         </t>
     </template>
@@ -34,7 +93,7 @@
             <div class="lt-sample-detail">
                 <nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span><a href="/my/inquiries">Message Center</a><span>/</span><t t-out="inquiry.name"/></nav>
                 <header class="lt-portal-heading lt-portal-heading--action"><div><h1 t-out="inquiry.subject"/><p><t t-out="inquiry.name"/> · Submitted <span t-field="inquiry.create_date" t-options="{'widget':'date'}"/></p></div><span t-att-class="'lt-status-badge lt-status-badge--%s' % inquiry.state" t-out="dict(inquiry._fields['state'].selection).get(inquiry.state)"/></header>
-                <div class="lt-detail-grid"><section class="lt-portal-card"><header><h2>Conversation Details</h2></header><div class="lt-detail-copy"><h3>Message</h3><p class="text-break" t-out="inquiry.message"/></div></section><aside class="lt-portal-card lt-detail-meta"><header><h2>Contact</h2></header><dl><dt>Type</dt><dd t-out="dict(inquiry._fields['request_type'].selection).get(inquiry.request_type)"/><dt>Name</dt><dd t-out="inquiry.contact_name"/><dt>Company</dt><dd t-out="inquiry.company_name or '—'"/><dt>Email</dt><dd t-out="inquiry.email"/><dt>Telephone</dt><dd t-out="inquiry.phone or '—'"/><dt>Assigned to</dt><dd t-out="inquiry.assigned_user_id.name or 'Our support team'"/></dl></aside></div>
+                <div class="lt-detail-grid"><section class="lt-portal-card"><header><h2>Conversation Details</h2></header><div class="lt-detail-copy"><h3>Message</h3><p class="text-break" t-out="inquiry.message"/></div></section><aside class="lt-portal-card lt-detail-meta"><header><h2>Contact</h2></header><dl><dt>Type</dt><dd t-out="dict(inquiry._fields['request_type']._description_selection(request.env)).get(inquiry.request_type)"/><dt>Name</dt><dd t-out="inquiry.contact_name"/><dt>Company</dt><dd t-out="inquiry.company_name or '—'"/><dt>Email</dt><dd t-out="inquiry.email"/><dt>Telephone</dt><dd t-out="inquiry.phone or '—'"/><dt>Assigned to</dt><dd><t t-if="inquiry.assigned_user_id.name"><t t-out="inquiry.assigned_user_id.name"/></t><t t-else="">Our support team</t></dd></dl></aside></div>
                 <section class="lt-portal-card lt-sample-messages"><header><h2>Messages</h2><p>Replies posted here are shared with the Lucky Tone team. Internal staff notes are never displayed.</p></header><div class="o_portal_messages_container" id="inquiry_chat" data-anchor="true"><t t-call="portal.message_thread"/></div></section>
             </div>
         </t>

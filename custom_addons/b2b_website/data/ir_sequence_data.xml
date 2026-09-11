@@ -12,4 +12,10 @@
         <field name="prefix">REG/%(year)s/</field>
         <field name="padding">5</field>
     </record>
+    <record id="seq_b2b_order_change_request" model="ir.sequence">
+        <field name="name">B2B Order Change Request</field>
+        <field name="code">b2b.order.change.request</field>
+        <field name="prefix">OCR/%(year)s/</field>
+        <field name="padding">5</field>
+    </record>
 </odoo>

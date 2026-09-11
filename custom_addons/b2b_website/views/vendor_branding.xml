@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Keep the native call as an inheritance anchor for Planning and other
+         frontend layouts; suppress its wrapper instead of deleting the call. -->
+    <template id="website_no_vendor_footer" inherit_id="website.layout" priority="99">
+        <xpath expr="//t[@t-call='web.brand_promotion']/.." position="attributes">
+            <attribute name="t-if">False</attribute>
+        </xpath>
+    </template>
+</odoo>

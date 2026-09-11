@@ -3,3 +3,7 @@ from . import test_contact_request
 from . import test_web_submission
 from . import test_role_permissions
 from . import test_registration_application
+from . import test_order_change
+from . import test_export_language
+from . import test_multilingual
+from . import test_portal_presentation

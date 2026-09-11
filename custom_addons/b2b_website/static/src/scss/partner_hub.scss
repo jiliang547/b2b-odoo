@@ -769,6 +769,20 @@ body:has(.lt-subnav) .o_notification_manager { top: 86px; }
     .lt-footer__grid { grid-template-columns: 1fr 1fr; gap: 35px 25px; }
     .lt-footer__about { grid-column: 1/-1; }
 }
+// Identifiers and telephone numbers keep their international reading order in RTL.
+/*!rtl:begin:ignore*/
+.lt-phone-input, .lt-phone-code, .lt-phone-country-option__code,
+.lt-auth-page input[type="email"], .lt-auth-page input[type="url"],
+.lt-purchase-panel__model, .lt-product-card__model, .pg-featured-card__sku {
+    direction: ltr;
+    unicode-bidi: isolate;
+}
+html[dir="rtl"] .lt-phone-country-menu { direction: ltr; text-align: left; }
+/*!rtl:end:ignore*/
+.lt-btn, .lt-registration-submit { overflow-wrap: anywhere; }
+.lt-registration-progress li { min-width: 0; }
+.lt-registration-progress span { white-space: normal; }
+
 @media (max-width: 479.98px) {
     .lt-subnav__inner { padding-left: 14px; padding-right: 14px; }
     .lt-hero h1 { font-size: 39px; }
@@ -874,6 +888,9 @@ form[aria-busy="true"] button[type="submit"] { cursor: wait; opacity: .72; }
 .o_portal_wrap.lt-portal-wrap { min-height: calc(100vh - 65px); background: #f8fafc; }
 .lt-portal-wrap > .lt-portal-shell.container { width: 100%; max-width: none; min-height: calc(100vh - 65px); display: grid; grid-template-columns: 220px minmax(0, 1fr); align-items: stretch; gap: 0; margin: 0; padding: 0 !important; transition: grid-template-columns .2s ease; }
 .lt-portal-wrap > .lt-portal-shell.container.is-sidebar-collapsed { grid-template-columns: 68px minmax(0, 1fr); }
+/* Bootstrap's legacy clearfix pseudo-elements must not become grid rows. */
+.lt-portal-wrap > .lt-portal-shell.container::before,
+.lt-portal-wrap > .lt-portal-shell.container::after { display: none !important; content: none !important; }
 .lt-portal-shell > .lt-account-sidebar { grid-column: 1; grid-row: 1 / span 20; }
 .lt-portal-shell > :not(.lt-account-sidebar) { grid-column: 2; min-width: 0; margin: 0; padding: 26px 28px 46px; }
 .lt-portal-shell > .row { width: 100%; min-width: 0; max-width: 100%; }
@@ -976,6 +993,28 @@ form[aria-busy="true"] button[type="submit"] { cursor: wait; opacity: .72; }
 .lt-workspace a { color: #2563eb; font-size: 12px; }
 
 .lt-portal-list { margin-bottom: 18px; }
+.lt-order-list-header { display: flow-root; }
+.lt-card-body { padding: 18px 17px; }
+.lt-card-body > :last-child { margin-bottom: 0; }
+.lt-preserve-lines { white-space: pre-wrap; overflow-wrap: anywhere; }
+.lt-order-change-card > .alert { margin: 18px 17px !important; }
+.lt-order-change-confirmation { border-top: 1px solid #e5e7eb; }
+.lt-order-change-confirmation .lt-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; }
+.lt-order-change-confirmation .lt-actions form { margin: 0; }
+.lt-sample-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; margin: 28px 0 0; padding: 0; list-style: none; }
+.lt-sample-steps li { position: relative; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 0 8px; color: #cbd5e1; font-size: 13px; text-align: center; }
+.lt-sample-steps li:not(:last-child)::after { position: absolute; top: 16px; left: calc(50% + 22px); width: calc(100% - 44px); height: 1px; background: #64748b; content: ""; }
+.lt-sample-steps li > span { display: grid; place-items: center; flex: 0 0 32px; width: 32px; height: 32px; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #334155; }
+.lt-sample-steps li[aria-current] { color: #93c5fd; }
+.lt-sample-steps li[aria-current] > span { color: #fff; background: #2563eb; border-color: #2563eb; }
+@media (max-width: 767px) {
+    .lt-sample-steps { grid-template-columns: 1fr; gap: 0; }
+    .lt-sample-steps li { flex-direction: row; gap: 14px; padding: 0 0 24px; text-align: left; }
+    .lt-sample-steps li:last-child { padding-bottom: 0; }
+    .lt-sample-steps li:not(:last-child)::after { top: 38px; left: 15px; width: 1px; height: calc(100% - 44px); }
+    .lt-order-change-confirmation .lt-actions form { flex: 1 1 100%; }
+    .lt-order-change-confirmation .lt-actions button { width: 100%; }
+}
 .lt-portal-tabs { display: flex; gap: 24px; margin-top: -4px; border-bottom: 1px solid #dfe4ea; }
 .lt-portal-tabs a { position: relative; padding: 10px 2px 11px; color: #64748b; font-size: 13px; font-weight: 600; }
 .lt-portal-tabs a.is-active { color: #2563eb; }
@@ -1331,6 +1370,7 @@ form[aria-busy="true"] button[type="submit"] { cursor: wait; opacity: .72; }
 .lt-registration-form .lt-field > input, .lt-registration-form .lt-field select, .lt-password-field { width: 100%; min-height: 45px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; color: #111827; }
 .lt-registration-form .lt-field > input, .lt-registration-form .lt-field select { padding: 9px 12px; }
 .lt-registration-form .lt-field > input:focus, .lt-registration-form .lt-field select:focus, .lt-password-field:focus-within { border-color: #e8380c; outline: 0; box-shadow: 0 0 0 3px rgba(232,56,12,.1); }
+/*!rtl:begin:ignore*/
 .lt-phone-input { position: relative; display: flex; width: 100%; height: 44px; overflow: visible; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; transition: border-color .15s ease, box-shadow .15s ease; }
 .lt-phone-input:focus-within { border-color: #e8380c; box-shadow: 0 0 0 1px rgba(232,56,12,.2); }
 .lt-phone-country { position: relative; min-width: 74px; flex: 0 0 auto; border-right: 1px solid #e5e7eb; border-radius: 6px 0 0 6px; }
@@ -1351,6 +1391,7 @@ form[aria-busy="true"] button[type="submit"] { cursor: wait; opacity: .72; }
 .lt-phone-country-option__flag { width: 20px; height: 15px; flex: 0 0 20px; border-radius: 1px; object-fit: cover; }
 .lt-phone-country-option__name { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lt-phone-country-option__code { flex: 0 0 auto; color: #9ca3af; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: 12px; }
+/*!rtl:end:ignore*/
 .lt-password-field { display: flex; overflow: hidden; }
 .lt-registration-form .lt-field .lt-password-field > input { width: auto; min-width: 0; min-height: 0; flex: 1; padding: 9px 12px; border: 0; border-radius: 0; outline: 0; box-shadow: none; background: transparent; }
 .lt-registration-form .lt-field .lt-password-field > input:focus { border: 0; outline: 0; box-shadow: none; }

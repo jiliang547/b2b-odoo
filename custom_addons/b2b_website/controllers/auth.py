@@ -240,6 +240,7 @@ class PartnerHubAuth(AuthSignupHome):
                     if self._account_exists(user_values["login"]):
                         raise SignupError()
                     try:
+                        user_values["lang"] = request.env.lang or request.website.default_lang_id.code
                         user = request.env["res.users"].sudo()._signup_create_user(user_values)
                     except (SignupError, UserError) as error:
                         # A concurrent signup can pass the pre-check and still

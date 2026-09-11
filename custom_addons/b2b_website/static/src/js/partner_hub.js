@@ -1,5 +1,7 @@
 /** @odoo-module **/
 
+import { _t, translationIsReady } from "@web/core/l10n/translation";
+
 import {rpc} from "@web/core/network/rpc";
 import {registry} from "@web/core/registry";
 import {Interaction} from "@web/public/interaction";
@@ -205,12 +207,12 @@ class PartnerHubCartForm extends Interaction {
             }
         };
         if (!Number.isFinite(quantity) || quantity < minimum || quantity > maximum) {
-            showValidation(`Enter a quantity between ${formatQuantity(minimum)} and ${formatQuantity(maximum)}.`);
+            showValidation(_t("Enter a quantity between %s and %s.", formatQuantity(minimum), formatQuantity(maximum)));
             return;
         }
         const step = Number(quantityInput.step || 1);
         if (!isQuantityAligned(quantity, minimum, step)) {
-            showValidation(`Start at ${formatQuantity(minimum)} and order in steps of ${formatQuantity(step)}.`);
+            showValidation(_t("Start at %s and order in steps of %s.", formatQuantity(minimum), formatQuantity(step)));
             return;
         }
         if (status) {
@@ -231,7 +233,7 @@ class PartnerHubCartForm extends Interaction {
             }));
         } catch (error) {
             const message = error?.data?.message
-                || "We could not add this product. Please try again.";
+                || _t("We could not add this product. Please try again.");
             this.services.notification.add(message, {
                 type: "danger",
                 autocloseDelay: 3000,
@@ -301,7 +303,7 @@ function initializeVariantPickers() {
                     element.textContent = formatQuantity(minimum);
                 });
                 panel.querySelectorAll("[data-lt-procurement-uom], [data-lt-minimum-uom], [data-lt-price-uom]").forEach((element) => {
-                    element.textContent = info.b2b_uom_name || "unit";
+                    element.textContent = info.b2b_uom_name || _t("unit");
                 });
                 const stockBadge = panel.querySelector("[data-lt-stock-badge]");
                 if (stockBadge) {
@@ -309,22 +311,22 @@ function initializeVariantPickers() {
                     stockBadge.classList.add(`lt-stock-badge--${info.b2b_stock_state || "available"}`);
                 }
                 const stockLabel = panel.querySelector("[data-lt-stock-label]");
-                if (stockLabel) stockLabel.textContent = info.b2b_stock_label || "Available";
+                if (stockLabel) stockLabel.textContent = info.b2b_stock_label || _t("Available");
                 const stockQuantity = panel.querySelector("[data-lt-stock-quantity]");
                 if (stockQuantity) {
                     stockQuantity.classList.toggle("d-none", !info.b2b_show_stock_quantity);
-                    stockQuantity.textContent = ` (${formatQuantity(info.b2b_stock_quantity || 0)} ${info.b2b_uom_name || "unit"})`;
+                    stockQuantity.textContent = ` (${formatQuantity(info.b2b_stock_quantity || 0)} ${info.b2b_uom_name || _t("unit")})`;
                 }
                 const leadTime = panel.querySelector("[data-lt-lead-time]");
                 if (leadTime) {
                     leadTime.textContent = info.b2b_lead_time_days == null
-                        ? "Contact sales"
+                        ? _t("Contact sales")
                         : info.b2b_lead_time_days > 0
-                            ? `${formatQuantity(info.b2b_lead_time_days)} days`
-                            : "Ready to ship";
+                            ? _t("%s days", formatQuantity(info.b2b_lead_time_days))
+                            : _t("Ready to ship");
                 }
                 panel.querySelectorAll("[data-lt-variant-sku]").forEach((element) => {
-                    element.textContent = info.b2b_sku || "Model on request";
+                    element.textContent = info.b2b_sku || _t("Model on request");
                 });
                 const image = document.querySelector("[data-lt-gallery-image]");
                 if (image && info.product_id) {
@@ -369,7 +371,7 @@ function initializeVariantPickers() {
                         const link = document.createElement("a");
                         link.className = "lt-btn lt-btn--outline lt-btn--small";
                         link.href = resource.url;
-                        link.textContent = "Download";
+                        link.textContent = _t("Download");
                         article.append(icon, copy, link);
                         return article;
                     }));
@@ -407,8 +409,8 @@ function initializeServiceProductFilter() {
             product.value = "";
         }
         product.options[0].textContent = orderId
-            ? (first ? "Select an ordered product" : "No eligible products on this order")
-            : "Select an order first";
+            ? (first ? _t("Select an ordered product") : _t("No eligible products on this order"))
+            : _t("Select an order first");
     };
     order.addEventListener("change", refresh);
     refresh();
@@ -458,7 +460,7 @@ function initializeCategoryBrowsers() {
                 breadcrumbs.replaceChildren();
                 const all = document.createElement("button");
                 all.type = "button";
-                all.textContent = brandId ? "Brand" : "All";
+                all.textContent = brandId ? _t("Brand") : _t("All");
                 all.addEventListener("click", () => load(false, false));
                 breadcrumbs.append(all);
                 data.breadcrumbs.forEach((category, index) => {
@@ -481,7 +483,7 @@ function initializeCategoryBrowsers() {
             } catch (_error) {
                 const message = document.createElement("p");
                 message.className = "lt-alert lt-alert--error";
-                message.textContent = "Categories could not be loaded. Please try again.";
+                message.textContent = _t("Categories could not be loaded. Please try again.");
                 grid.replaceChildren(message);
             } finally {
                 // Measure the natural content height without letting the browser paint
@@ -576,7 +578,7 @@ function initializeRegistrationContacts() {
         show(
             email,
             invalid
-                ? "Please enter a valid business email address, such as name@company.com."
+                ? _t("Please enter a valid business email address, such as name@company.com.")
                 : ""
         );
         return !invalid;
@@ -665,7 +667,7 @@ function initializeRegistrationContacts() {
             }
             const code = select.selectedOptions[0]?.dataset.code || "";
             const invalid = value ? (!code || !/^[0-9]+$/.test(value) || value.length < 4 || code.length + value.length > 15) : input.required;
-            show(input, invalid ? "Please enter a valid number and select its country code." : "");
+            show(input, invalid ? _t("Please enter a valid number and select its country code.") : "");
             return !invalid;
         };
         country.addEventListener("change", () => { sync(); if (input.value) validate(); });
@@ -736,7 +738,7 @@ function initializeRegistrationContacts() {
             } catch { valid = false; }
         }
         if (valid) website.value = value;
-        show(website, valid ? "" : "Please enter a valid company website, such as www.company.com.");
+        show(website, valid ? "" : _t("Please enter a valid company website, such as www.company.com."));
         return valid;
     };
     website.addEventListener("blur", validateWebsite);
@@ -752,12 +754,7 @@ function initializeRegistrationContacts() {
     }, true);
 }
 
-function initializeEnglishValidationMessages() {
-    const language = document.documentElement.lang?.toLocaleLowerCase() || "";
-    if (!language.startsWith("en")) {
-        return;
-    }
-
+function initializeLocalizedValidationMessages() {
     const fieldTypes = [HTMLInputElement, HTMLSelectElement, HTMLTextAreaElement];
     const isFormField = (field) => fieldTypes.some((fieldType) => field instanceof fieldType);
     const clearManagedMessage = (field) => {
@@ -782,37 +779,37 @@ function initializeEnglishValidationMessages() {
             return;
         }
 
-        let message = field.dataset.ltValidationMessage;
+        let message = (field.name === "terms" ? _t("Please accept the Terms of Use and Privacy Policy.") : field.dataset.ltValidationMessage);
         if (!message && field.validity.valueMissing) {
             if (field instanceof HTMLSelectElement) {
-                message = "Please select an item from the list.";
+                message = _t("Please select an item from the list.");
             } else if (field.type === "checkbox") {
-                message = "Please select this option.";
+                message = _t("Please select this option.");
             } else if (field.type === "radio") {
-                message = "Please select an option.";
+                message = _t("Please select an option.");
             } else {
-                message = "Please fill out this field.";
+                message = _t("Please fill out this field.");
             }
         } else if (!message && field.validity.typeMismatch) {
             message = field.type === "email"
-                ? "Please enter a valid email address."
-                : "Please enter a valid value.";
+                ? _t("Please enter a valid email address.")
+                : _t("Please enter a valid value.");
         } else if (!message && field.validity.patternMismatch) {
-            message = field.title || "Please match the requested format.";
+            message = field.title || _t("Please match the requested format.");
         } else if (!message && field.validity.rangeUnderflow) {
-            message = `Value must be greater than or equal to ${field.min}.`;
+            message = _t("Value must be greater than or equal to %s.", field.min);
         } else if (!message && field.validity.rangeOverflow) {
-            message = `Value must be less than or equal to ${field.max}.`;
+            message = _t("Value must be less than or equal to %s.", field.max);
         } else if (!message && field.validity.stepMismatch) {
-            message = "Please enter a valid value.";
+            message = _t("Please enter a valid value.");
         }
-        field.setCustomValidity(message || "Please enter a valid value.");
+        field.setCustomValidity(message || _t("Please enter a valid value."));
         field.dataset.ltManagedValidity = "1";
     }, true);
 }
 
 function initializePartnerHub() {
-    initializeEnglishValidationMessages();
+    initializeLocalizedValidationMessages();
     initializeRegistrationContacts();
     initializeNavigation();
     initializeFilters();
@@ -874,7 +871,7 @@ function initializePortalSidebar() {
     const sync = () => {
         const expanded = !shell.classList.contains("is-sidebar-collapsed");
         toggle.setAttribute("aria-expanded", String(expanded));
-        toggle.setAttribute("aria-label", expanded ? "Collapse account navigation" : "Expand account navigation");
+        toggle.setAttribute("aria-label", expanded ? _t("Collapse account navigation") : _t("Expand account navigation"));
     };
     toggle.addEventListener("click", () => {
         shell.classList.toggle("is-sidebar-collapsed");
@@ -918,7 +915,7 @@ function initializeSubmissionForms() {
                     ? button.value
                     : button.innerHTML;
                 button.disabled = true;
-                const label = button.dataset.ltSubmittingLabel || "Submitting…";
+                const label = button.dataset.ltSubmittingLabel || _t("Submitting…");
                 if (button instanceof HTMLInputElement) {
                     button.value = label;
                 } else {
@@ -948,13 +945,36 @@ function initializePaymentStatus() {
     const updateConnectivity = () => {
         if (liveStatus) {
             liveStatus.textContent = navigator.onLine
-                ? "Automatic payment checks are continuing."
-                : "Connection lost. We will continue checking when you are back online.";
+                ? _t("Automatic payment checks are continuing.")
+                : _t("Connection lost. We will continue checking when you are back online.");
         }
     };
     updateConnectivity();
     window.addEventListener("online", updateConnectivity);
     window.addEventListener("offline", updateConnectivity);
+
+    // Keep Odoo's native post-processing endpoint as the single source of
+    // truth.  The Partner Hub replaces the native status-page layout, so it
+    // also owns a small defensive poller: this guarantees the final redirect
+    // even when the native public interaction was initialized before the
+    // replacement status node became available.
+    let pollDelay = 0;
+    const pollPayment = async () => {
+        try {
+            const result = await rpc("/payment/status/poll", {
+                csrf_token: window.odoo?.csrf_token,
+            });
+            if (["authorized", "done", "cancel", "error"].includes(result.state)) {
+                window.location.assign(result.landing_route);
+                return;
+            }
+        } catch (_error) {
+            // Transient network and post-processing errors are retried below.
+        }
+        pollDelay = Math.min(pollDelay ? pollDelay * 1.5 : 3000, 30000);
+        window.setTimeout(pollPayment, pollDelay);
+    };
+    pollPayment();
 
     const timer = window.setInterval(() => {
         const seconds = Math.floor((Date.now() - startedAt) / 1000);
@@ -974,7 +994,7 @@ function initializePaymentStatus() {
         pending?.setAttribute("hidden", "hidden");
         statusPage.classList.remove("is-pending");
         if (liveStatus) {
-            liveStatus.textContent = "Automatic payment checks are continuing.";
+            liveStatus.textContent = _t("Automatic payment checks are continuing.");
         }
     });
 }
@@ -1035,8 +1055,9 @@ function initializeCompanyOnboarding() {
     dialog.querySelector("a, button:not(.lt-company-onboarding-dialog__backdrop)")?.focus();
 }
 
-if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initializePartnerHub, {once: true});
-} else {
-    initializePartnerHub();
-}
+// Lazy frontend assets may execute after DOMContentLoaded but before translations.
+// Both prerequisites are needed before assigning translated strings to the DOM.
+const domReady = document.readyState === "loading"
+    ? new Promise((resolve) => document.addEventListener("DOMContentLoaded", resolve, {once: true}))
+    : Promise.resolve();
+Promise.all([domReady, translationIsReady]).then(initializePartnerHub);

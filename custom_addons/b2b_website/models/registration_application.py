@@ -153,7 +153,9 @@ class B2BRegistrationApplication(models.Model):
                 raise_if_not_found=False,
             )
             if template:
-                template.sudo().send_mail(self.id, force_send=True)
+                template.sudo().with_context(
+                    lang=self.partner_id.lang or self.website_id.default_lang_id.code,
+                ).send_mail(self.id, force_send=True)
         return True
 
     @api.model
@@ -275,7 +277,9 @@ class B2BRegistrationApplication(models.Model):
                 raise_if_not_found=False,
             )
             if template:
-                template.sudo().send_mail(self.id, force_send=True)
+                template.sudo().with_context(
+                    lang=self.partner_id.lang or self.website_id.default_lang_id.code,
+                ).send_mail(self.id, force_send=True)
         return True
 
     def action_reject(self):
@@ -293,7 +297,9 @@ class B2BRegistrationApplication(models.Model):
                 raise_if_not_found=False,
             )
             if template:
-                template.sudo().send_mail(self.id, force_send=True)
+                template.sudo().with_context(
+                    lang=self.partner_id.lang or self.website_id.default_lang_id.code,
+                ).send_mail(self.id, force_send=True)
         return True
 
     def action_return_to_review(self):

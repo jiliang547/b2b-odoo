@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="portal_order_list_header" name="Shared order and quotation navigation">
+        <section class="lt-portal-list lt-order-list-header">
+            <nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span>Orders</nav>
+            <header class="lt-portal-heading"><h1>Orders</h1><p>Manage your orders, payments and quotations.</p></header>
+            <nav class="lt-portal-tabs" aria-label="Order lists">
+                <a href="/my/orders" t-att-class="'is-active' if not quotations_active else None" t-att-aria-current="'page' if not quotations_active else None">Orders &amp; Payments</a>
+                <a href="/my/quotes" t-att-class="'is-active' if quotations_active else None" t-att-aria-current="'page' if quotations_active else None">Quotations</a>
+            </nav>
+        </section>
+    </template>
+    <template id="portal_orders_consistent_header" inherit_id="b2b_website.portal_orders_figma">
+        <xpath expr="//section[hasclass('lt-portal-list')]" position="replace"><t t-call="b2b_website.portal_order_list_header"><t t-set="quotations_active" t-value="False"/></t></xpath>
+    </template>
+    <template id="portal_quotes_consistent_layout" inherit_id="b2b_website.portal_quotes_figma">
+        <xpath expr="//section[hasclass('lt-portal-list')]" position="replace"><t t-call="b2b_website.portal_order_list_header"><t t-set="quotations_active" t-value="True"/></t></xpath>
+        <xpath expr="//t[@t-if='quotations'][@t-call='portal.portal_table']" position="replace">
+            <t t-if="quotations">
+                <div class="lt-portal-card lt-table-card"><div class="table-responsive"><table class="lt-data-table">
+                    <thead><tr><th>Quotation No.</th><th>Date</th><th>Valid Until</th><th>Amount</th><th>Status</th><th class="text-end">Details</th></tr></thead>
+                    <tbody><tr t-foreach="quotations" t-as="quotation">
+                        <td><a t-att-href="quotation.get_portal_url()"><strong t-out="quotation.name"/></a></td>
+                        <td><span t-field="quotation.date_order" t-options="{'widget': 'date'}"/></td>
+                        <td><span t-if="quotation.validity_date" t-field="quotation.validity_date"/><span t-else="">—</span></td>
+                        <td><strong t-field="quotation.amount_total"/></td>
+                        <td><span t-if="quotation.state == 'cancel'" class="lt-status-badge lt-status-badge--payment_cancelled">Cancelled</span><span t-elif="quotation.is_expired" class="lt-status-badge lt-status-badge--payment_failed">Expired</span><span t-else="" class="lt-status-badge lt-status-badge--awaiting_payment">Quotation</span></td>
+                        <td class="text-end"><a class="lt-btn lt-btn--outline lt-btn--small" t-att-href="quotation.get_portal_url()" t-att-aria-label="'View details for %s' % quotation.name">View Details →</a></td>
+                    </tr></tbody>
+                </table></div></div>
+                <div t-if="pager" class="o_portal_pager d-flex justify-content-center my-3"><t t-call="portal.pager"/></div>
+            </t>
+        </xpath>
+    </template>
+    <template id="portal_record_no_vendor_promotion" inherit_id="portal.portal_record_sidebar">
+        <xpath expr="//div[a/img[@src='/web/static/img/logo.png']]" position="replace"/>
+    </template>
+    <template id="sale_portal_no_vendor_promotion" inherit_id="sale.sale_order_portal_template">
+        <xpath expr="//button[@id='portal_connect_software_modal_btn']/.." position="replace"/>
+        <xpath expr="//div[@id='sale_portal_connect_software_modal']" position="replace"/>
+    </template>
+    <template id="sale_portal_meaningful_terms" inherit_id="sale.sale_order_portal_content">
+        <xpath expr="//section[@id='terms']" position="attributes"><attribute name="t-if">not is_html_empty(sale_order.note) and not sale_order._b2b_is_placeholder_terms_note()</attribute></xpath>
+    </template>
+    <template id="partner_sale_terms" name="Partner sales terms">
+        <t t-call="b2b_website.partner_layout">
+            <t t-set="no_index" t-value="not terms_available"/>
+            <section class="lt-page-head lt-page-head--compact"><div class="container"><h1>Terms &amp; Conditions of Sale</h1></div></section>
+            <section class="lt-section"><div class="container lt-form-shell"><div class="lt-form-card">
+                <div t-if="terms_available" t-field="company.invoice_terms_html"/>
+                <t t-else=""><h2>Sales terms are not published yet</h2><p>Please contact our team for the terms applicable to your quotation or order.</p></t>
+                <a class="lt-btn lt-btn--blue" href="/contact">Contact us</a>
+            </div></div></section>
+        </t>
+    </template>
+</odoo>

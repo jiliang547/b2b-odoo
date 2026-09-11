@@ -54,8 +54,8 @@
                     </div>
                     <aside class="lt-purchase-panel">
                         <h1 t-out="product.name"/>
-                        <div class="lt-purchase-panel__meta"><p class="lt-purchase-panel__model">SKU: <span data-lt-variant-sku="" t-out="variant.default_code or product.b2b_model_number or 'Model on request'"/></p></div>
-                        <p class="lt-purchase-panel__description" t-out="product.description_sale or 'Contact our sales team for application guidance and technical support.'"/>
+                        <div class="lt-purchase-panel__meta"><p class="lt-purchase-panel__model">SKU: <span data-lt-variant-sku=""><t t-if="variant.default_code"><t t-out="variant.default_code"/></t><t t-else=""><t t-if="product.b2b_model_number"><t t-out="product.b2b_model_number"/></t><t t-else="">Model on request</t></t></span></p></div>
+                        <p class="lt-purchase-panel__description"><t t-if="product.description_sale"><t t-out="product.description_sale"/></t><t t-else="">Contact our sales team for application guidance and technical support.</t></p>
                         <t t-call="b2b_website.price_display"/>
                         <dl class="lt-procurement-facts"><div><dt>MOQ</dt><dd><strong data-lt-minimum-quantity="" t-out="'%g' % procurement['minimum_quantity']"/> <span data-lt-procurement-uom="" t-out="procurement['uom_name']"/></dd></div><div><dt>Lead time</dt><dd data-lt-lead-time=""><t t-if="procurement['lead_time_days'] is None">Contact sales</t><t t-elif="procurement['lead_time_days']"><strong t-out="procurement['lead_time_days']"/> days</t><t t-else="">Ready to ship</t></dd></div></dl>
                         <div t-if="product.valid_product_template_attribute_line_ids" class="lt-variant-picker" data-lt-variant-picker="" t-att-data-template-id="product.id" t-att-data-product-id="variant.id">

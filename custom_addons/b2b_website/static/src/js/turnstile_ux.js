@@ -1,5 +1,7 @@
 /** @odoo-module **/
 
+import { _t } from "@web/core/l10n/translation";
+
 const AUTH_FORM_SELECTOR = ".lt-auth-page form[data-captcha]";
 const TURNSTILE_SCRIPT_URL = "https://challenges.cloudflare.com/turnstile/v0/api.js";
 const VERIFICATION_TIMEOUT = 25000;
@@ -15,9 +17,9 @@ let callbackSequence = 0;
 
 function turnstileErrorMessage(code) {
     if (CONFIGURATION_ERROR_CODES.has(String(code || ""))) {
-        return "Security verification is unavailable. Please contact support.";
+        return _t("Security verification is unavailable. Please contact support.");
     }
-    return "Security verification could not be completed. Check your connection and try again.";
+    return _t("Security verification could not be completed. Check your connection and try again.");
 }
 
 class PartnerHubTurnstileUX {
@@ -86,7 +88,7 @@ class PartnerHubTurnstileUX {
             const retryButton = document.createElement("button");
             retryButton.type = "button";
             retryButton.className = "lt-turnstile-retry";
-            retryButton.textContent = "Retry verification";
+            retryButton.textContent = _t("Retry verification");
             retryButton.addEventListener("click", () => this.retry());
             this.feedback.append(retryButton);
         }
@@ -117,7 +119,7 @@ class PartnerHubTurnstileUX {
 
     showPending(duration = VERIFICATION_TIMEOUT) {
         if (this.state !== "pending") {
-            this.setState("pending", "Completing security check…");
+            this.setState("pending", _t("Completing security check…"));
         }
         this.startTimeout(duration);
     }
@@ -131,7 +133,7 @@ class PartnerHubTurnstileUX {
     showComplete() {
         window.clearTimeout(this.timeoutId);
         this.submitButton?.removeAttribute("aria-disabled");
-        this.setState("success", "Security check complete.");
+        this.setState("success", _t("Security check complete."));
     }
 
     installCallbacks(container) {

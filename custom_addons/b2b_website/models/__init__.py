@@ -9,3 +9,5 @@ from . import homepage_product
 from . import website_track
 from . import faq
 from . import registration_application
+from . import order_change
+from . import portal_terms
