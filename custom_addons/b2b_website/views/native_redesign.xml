@@ -118,11 +118,6 @@
                     </div>
                 </div>
                 <section class="lt-workspace"><h2>My Workspace</h2><div><article><i class="fa fa-shopping-bag"/><h3>Orders</h3><p>Track confirmed orders and complete interrupted payments.</p><a href="/my/orders">View Orders →</a></article><article><i class="fa fa-file-text-o"/><h3>Quotations</h3><p>Review and accept open quotations from Lucky Tone.</p><a href="/my/quotes">View Quotations →</a></article><article><i class="fa fa-comments-o"/><h3>Messages</h3><p>Read replies from sales and continue your conversations.</p><a href="/my/inquiries">View Messages →</a></article><article><i class="fa fa-flask"/><h3>Sample Requests</h3><p>Track your product sample requests and statuses.</p><a href="/my/sample-requests">View Samples →</a></article><article><i class="fa fa-life-ring"/><h3>After-Sales Service</h3><p>Submit and track technical support tickets.</p><a href="/my/tickets">View Tickets →</a></article><article><i class="fa fa-building-o"/><h3>Company Profile</h3><p>Your company's registered information and partner approval status.</p><a href="/my/company">View Profile →</a></article><article><i class="fa fa-users"/><h3>Company Users</h3><p>Contacts associated with your company account.</p><a href="/my/company/users">View Users →</a></article><article><i class="fa fa-user-o"/><h3>Personal Profile</h3><p>Update your personal contact details and address.</p><a href="/my/account">Edit Profile →</a></article></div></section>
-                <section class="lt-portal-card">
-                    <header><h2>Order Changes</h2><a href="/my/order-changes">View Change Requests →</a></header>
-                    <p>Review proposed revisions, additional payments and refund progress.</p>
-                    <p t-if="order_change_action_count"><strong t-out="order_change_action_count"/> change requests need your confirmation or payment.</p>
-                </section>
                 <div class="o_portal_docs d-none" aria-hidden="true"><div class="o_portal_doc_spinner spinner-border"/></div>
             </div>
         </xpath>

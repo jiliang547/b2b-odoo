@@ -143,9 +143,6 @@ class PartnerHubPortal(CustomerPortal):
             "order_change_count": request.env["b2b.order.change.request"].search_count(
                 self._order_change_domain()
             ),
-            "order_change_action_count": request.env["b2b.order.change.request"].search_count(
-                self._order_change_domain() + [("state", "in", ("customer_confirmation", "balance_due"))]
-            ),
             "recent_orders": recent_orders,
             "recent_samples": Sample.search(
                 self._sample_domain(), order="create_date desc", limit=2
