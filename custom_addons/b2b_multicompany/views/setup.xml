@@ -40,7 +40,8 @@
                         <page string="1. Companies and Access">
                             <button name="action_companies" type="object" string="Create / Review Native Companies"/>
                             <button name="action_users" type="object" string="Review Staff Company Access"/>
-                            <p>Administrator: create or reuse each legal seller, then grant staff Allowed Companies. These buttons retain native access controls.</p>
+                            <p>Staff access: open the user, then Access Rights. Companies allows multiple companies; Default Company selects one starting company. Only a native user-access administrator can change these permissions.</p>
+                            <p>These buttons open native management pages, not selection dialogs. Open a company or user by clicking its name; save changes, then use the Business Setup breadcrumb to return. Select your sellers in Selling Companies below. Native administrator permissions still apply.</p>
                             <group><field name="selling_company_ids" widget="many2many_tags" options="{'no_create': True}"/>
                             <field name="factory_id" invisible="fulfilment_mode != 'odoo'" options="{'no_create': True}"/></group>
                         </page>
@@ -48,7 +49,7 @@
                             <button name="action_brands" type="object" string="Configure Brand / Legal Seller / Bank Links"/>
                             <group><field name="bank_company_id" domain="[('id', 'in', selling_company_ids)]" options="{'no_create': True}"/></group>
                             <button name="action_banks" type="object" string="Create / Review Native Bank Journals"/>
-                            <p>Choose Bank Configuration Company first. The native journal window uses that company without changing your global company selection. Verify account, currency and outstanding accounts before linking the journal to a brand.</p>
+                            <p>Choose Bank Configuration Company first. Open and edit records on the native management page, then return using the Business Setup breadcrumb. The journal page uses the selected bank company without changing your global company selection. Verify account, currency and outstanding accounts before linking the journal to a brand.</p>
                             <group><field name="default_brand_id" options="{'no_create': True}"/></group>
                         </page>
                         <page string="3. Assign Customers">

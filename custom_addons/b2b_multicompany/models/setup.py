@@ -110,8 +110,12 @@ class BusinessSetup(models.TransientModel):
     def _open_native(self, model, name, domain=None):
         self.ensure_one()
         check_configuration_access(self.env)
+        # Odoo 19 does not switch list -> form in a target=new act_window.
+        # Use the native action stack so rows/New work and the setup breadcrumb
+        # remains available. Do not use target=main (which clears that stack).
         return {'type': 'ir.actions.act_window', 'name': name, 'res_model': model,
-                'view_mode': 'list,form', 'domain': domain or [], 'target': 'new'}
+                'view_mode': 'list,form', 'views': [(False, 'list'), (False, 'form')],
+                'domain': domain or [], 'target': 'current'}
 
     def action_companies(self):
         return self._open_native('res.company', _('Companies'))
@@ -133,4 +137,11 @@ class BusinessSetup(models.TransientModel):
         return action
 
     def action_users(self):
-        return self._open_native('res.users', _('Users and Allowed Companies'), [('share', '=', False)])
+        action = self._open_native('res.users', _('Users and Company Access'), [('share', '=', False)])
+        # The default res.users form is the simplified contact-like view.
+        # Match Settings / Users explicitly; keep native ACLs (no sudo).
+        action['views'] = [(self.env.ref('base.view_users_tree').id, 'list'),
+                           (self.env.ref('base.view_users_form').id, 'form')]
+        action['search_view_id'] = (self.env.ref('base.view_users_search').id, 'search')
+        action['context'] = dict(self.env.context, is_action_res_users=True)
+        return action

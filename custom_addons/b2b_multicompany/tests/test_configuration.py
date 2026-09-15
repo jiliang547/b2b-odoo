@@ -25,6 +25,29 @@ class TestSellingConfiguration(TransactionCase):
             'b2b_factory_company_id': cls.factory.id,
             'b2b_default_account_brand_id': cls.brand.id})
 
+    def test_setup_native_pages_support_list_form_navigation(self):
+        self.env.user.company_ids = [Command.link(self.seller.id)]
+        wizard = self.env['b2b.business.setup'].create({
+            'website_id': self.website.id, 'selling_company_ids': [Command.set(self.seller.ids)],
+            'bank_company_id': self.seller.id})
+        for method, model in [('action_companies', 'res.company'), ('action_users', 'res.users'),
+                              ('action_brands', 'b2b.product.brand'), ('action_banks', 'account.journal')]:
+            action = getattr(wizard, method)()
+            self.assertEqual(action['target'], 'current', method)
+            self.assertEqual(action['res_model'], model)
+            self.assertEqual([kind for _id, kind in action['views']], ['list', 'form'])
+        self.assertEqual(wizard.action_users()['domain'], [('share', '=', False)])
+        users_action = wizard.action_users()
+        self.assertEqual(users_action['views'][1], (self.env.ref('base.view_users_form').id, 'form'))
+        self.assertTrue(users_action['context']['is_action_res_users'])
+        view = self.env['res.users'].get_view(view_id=users_action['views'][1][0], view_type='form')
+        self.assertIn('name="company_ids"', view['arch'])
+        self.assertIn('name="company_id"', view['arch'])
+        self.assertIn('name="access_rights"', view['arch'])
+        bank = wizard.action_banks()
+        self.assertIn(('company_id', '=', self.seller.id), bank['domain'])
+        self.assertEqual(bank['context']['default_company_id'], self.seller.id)
+
     def test_contact_inherits_fixed_seller(self):
         contact = self.env['res.partner'].create({'name': 'UAT Contact', 'parent_id': self.customer.id})
         self.assertEqual(contact.b2b_effective_selling_company_id, self.seller)
