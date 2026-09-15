@@ -51,6 +51,31 @@ class B2BCollectionCommon(AccountTestInvoicingCommon):
 
 @tagged('post_install', '-at_install')
 class TestB2BCollection(B2BCollectionCommon):
+    def test_native_demo_confirmation_does_not_activate_collection(self):
+        order = self.env['sale.order'].create({
+            'partner_id': self.customer.id, 'website_id': self.website.id,
+            'order_line': [Command.create({'product_id': self.product.id, 'price_unit': 100})],
+        })
+        # Odoo.sh may force demos after registry initialization.
+        with patch.object(self.env.registry, '_init', False):
+            order.sudo().with_context(install_demo=True).action_confirm()
+        self.assertEqual(order.state, 'sale')
+        self.assertFalse(order.b2b_collection_active)
+
+    def test_demo_context_cannot_bypass_real_collection(self):
+        order = self._order('a')
+        with patch.object(self.env.registry, '_init', False):
+            self.assertFalse(order.with_user(self.operator).with_context(install_demo=True)._b2b_loading_native_demo())
+            with self.assertRaises(UserError), self.cr.savepoint():
+                order.sudo().with_context(install_demo=True).action_confirm()
+        with patch.object(self.env.registry, '_init', True):
+            self.assertFalse(order.with_user(self.operator).with_context(install_demo=True)._b2b_loading_native_demo())
+            # Even a loader context must not release an already active order.
+            with self.assertRaises(UserError), self.cr.savepoint():
+                order.sudo().with_context(install_demo=True).action_confirm()
+            with self.assertRaises(UserError), self.cr.savepoint():
+                order.sudo().with_context(install_demo=True).write({'state': 'sale'})
+
     def test_duplicate_uses_new_order_payment_reference(self):
         source = self._order('b30')
         duplicate = source.copy()

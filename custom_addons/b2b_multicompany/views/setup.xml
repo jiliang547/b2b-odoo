@@ -10,20 +10,20 @@
             <group string="Fulfilment" invisible="not b2b_fulfilment_mode">
                 <field name="b2b_fulfilment_mode"/><field name="b2b_fulfilment_factory_id" invisible="b2b_fulfilment_mode != 'odoo'"/>
                 <field name="b2b_external_change_pending" invisible="b2b_fulfilment_mode != 'external'"/>
-                <div class="alert alert-info" invisible="b2b_fulfilment_mode != 'external'">Production, inventory and shipment belong to External ERP. API integration is pending; payment clearance is not a production or shipment acknowledgement. Do not create local factory or delivery documents.</div>
+                <div class="alert alert-info" role="status" invisible="b2b_fulfilment_mode != 'external'">Production, inventory and shipment belong to External ERP. API integration is pending; payment clearance is not a production or shipment acknowledgement. Do not create local factory or delivery documents.</div>
             </group>
         </xpath></field>
     </record>
     <template id="external_order_notice" inherit_id="sale.sale_order_portal_template" priority="110">
         <xpath expr="//div[@id='sale_order_sidebar_button']" position="before">
-            <div t-if="sale_order.b2b_fulfilment_mode == 'external'" class="alert alert-info">Fulfilment is managed externally. Production and shipment updates are awaiting integration; payment confirmation does not confirm dispatch.
+            <div t-if="sale_order.b2b_fulfilment_mode == 'external'" class="alert alert-info" role="status">Fulfilment is managed externally. Production and shipment updates are awaiting integration; payment confirmation does not confirm dispatch.
                 <p t-if="sale_order.b2b_external_change_pending">Your commercial revision is recorded. External execution is pending; completion of the payment review does not mean the production provider has applied this change.</p>
             </div>
         </xpath>
     </template>
     <template id="external_collection_notice" inherit_id="b2b_website.portal_collection">
         <xpath expr="//p[strong[@t-out=&quot;'Released' if order.state == 'sale' and order.b2b_production_allowed else 'Awaiting release'&quot;]]" position="before">
-            <div t-if="order.b2b_fulfilment_mode == 'external'" class="alert alert-info">External ERP fulfilment — status integration pending. The release indicators below describe payment eligibility only, not actual production or dispatch.
+            <div t-if="order.b2b_fulfilment_mode == 'external'" class="alert alert-info" role="status">External ERP fulfilment — status integration pending. The release indicators below describe payment eligibility only, not actual production or dispatch.
                 <p t-if="order.b2b_external_change_pending">Order revision awaiting external execution. Financial completion is not an ERP acknowledgement.</p>
             </div>
         </xpath>
@@ -34,7 +34,7 @@
             <form string="Business Setup">
                 <header><button name="action_save_setup" type="object" string="Save Website Setup" class="btn-primary"/></header>
                 <sheet>
-                    <div class="alert alert-info">Reuse existing companies and bank records. External ERP is the default: no factory, warehouse or internal supply price is required. Save changes explicitly before leaving this workspace.</div>
+                    <div class="alert alert-info" role="status">Reuse existing companies and bank records. External ERP is the default: no factory, warehouse or internal supply price is required. Save changes explicitly before leaving this workspace.</div>
                     <group><field name="website_id" options="{'no_create': True}"/><field name="fulfilment_mode"/></group>
                     <notebook>
                         <page string="1. Companies and Access">

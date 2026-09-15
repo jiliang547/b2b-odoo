@@ -93,7 +93,15 @@ class SaleOrder(models.Model):
             _('Payment reference: %s', self.name),
         ]))
 
+    def _b2b_loading_native_demo(self):
+        # Native load_demo uses sudo + install_demo, including force_demo on
+        # an already-ready registry. Never trust a request context flag alone.
+        # Already active collection orders still pass every release check.
+        return bool(self.env.su and self.env.context.get('install_demo'))
+
     def _b2b_start_collection(self):
+        if self._b2b_loading_native_demo():
+            return
         for order in self.filtered(lambda o: o.website_id and o.state in ('draft', 'sent') and not o.b2b_is_change_revision and not o.b2b_collection_active):
             order._b2b_lock_collection()
             if not order.b2b_collection_active:
@@ -125,7 +133,8 @@ class SaleOrder(models.Model):
         if set(vals) & {'require_payment', 'prepayment_percent'} and self.filtered('b2b_collection_active'):
             check_manager(self.env)
         if vals.get('state') == 'sale':
-            for order in self.filtered(lambda o: o.website_id and not o.b2b_is_change_revision):
+            for order in self.filtered(lambda o: o.website_id and not o.b2b_is_change_revision
+                                       and (o.b2b_collection_active or not o._b2b_loading_native_demo())):
                 order._b2b_start_collection()
                 if not order._b2b_can_produce():
                     raise UserError(_('Production is blocked: review, required funds or credit checks are incomplete.'))
