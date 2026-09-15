@@ -4,6 +4,45 @@
         <field name="name">b2b.setup.native.bank.journals</field><field name="model">account.journal</field>
         <field name="arch" type="xml"><list string="Bank Journals"><field name="name"/><field name="company_id"/><field name="currency_id"/><field name="bank_account_id"/><field name="type"/></list></field>
     </record>
+    <record id="view_setup_bank_journal_form" model="ir.ui.view">
+        <field name="name">b2b.setup.native.bank.journal.form</field>
+        <field name="model">account.journal</field>
+        <field name="inherit_id" ref="account.view_account_journal_form"/>
+        <field name="mode">primary</field>
+        <field name="priority">90</field>
+        <field name="arch" type="xml">
+            <xpath expr="//form/field[@name='company_id']" position="attributes">
+                <attribute name="force_save">1</attribute>
+            </xpath>
+            <xpath expr="//sheet/group/group/field[@name='company_id']" position="attributes">
+                <attribute name="force_save">1</attribute>
+            </xpath>
+            <xpath expr="//sheet/group" position="before">
+                <div class="alert alert-info" role="status">This journal belongs to the Company shown below. Accounts created here use that company, independently of the top-right current company.</div>
+            </xpath>
+            <xpath expr="//field[@name='default_account_id']" position="attributes">
+                <attribute name="context">{'allowed_company_ids': [company_id], 'default_company_ids': [(6, 0, [company_id])], 'default_account_type': 'asset_cash'}</attribute>
+            </xpath>
+            <xpath expr="//field[@name='suspense_account_id']" position="attributes">
+                <attribute name="context">{'allowed_company_ids': [company_id], 'default_company_ids': [(6, 0, [company_id])], 'default_account_type': 'asset_current'}</attribute>
+            </xpath>
+            <xpath expr="//field[@name='profit_account_id']" position="attributes">
+                <attribute name="context">{'allowed_company_ids': [company_id], 'default_company_ids': [(6, 0, [company_id])], 'default_account_type': 'income_other'}</attribute>
+            </xpath>
+            <xpath expr="//field[@name='loss_account_id']" position="attributes">
+                <attribute name="context">{'allowed_company_ids': [company_id], 'default_company_ids': [(6, 0, [company_id])], 'default_account_type': 'expense'}</attribute>
+            </xpath>
+            <xpath expr="//field[@name='bank_account_id']" position="attributes">
+                <attribute name="context">{'allowed_company_ids': [company_id], 'default_partner_id': company_partner_id}</attribute>
+            </xpath>
+            <xpath expr="//field[@name='inbound_payment_method_line_ids']//field[@name='payment_account_id']" position="attributes">
+                <attribute name="context">{'allowed_company_ids': [parent.company_id], 'default_company_ids': [(6, 0, [parent.company_id])], 'default_account_type': 'asset_current', 'default_reconcile': True}</attribute>
+            </xpath>
+            <xpath expr="//field[@name='outbound_payment_method_line_ids']//field[@name='payment_account_id']" position="attributes">
+                <attribute name="context">{'allowed_company_ids': [parent.company_id], 'default_company_ids': [(6, 0, [parent.company_id])], 'default_account_type': 'asset_current', 'default_reconcile': True}</attribute>
+            </xpath>
+        </field>
+    </record>
     <record id="sale_fulfilment_provider" model="ir.ui.view">
         <field name="name">sale.order.fulfilment.provider</field><field name="model">sale.order</field><field name="inherit_id" ref="sale.view_order_form"/>
         <field name="arch" type="xml"><xpath expr="//sheet" position="inside">

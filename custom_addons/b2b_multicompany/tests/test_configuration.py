@@ -3,6 +3,8 @@ from odoo.exceptions import AccessError, ValidationError
 from odoo.tests import TransactionCase, tagged
 from odoo.addons.website_sale.tests.common import MockRequest
 from unittest.mock import patch
+from psycopg2.errors import UniqueViolation
+from odoo.tools import mute_logger
 
 
 @tagged('post_install', '-at_install')
@@ -156,6 +158,41 @@ class TestSellingConfiguration(TransactionCase):
         contact = self.env['res.partner'].create({'name': 'UAT Contact', 'parent_id': self.customer.id})
         self.assertEqual(contact.b2b_effective_selling_company_id, self.seller)
         self.assertEqual(self.website._b2b_configured_seller(contact), self.seller)
+
+    def test_setup_bank_save_keeps_target_when_global_context_is_restored(self):
+        current = self.env.company
+        self.env.user.company_ids = [Command.link(self.seller.id)]
+        wizard = self.env['b2b.business.setup'].create({
+            'website_id': self.website.id, 'selling_company_ids': [Command.set(self.seller.ids)],
+            'bank_company_id': self.seller.id})
+        action = wizard.action_banks()
+        context = dict(action['context'], allowed_company_ids=[current.id, self.seller.id])
+        # The same code in the current company must not conflict with the target.
+        self.env['account.journal'].create({'name': 'UAT Current Bank', 'code': 'UCTX',
+                                          'type': 'bank', 'company_id': current.id})
+        journal = self.env['account.journal'].with_context(context).create({
+            'name': 'UAT Target Bank', 'code': 'UCTX', 'type': 'bank'})
+        self.assertEqual(journal.company_id, self.seller)
+        self.assertIn(self.seller, journal.default_account_id.company_ids)
+        with self.assertRaises(ValidationError), self.cr.savepoint():
+            self.env['account.journal'].with_context(context).create({
+                'name': 'UAT Wrong Target', 'code': 'UCT2', 'type': 'bank', 'company_id': current.id})
+        with self.assertRaises(UniqueViolation), mute_logger('odoo.sql_db'), self.cr.savepoint():
+            self.env['account.journal'].with_context(context).create({
+                'name': 'UAT Duplicate Target', 'code': 'UCTX', 'type': 'bank'})
+        form = self.env['account.journal'].get_view(view_id=action['views'][1][0], view_type='form')
+        self.assertIn('force_save="1"', form['arch'])
+        self.assertIn('default_company_ids', form['arch'])
+
+    def test_setup_bank_context_does_not_grant_company_access(self):
+        user = self.env['res.users'].create({
+            'name': 'UAT Restricted Bank Admin', 'login': 'uat-restricted-bank-admin',
+            'company_id': self.env.company.id, 'company_ids': [Command.set(self.env.company.ids)],
+            'group_ids': [Command.set(self.env.ref('account.group_account_manager').ids)]})
+        with self.assertRaises(AccessError), self.cr.savepoint():
+            self.env['account.journal'].with_user(user).with_context(
+                b2b_bank_setup_company_id=self.seller.id).create({
+                    'name': 'UAT Forbidden Bank', 'type': 'bank', 'code': 'UFB'})
 
     def test_setup_default_external_and_batch_assignment(self):
         self.env.user.company_ids = [Command.link(self.seller.id)]

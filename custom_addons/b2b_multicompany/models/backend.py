@@ -122,6 +122,28 @@ class SaleOrder(models.Model):
         return result
 
 
+class AccountJournal(models.Model):
+    _inherit = 'account.journal'
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        company_id = self.env.context.get('b2b_bank_setup_company_id')
+        if not company_id:
+            return super().create(vals_list)
+        # The web client can restore the global company context. Native journal
+        # creation fills company_id before ORM defaults, so default_company_id
+        # alone is not sufficient when the readonly field is omitted on save.
+        company = self.env['res.company'].browse(company_id).exists()
+        if not company or company not in self.env.user.company_ids:
+            raise AccessError(_('You do not have access to this bank company.'))
+        values = [dict(vals) for vals in vals_list]
+        for vals in values:
+            if vals.get('company_id') and vals['company_id'] != company.id:
+                raise ValidationError(_('The journal company must match Bank Configuration Company. Return to Business Setup to select another company.'))
+            vals['company_id'] = company.id
+        return super(AccountJournal, self.with_company(company)).create(values)
+
+
 class AccountMove(models.Model):
     _inherit = 'account.move'
 

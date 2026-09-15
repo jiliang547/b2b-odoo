@@ -132,8 +132,10 @@ class BusinessSetup(models.TransientModel):
         action = self._open_native('account.journal', _('Bank Journals — %s', self.bank_company_id.name),
                                    [('type', '=', 'bank'), ('company_id', '=', self.bank_company_id.id)])
         action['context'] = dict(self.env.context, allowed_company_ids=self.bank_company_id.ids,
-                                 default_company_id=self.bank_company_id.id, default_type='bank')
-        action['views'] = [(self.env.ref('b2b_multicompany.view_setup_bank_journals').id, 'list'), (False, 'form')]
+                                 default_company_id=self.bank_company_id.id, default_type='bank',
+                                 b2b_bank_setup_company_id=self.bank_company_id.id)
+        action['views'] = [(self.env.ref('b2b_multicompany.view_setup_bank_journals').id, 'list'),
+                           (self.env.ref('b2b_multicompany.view_setup_bank_journal_form').id, 'form')]
         return action
 
     def action_users(self):
