@@ -21,6 +21,8 @@ export class B2BManagementDashboard extends Component {
             samples: 0,
             openService: 0,
             failedJobs: 0,
+            pendingBankReceipts: 0,
+            canReviewFinance: false,
             canUseSales: false,
             canManageB2B: false,
             canUseService: false,
@@ -35,12 +37,13 @@ export class B2BManagementDashboard extends Component {
                     return 0;
                 }
             };
-            const [canUseSales, canManageB2B, canUseService, canViewErp, canUseRepairs] = await Promise.all([
+            const [canUseSales, canManageB2B, canUseService, canViewErp, canUseRepairs, canReviewFinance] = await Promise.all([
                 user.hasGroup("sales_team.group_sale_salesman"),
                 user.hasGroup("b2b_core.group_b2b_manager"),
                 user.hasGroup("helpdesk.group_helpdesk_user"),
                 user.hasGroup("b2b_core.group_b2b_operator"),
                 user.hasGroup("stock.group_stock_user"),
+                user.hasGroup("b2b_website.group_b2b_finance"),
             ]);
             const [newContactRequests, pendingRegistrations, pendingApplications, pendingOrderReviews, orderChanges, samples, openService, failedJobs] = await Promise.all([
                 safeCount("b2b.contact.request", [["state", "=", "new"]]),
@@ -54,6 +57,8 @@ export class B2BManagementDashboard extends Component {
             ]);
             Object.assign(this.state, {
                 loading: false,
+                canReviewFinance,
+                pendingBankReceipts: canReviewFinance ? await safeCount("b2b.bank.receipt", [["state", "=", "submitted"]]) : 0,
                 newContactRequests,
                 pendingRegistrations,
                 pendingApplications,

@@ -30,17 +30,29 @@ class SaleOrder(models.Model):
 
     def _b2b_is_placeholder_terms_note(self):
         self.ensure_one()
-        if not self.note or self.company_id._b2b_has_published_sale_terms():
-            return False
-        document = html.fragment_fromstring(str(self.note), create_parent="div")
-        links = document.xpath(".//a[@href]")
-        if len(links) != 1:
-            return False
-        target = urlsplit(links[0].get("href"))
-        hosts = {"localhost", "127.0.0.1", urlsplit(self.company_id.get_base_url()).hostname}
-        if target.path.rstrip("/") != "/terms" or (target.hostname and target.hostname not in hosts):
-            return False
-        links[0].drop_tree()
-        label = re.sub(r"[\s:：]+", "", document.text_content()).casefold()
-        # Only the native link-only placeholder; preserve any negotiated prose.
-        return label in {"terms&conditions", "termsandconditions", "条款和条件", "条款与条件"}
+        return _is_placeholder_terms(self.note, self.company_id)
+
+
+def _is_placeholder_terms(note, company):
+    if not note or company._b2b_has_published_sale_terms():
+        return False
+    document = html.fragment_fromstring(str(note), create_parent="div")
+    links = document.xpath(".//a[@href]")
+    if len(links) != 1:
+        return False
+    target = urlsplit(links[0].get("href"))
+    hosts = {"localhost", "127.0.0.1", urlsplit(company.get_base_url()).hostname}
+    if target.path.rstrip("/") != "/terms" or (target.hostname and target.hostname not in hosts):
+        return False
+    links[0].drop_tree()
+    label = re.sub(r"[\s:：]+", "", document.text_content()).casefold()
+    # Only the native link-only placeholder; preserve any negotiated prose.
+    return label in {"terms&conditions", "termsandconditions", "条款和条件", "条款与条件"}
+
+
+class AccountMove(models.Model):
+    _inherit = "account.move"
+
+    def _b2b_is_placeholder_terms_note(self):
+        self.ensure_one()
+        return _is_placeholder_terms(self.narration, self.company_id)

@@ -11,3 +11,7 @@ from . import faq
 from . import registration_application
 from . import order_change
 from . import portal_terms
+from . import portal_errors
+from . import collection_policy
+from . import order_collection
+from . import bank_receipt

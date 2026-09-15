@@ -51,6 +51,9 @@
                             <field name="original_amount"/>
                             <field name="proposed_amount"/>
                             <field name="delta_amount"/>
+                            <field name="refund_amount" invisible="not collection_adjustment"/>
+                            <field name="refund_payment_id" invisible="not collection_adjustment or not refund_amount" domain="[('payment_type', '=', 'outbound'), ('partner_type', '=', 'customer')]" options="{'no_create': True}"/>
+                            <field name="collection_adjustment" invisible="1"/>
                             <field name="has_posted_invoice"/>
                             <field name="has_delivered_items"/>
                         </group>

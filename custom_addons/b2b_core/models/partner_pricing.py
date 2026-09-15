@@ -122,6 +122,13 @@ class ResPartnerPricing(models.Model):
             for record in records
         })
 
+    def _b2b_effective_pricing_company(self, website):
+        """Extension point for legal-seller routing without replacing price layering."""
+        return website.company_id
+
+    def _b2b_override_pricing_company(self, website):
+        return website.company_id
+
     def _b2b_sync_effective_pricelists(self):
         """Keep one native order-compatible aggregate pricelist per scope."""
         Pricelist = self.env["product.pricelist"].sudo().with_context(active_test=False)
@@ -146,7 +153,7 @@ class ResPartnerPricing(models.Model):
                         customer=company.name,
                         currency=currency.name,
                     ),
-                    "company_id": website.company_id.id,
+                    "company_id": company._b2b_effective_pricing_company(website).id,
                     "website_id": website.id,
                     "currency_id": currency.id,
                     "selectable": False,
@@ -209,7 +216,10 @@ class ResPartnerPricing(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         partners = super().create(vals_list)
-        partners.filtered("b2b_customer_type_id")._b2b_sync_effective_pricelists()
+        # Native accounting may create contacts without B2B field visibility.
+        # Inspect only the internal configuration under sudo; create ACLs and
+        # the manager-only configuration write checks above remain unchanged.
+        partners.sudo().filtered("b2b_customer_type_id")._b2b_sync_effective_pricelists()
         return partners
 
     def write(self, vals):
@@ -270,9 +280,9 @@ class B2BPartnerPricelistOverride(models.Model):
                 raise ValidationError(_(
                     "A generated customer effective pricelist cannot be used as an override."
                 ))
-            if pricelist.company_id and pricelist.company_id != override.website_id.company_id:
+            if pricelist.company_id and pricelist.company_id != override.partner_id._b2b_override_pricing_company(override.website_id):
                 raise ValidationError(_(
-                    "The override pricelist and website must belong to the same company."
+                    "The override pricelist must belong to the customer's selling company or be shared."
                 ))
             base_mapping = self.env["b2b.customer.type.pricelist"].sudo().search([
                 ("customer_type_id", "=", override.partner_id.b2b_customer_type_id.id),

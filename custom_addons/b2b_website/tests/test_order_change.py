@@ -52,7 +52,6 @@ class TestB2BOrderChange(TransactionCase):
                 "price_unit": amount,
             })],
         })
-        order.action_confirm()
         self.env["payment.transaction"].create({
             "provider_id": self.env.ref("payment.payment_provider_demo").id,
             "payment_method_id": self.env.ref("payment_demo.payment_method_demo").id,
@@ -66,6 +65,7 @@ class TestB2BOrderChange(TransactionCase):
         })
         order.invalidate_recordset(["amount_paid"])
         self.assertEqual(order.amount_paid, order.amount_total)
+        order.action_confirm()
         return order
 
     def _proposal(self, order, proposed_price):
@@ -82,6 +82,16 @@ class TestB2BOrderChange(TransactionCase):
 
     def _customer_accept(self, change):
         change.with_user(self.portal_user).action_customer_accept()
+
+    def _record_refund(self, change):
+        source = change.order_id.transaction_ids.filtered(lambda tx: tx.state == 'done' and tx.operation != 'refund')[:1]
+        refund = source.copy({
+            'reference': 'ACTUAL-REFUND-%s' % change.id,
+            'operation': 'refund', 'source_transaction_id': source.id,
+            'amount': -(change.refund_amount if change.collection_adjustment else abs(change.delta_amount)),
+            'state': 'done', 'sale_order_ids': [Command.clear()],
+        })
+        change.refund_transaction_id = refund
 
     def test_proposal_editor_uses_native_save_and_close_dialog(self):
         order = self._order()
@@ -228,6 +238,9 @@ class TestB2BOrderChange(TransactionCase):
         change.finance_reference = "REFUND-DEMO-001"
         with self.assertRaises(AccessError):
             change.with_user(self.manager).action_finance_complete()
+        with self.assertRaises(ValidationError):
+            change.action_finance_complete()
+        self._record_refund(change)
         change.action_finance_complete()
         self.assertEqual(change.state, "completed")
         self.assertFalse(order.b2b_change_payment_hold)
@@ -307,6 +320,7 @@ class TestB2BOrderChange(TransactionCase):
             change.with_user(finance_user).write({"state": "completed"})
         with self.assertRaises(AccessError):
             change.with_user(finance_user).write({"requested_changes": "Tampered"})
+        self._record_refund(change)
         change.with_user(finance_user).action_finance_complete()
         self.assertEqual(change.state, "completed")
 
@@ -338,11 +352,15 @@ class TestB2BOrderChange(TransactionCase):
         self.assertEqual(next_change.state, "balance_due")
         self.assertAlmostEqual(order.amount_total - order.amount_paid, next_change.delta_amount)
 
-    def test_recorded_external_refund_reduces_balance_for_later_changes(self):
+    def test_refund_reference_alone_cannot_reduce_balance_for_later_changes(self):
         order = self._order()
         change = self._proposal(order, 80.0)
         self._customer_accept(change)
         change.finance_reference = "EXTERNAL-REFUND-TEST"
+        with self.assertRaises(ValidationError):
+            change.action_finance_complete()
+        self.assertEqual(change.state, 'finance_review')
+        self._record_refund(change)
         change.action_finance_complete()
         self.assertAlmostEqual(order.amount_paid, order.amount_total)
         next_change = self._proposal(order, 90.0)

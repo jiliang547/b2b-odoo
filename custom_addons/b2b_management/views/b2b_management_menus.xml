@@ -46,7 +46,11 @@
     </record>
     <menuitem id="menu_b2b_management_root" name="B2B Management" sequence="38" web_icon="b2b_management,static/description/icon.png" groups="b2b_core.group_b2b_operator"/>
     <menuitem id="menu_b2b_dashboard" name="Dashboard" parent="menu_b2b_management_root" action="action_b2b_dashboard" sequence="5"/>
+    <menuitem id="menu_b2b_business_setup" name="Business Setup" parent="menu_b2b_management_root" action="b2b_multicompany.action_business_setup" sequence="6" groups="b2b_core.group_b2b_manager"/>
     <menuitem id="menu_b2b_operations" name="Operations" parent="menu_b2b_management_root" sequence="10"/>
+    <menuitem id="menu_b2b_brand_banks" name="Brand Receiving Accounts" parent="menu_b2b_operations" action="b2b_core.action_b2b_product_brands" sequence="7" groups="b2b_website.group_b2b_finance"/>
+    <menuitem id="menu_b2b_bank_receipts" name="Bank Transfer Reviews" parent="menu_b2b_operations" action="b2b_website.action_bank_receipts" sequence="9" groups="b2b_website.group_b2b_finance"/>
+    <menuitem id="menu_b2b_collection_policies" name="Collection Terms" parent="menu_b2b_operations" action="b2b_website.action_collection_policies" sequence="8" groups="b2b_core.group_b2b_manager"/>
     <menuitem id="menu_b2b_samples" name="Sample Requests" parent="menu_b2b_operations" action="b2b_sample.action_b2b_sample_requests" sequence="10"/>
     <menuitem id="menu_b2b_contact_requests" name="Contact Requests" parent="menu_b2b_operations" action="b2b_website.action_b2b_contact_requests" sequence="15"/>
     <menuitem id="menu_b2b_order_changes" name="Order Changes" parent="menu_b2b_operations" action="b2b_website.action_b2b_order_changes" sequence="16"/>

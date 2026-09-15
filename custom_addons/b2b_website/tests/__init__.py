@@ -7,3 +7,4 @@ from . import test_order_change
 from . import test_export_language
 from . import test_multilingual
 from . import test_portal_presentation
+from . import test_collection

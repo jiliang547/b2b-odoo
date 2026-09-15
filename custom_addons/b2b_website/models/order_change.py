@@ -66,6 +66,9 @@ class B2BOrderChangeRequest(models.Model):
     original_amount = fields.Monetary(readonly=True, copy=False)
     proposed_amount = fields.Monetary(readonly=True, copy=False)
     delta_amount = fields.Monetary(readonly=True, copy=False)
+    collection_adjustment = fields.Boolean(readonly=True, copy=False)
+    refund_amount = fields.Monetary(string='Actual Refund Required', readonly=True, copy=False)
+    refund_payment_id = fields.Many2one('account.payment', string='Bank Refund Payment', copy=False, ondelete='restrict')
     original_snapshot = fields.Json(readonly=True, copy=False)
     revision_number = fields.Integer(readonly=True, copy=False)
     customer_confirmed_at = fields.Datetime(readonly=True, copy=False)
@@ -84,6 +87,8 @@ class B2BOrderChangeRequest(models.Model):
     has_delivered_items = fields.Boolean(compute="_compute_financial_context")
 
     def write(self, vals):
+        if set(vals) & {'refund_payment_id', 'refund_transaction_id'} and self.filtered(lambda r: r.state == 'completed'):
+            raise ValidationError(_('Completed refund evidence cannot be replaced.'))
         # Finance needs write access to record the native accounting/refund
         # evidence, but that must not silently grant authority over the sales
         # proposal or workflow state.
@@ -98,6 +103,7 @@ class B2BOrderChangeRequest(models.Model):
                 "finance_note",
                 "finance_reference",
                 "refund_transaction_id",
+                "refund_payment_id",
             }
             if set(vals) - finance_fields:
                 raise AccessError(_(
@@ -156,7 +162,7 @@ class B2BOrderChangeRequest(models.Model):
             order = self.env["sale.order"].browse(vals.get("order_id")).exists()
             if not order or order.state not in ("sale", "done"):
                 raise ValidationError(_("Only confirmed orders can be changed through this workflow."))
-            if order.currency_id.compare_amounts(order.amount_paid, order.amount_total) < 0:
+            if not order.b2b_collection_active and order.currency_id.compare_amounts(order.amount_paid, order.amount_total) < 0:
                 raise ValidationError(_("This order has not been fully paid yet."))
             if any(line.qty_delivered > 0 for line in order.order_line):
                 raise ValidationError(_(
@@ -169,6 +175,7 @@ class B2BOrderChangeRequest(models.Model):
                     "b2b.order.change.request"
                 ) or _("New")
             vals.setdefault("original_amount", order.amount_total)
+            vals['collection_adjustment'] = order.b2b_collection_active
             vals.setdefault("original_snapshot", self._snapshot_order(order))
             vals.setdefault("revision_number", order.b2b_change_revision + 1)
             if not vals.get("assigned_user_id"):
@@ -356,18 +363,24 @@ class B2BOrderChangeRequest(models.Model):
     def action_customer_accept(self):
         self._check_customer_action()
         for request in self.sudo():
+            request.order_id._b2b_lock_collection()
             if request.state != "customer_confirmation":
                 raise ValidationError(_("This proposal is not awaiting customer confirmation."))
             request.write({"state": "applying", "customer_confirmed_at": fields.Datetime.now()})
             request.order_id.b2b_change_payment_hold = True
             request._apply_revision()
+            if request.collection_adjustment:
+                request.refund_amount = max(request.order_id._b2b_received_amount() - request.proposed_amount, 0)
             delta = request.delta_amount
             if request.currency_id.is_zero(delta):
                 next_state = "finance_review" if request.has_posted_invoice else "completed"
             elif delta > 0:
-                next_state = "balance_due"
+                if request.order_id.b2b_collection_active and request.order_id._b2b_can_produce():
+                    next_state = "finance_review" if request.has_posted_invoice else "completed"
+                else:
+                    next_state = "balance_due"
             else:
-                next_state = "finance_review"
+                next_state = "finance_review" if not request.collection_adjustment or request.refund_amount or request.has_posted_invoice else "completed"
             values = {"state": next_state}
             if next_state == "completed":
                 values["completed_at"] = fields.Datetime.now()
@@ -399,7 +412,7 @@ class B2BOrderChangeRequest(models.Model):
     def _on_order_payment_updated(self):
         for request in self.filtered(lambda item: item.state == "balance_due"):
             order = request.order_id
-            if order.currency_id.compare_amounts(order.amount_paid, order.amount_total) >= 0:
+            if (order.b2b_collection_active and order._b2b_can_produce()) or order.currency_id.compare_amounts(order.amount_paid, order.amount_total) >= 0:
                 next_state = "finance_review" if request.has_posted_invoice else "completed"
                 values = {"state": next_state}
                 if next_state == "completed":
@@ -431,12 +444,32 @@ class B2BOrderChangeRequest(models.Model):
     def action_finance_complete(self):
         self._check_finance()
         for request in self:
+            request.order_id._b2b_lock_collection()
             if request.state != "finance_review":
                 raise ValidationError(_("This request is not awaiting finance review."))
             if not request.finance_reference:
                 raise ValidationError(_("Record the accounting or refund reference first."))
+            required_refund = request.refund_amount if request.collection_adjustment else max(-request.delta_amount, 0)
+            if request.refund_payment_id and request.refund_transaction_id:
+                raise ValidationError(_('Select one refund record, not both a bank payment and an online transaction.'))
+            if required_refund and not request.refund_transaction_id:
+                payment = request.refund_payment_id
+                if payment:
+                    self.env.cr.execute('SELECT id FROM account_payment WHERE id=%s FOR UPDATE', [payment.id])
+                    payment.invalidate_recordset()
+                if not payment or payment.state not in ('in_process', 'paid') or payment.move_id.state != 'posted' or payment.payment_type != 'outbound' or payment.partner_type != 'customer' or payment.company_id != request.order_id.company_id or payment.partner_id.commercial_partner_id != request.commercial_partner_id:
+                    raise ValidationError(_('Select the posted native customer bank refund before completing this adjustment.'))
+                amount = payment.currency_id._convert(payment.amount, request.currency_id, payment.company_id, payment.date)
+                if payment.payment_transaction_id:
+                    raise ValidationError(_('Select the online Refund Transaction instead of its accounting payment.'))
+                if request.currency_id.compare_amounts(amount, required_refund):
+                    raise ValidationError(_('The actual refund must match the excess received over the revised order total.'))
+                if self.sudo().search_count([('refund_payment_id', '=', payment.id), ('state', '=', 'completed'), ('id', '!=', request.id)], limit=1):
+                    raise ValidationError(_('This bank refund is already assigned to another adjustment.'))
             if request.delta_amount < 0 and request.refund_transaction_id:
                 refund = request.refund_transaction_id
+                self.env.cr.execute('SELECT id FROM payment_transaction WHERE id=%s FOR UPDATE', [refund.id])
+                refund.invalidate_recordset()
                 if refund.state != "done":
                     raise ValidationError(_("The selected refund transaction is not completed."))
                 if (
@@ -444,12 +477,14 @@ class B2BOrderChangeRequest(models.Model):
                     or request.order_id not in refund.source_transaction_id.sale_order_ids
                     or refund.currency_id != request.currency_id
                     or refund.partner_id.commercial_partner_id != request.commercial_partner_id
-                    or request.currency_id.compare_amounts(abs(refund.amount), abs(request.delta_amount))
+                    or request.currency_id.compare_amounts(abs(refund.amount), request.refund_amount if request.collection_adjustment else abs(request.delta_amount))
                 ):
                     raise ValidationError(_(
                         "Select a completed refund for this order, customer and currency "
                         "whose amount matches the refund difference."
                     ))
+                if self.sudo().search_count([('refund_transaction_id', '=', refund.id), ('state', '=', 'completed'), ('id', '!=', request.id)], limit=1):
+                    raise ValidationError(_('This online refund is already assigned to another adjustment.'))
             request.with_context(b2b_finance_workflow=True).write({
                 "state": "completed",
                 "completed_at": fields.Datetime.now(),

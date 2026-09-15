@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="backend_source_bank_refund" model="ir.ui.view">
+        <field name="name">b2b.change.source.bank.refund</field>
+        <field name="model">b2b.order.change.request</field>
+        <field name="inherit_id" ref="b2b_website.view_b2b_order_change_form"/>
+        <field name="arch" type="xml">
+            <field name="refund_payment_id" position="after">
+                <button name="action_b2b_open_bank_refund" type="object" string="Register / Open Bank Refund" groups="account.group_account_invoice" invisible="state != 'finance_review' or not collection_adjustment or not refund_amount or refund_transaction_id"/>
+                <div class="text-muted" invisible="state != 'finance_review' or not collection_adjustment or not refund_amount">Record the actual bank refund, then select it in Bank Refund Payment above. This opens native Accounting with the original order company; it does not transfer funds.</div>
+            </field>
+        </field>
+    </record>
+    <record id="backend_customer_order" model="ir.ui.view">
+        <field name="name">sale.order.customer.first</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <field name="partner_id" position="before">
+                <field name="b2b_backend_order" invisible="1" force_save="1"/>
+                <field name="website_id" string="Partner Hub Website" readonly="id" options="{'no_create': True}" groups="b2b_core.group_b2b_operator"/>
+            </field>
+            <field name="partner_id" position="after">
+                <div class="text-muted" invisible="not b2b_backend_order">Selling company and website prices follow the customer. Select the customer before adding products. Existing orders keep their original legal seller.</div>
+            </field>
+        </field>
+    </record>
+</odoo>

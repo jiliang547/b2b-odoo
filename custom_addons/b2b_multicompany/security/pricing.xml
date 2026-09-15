@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="effective_price_customer_isolation" model="ir.rule">
+        <field name="name">Private effective prices remain customer-specific</field>
+        <field name="model_id" ref="product.model_product_pricelist"/>
+        <field name="domain_force">[] if not user.share else ['|', ('b2b_effective_partner_id', '=', False), ('b2b_effective_partner_id', '=', user.partner_id.commercial_partner_id.id)]</field>
+    </record>
+    <record id="rule_order_change_company" model="ir.rule">
+        <field name="name">Order changes: legal seller isolation</field>
+        <field name="model_id" ref="b2b_website.model_b2b_order_change_request"/>
+        <field name="domain_force">[('commercial_partner_id', '=', user.partner_id.commercial_partner_id.id)] if user.share else [('order_id.company_id', 'in', company_ids)]</field>
+    </record>
+</odoo>

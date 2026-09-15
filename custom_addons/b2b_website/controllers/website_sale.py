@@ -26,6 +26,16 @@ def _can_checkout():
 
 
 class PartnerHubWebsiteSale(WebsiteSale):
+    def _get_shop_payment_values(self, order, **kwargs):
+        values = super()._get_shop_payment_values(order, **kwargs)
+        if order.b2b_collection_active:
+            from .collection_payment import CollectionSalePortal
+            values.update(CollectionSalePortal()._get_payment_values(order, website_id=request.website.id))
+            values.update({'display_submit_button': False, 'sale_order_id': order.id,
+                           'landing_route': order.get_portal_url(),
+                           'transaction_route': order.get_portal_url(suffix='/transaction')})
+        return values
+
     def _b2b_checkout_order(self, sale_order_id=None):
         if sale_order_id:
             order = request.env["sale.order"].sudo().browse(int(sale_order_id)).exists()
@@ -82,6 +92,8 @@ class PartnerHubWebsiteSale(WebsiteSale):
     def shop_payment(self, **post):
         if not _can_checkout():
             return request.render("b2b_website.ordering_unavailable", {"page_name": "ordering_unavailable"})
+        if request.cart:
+            request.cart.sudo()._b2b_start_collection()
         return super().shop_payment(**post)
 
     @route(
@@ -117,6 +129,7 @@ class PartnerHubWebsiteSale(WebsiteSale):
             "prepayment_percent": 1.0,
         })
         order.action_quotation_sent()
+        order._b2b_start_collection()
         assigned_user = order.user_id.filtered(
             lambda user: user.has_group("b2b_core.group_b2b_manager")
         )

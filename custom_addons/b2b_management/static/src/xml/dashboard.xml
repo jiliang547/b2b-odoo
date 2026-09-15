@@ -4,6 +4,7 @@
         <div class="o_b2b_dashboard">
             <header><div><span>OPERATIONS</span><h1>B2B Management</h1><p>Partner approvals, samples, service and integration exceptions.</p></div><a class="btn btn-primary" href="/" target="_blank">Open Partner Hub</a></header>
             <section class="o_b2b_metrics" aria-label="Operational metrics">
+                <button t-if="state.canReviewFinance" type="button" t-on-click="() => this.openAction('b2b_website.action_bank_receipts')"><span class="is-amber">Bank transfer reviews</span><strong t-out="state.loading ? '—' : state.pendingBankReceipts"/><small>Verify actual receipts</small></button>
                 <button type="button" t-on-click="() => this.openAction('b2b_management.action_b2b_new_contact_requests')"><span class="is-violet">New contact requests</span><strong t-out="state.loading ? '—' : state.newContactRequests"/><small>Unread inquiries</small></button>
                 <button type="button" t-on-click="() => this.openAction('b2b_management.action_b2b_pending_registrations')"><span class="is-emerald">Pending registrations</span><strong t-out="state.loading ? '—' : state.pendingRegistrations"/><small>Portal accounts awaiting approval</small></button>
                 <button type="button" t-on-click="() => this.openAction('b2b_management.action_b2b_partner_applications')"><span class="is-amber">Partner applications</span><strong t-out="state.loading ? '—' : state.pendingApplications"/><small>Awaiting review</small></button>

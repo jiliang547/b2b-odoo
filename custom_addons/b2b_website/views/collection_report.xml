@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="paperformat_collection_pi" model="report.paperformat">
+        <field name="name">Partner Hub PI A4</field>
+        <field name="format">A4</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">15</field>
+        <field name="margin_bottom">15</field>
+        <field name="margin_left">15</field>
+        <field name="margin_right">15</field>
+        <field name="header_spacing">0</field>
+        <field name="dpi">96</field>
+    </record>
+    <record id="action_report_collection_pi" model="ir.actions.report"><field name="name">Partner Hub PI</field><field name="model">sale.order</field><field name="report_type">qweb-pdf</field><field name="report_name">b2b_website.report_collection_pi</field><field name="report_file">b2b_website.report_collection_pi</field><field name="paperformat_id" ref="paperformat_collection_pi"/></record>
+    <template id="collection_pi_layout"><t t-call="web.basic_layout"><div class="mb-4"><img t-if="doc.b2b_brand_logo" t-att-src="image_data_uri(doc.b2b_brand_logo)" style="max-height:65px;max-width:220px"/><h3 t-out="doc.company_id.name"/><div t-field="doc.company_id.partner_id" t-options="{'widget':'contact','fields':['address'],'no_marker':True}"/><hr/><div t-out="address"/></div><t t-out="0"/></t></template>
+    <template id="collection_pi_document" inherit_id="sale.report_saleorder_document" primary="True">
+        <xpath expr="//t[@t-set='doc']" position="attributes"><attribute name="t-value">doc.with_context(lang=doc._get_lang() or 'en_US')</attribute></xpath>
+        <xpath expr="//div[@name='informations_reference']" position="attributes"><attribute name="style">overflow-wrap:anywhere;word-wrap:break-word;word-break:break-all;padding-right:20px</attribute></xpath>
+        <xpath expr="//p[span[@t-field='doc.payment_term_id.note']]" position="attributes"><attribute name="t-if">False</attribute></xpath>
+        <xpath expr="//t[@t-call='web.external_layout']" position="attributes"><attribute name="t-call">b2b_website.collection_pi_layout</attribute></xpath>
+        <xpath expr="//div[hasclass('page')]/div[1]" position="after"><h2>PRO-FORMA INVOICE · <t t-out="doc.name"/></h2><p>Payment request only — not a receipt or tax invoice.</p></xpath>
+        <xpath expr="//span[@name='order_note']" position="attributes"><attribute name="t-if">not doc._b2b_is_placeholder_terms_note()</attribute></xpath>
+        <xpath expr="//div[hasclass('page')]" position="inside"><div style="page-break-inside:avoid;margin-top:24px"><h4>Payment Instructions</h4><p>Collection Terms: <span t-out="doc.b2b_collection_policy_id.name"/></p><p>Required before production: <t t-out="doc.b2b_production_percent"/>%. Required before shipment: <t t-out="doc.b2b_shipment_percent"/>%.</p><p>Confirmed receipts: <span t-field="doc.b2b_net_received"/> · Remaining balance: <span t-field="doc.b2b_balance"/></p><p>Required for current stage: <strong t-field="doc.b2b_payable_now"/></p><div style="white-space:pre-wrap" t-out="doc.b2b_bank_instructions"/></div></xpath>
+    </template>
+    <template id="report_collection_pi"><t t-call="web.html_container"><t t-foreach="docs" t-as="doc"><t t-set="is_pro_forma" t-value="True"/><t t-call="b2b_website.collection_pi_document" t-lang="doc._get_lang() or 'en_US'"/></t></t></template>
+</odoo>

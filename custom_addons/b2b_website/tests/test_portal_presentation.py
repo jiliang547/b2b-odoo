@@ -17,6 +17,23 @@ class TestPortalPresentation(TransactionCase):
         self.assertEqual(self.order.note, note)
         self.assertFalse(self.company._b2b_has_published_sale_terms())
 
+    def test_invoice_placeholder_preserves_contract_and_record(self):
+        invoice = self.env['account.move'].new({'company_id': self.company.id})
+        invoice.narration = '<p>Terms &amp; Conditions: <a href="http://localhost:8070/terms">Terms</a></p>'
+        original = invoice.narration
+        self.assertTrue(invoice._b2b_is_placeholder_terms_note())
+        self.assertEqual(invoice.narration, original)
+        invoice.narration = '<p>Special agreed payment terms.</p>'
+        self.assertFalse(invoice._b2b_is_placeholder_terms_note())
+
+    def test_preview_and_cart_templates(self):
+        invoice = self.env.ref('account.report_invoice_document')._get_combined_arch()
+        self.assertEqual(invoice.xpath(".//t[@name='proforma_invoice_title']")[0].text, 'Invoice Preview')
+        self.assertIn('_b2b_is_placeholder_terms_note', invoice.xpath(".//div[@name='comment']")[0].get('t-if'))
+        for xmlid in ('b2b_website.product_card', 'b2b_website.product_detail'):
+            arch = self.env.ref(xmlid)._get_combined_arch()
+            self.assertTrue(arch.xpath(".//form[@data-lt-cart-form]//button[@type='submit'][@disabled]"))
+
     def test_negotiated_prose_and_external_links_preserved(self):
         for note in (
             '<p>Custom delivery agreement. <a href="/terms">Terms</a></p>',

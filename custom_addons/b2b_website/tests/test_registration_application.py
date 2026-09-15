@@ -1,6 +1,7 @@
 from datetime import timedelta
 import re
 from unittest.mock import patch
+from uuid import uuid4
 
 from odoo import http
 from odoo.addons.mail.models.mail_template import MailTemplate
@@ -405,7 +406,7 @@ class TestB2BRegistrationHttpFlow(HttpCase):
 
     def test_submit_verify_review_and_activate(self):
         self.authenticate(None, None)
-        email = "registration-http-closure@example.test"
+        email = f"registration-http-closure-{uuid4().hex}@example.test"
         response = self._submit(self._payload(email))
 
         self.assertEqual(response.status_code, 200)
@@ -467,7 +468,7 @@ class TestB2BRegistrationHttpFlow(HttpCase):
                              ("company_website", "abcdef"), ("company_website", "name@company.com"),
                              ("mobile", "123abc"), ("company_phone", "123")):
             with self.subTest(field=field, value=value):
-                email = "invalid-contact@example.test"
+                email = f"invalid-contact-{uuid4().hex}@example.test"
                 response = self._submit(self._payload(email, **{field: value}))
                 self.assertEqual(response.status_code, 200)
                 self.assertIn("Please enter a valid", response.text)
@@ -482,7 +483,7 @@ class TestB2BRegistrationHttpFlow(HttpCase):
 
     def test_selected_phone_country_overrides_company_country(self):
         self.authenticate(None, None)
-        email = "uk-mobile@example.test"
+        email = f"uk-mobile-{uuid4().hex}@example.test"
         response = self._submit(self._payload(email, mobile="07911 123456",
             mobile_country=str(self.env.ref("base.uk").id), company_phone=""))
         self.assertIn("Check your email", response.text)
@@ -492,7 +493,7 @@ class TestB2BRegistrationHttpFlow(HttpCase):
 
     def test_terms_are_enforced_server_side(self):
         self.authenticate(None, None)
-        email = "registration-http-no-terms@example.test"
+        email = f"registration-http-no-terms-{uuid4().hex}@example.test"
 
         response = self._submit(self._payload(email, terms="0"))
 
@@ -504,7 +505,7 @@ class TestB2BRegistrationHttpFlow(HttpCase):
 
     def test_product_interest_must_use_the_registration_category(self):
         self.authenticate(None, None)
-        email = "registration-http-invalid-interest@example.test"
+        email = f"registration-http-invalid-interest-{uuid4().hex}@example.test"
         unrelated = self.env["res.partner.category"].create({
             "name": "Unrelated Registration Interest",
         })
@@ -521,7 +522,7 @@ class TestB2BRegistrationHttpFlow(HttpCase):
 
     def test_inactive_customer_type_cannot_be_submitted_directly(self):
         self.authenticate(None, None)
-        email = "registration-http-inactive-type@example.test"
+        email = f"registration-http-inactive-type-{uuid4().hex}@example.test"
         inactive_type = self.env["b2b.customer.type"].create({
             "name": "Inactive HTTP Registration Type",
             "active": False,
@@ -539,7 +540,7 @@ class TestB2BRegistrationHttpFlow(HttpCase):
 
     def test_duplicate_email_does_not_create_another_account(self):
         self.authenticate(None, None)
-        email = "registration-http-duplicate@example.test"
+        email = f"registration-http-duplicate-{uuid4().hex}@example.test"
         mail_new_test_user(
             self.env, login=email, groups="base.group_portal", email=email
         )
@@ -557,7 +558,7 @@ class TestB2BRegistrationHttpFlow(HttpCase):
 
     def test_turnstile_rejection_stops_registration_before_account_creation(self):
         self.authenticate(None, None)
-        email = "registration-http-turnstile-rejected@example.test"
+        email = f"registration-http-turnstile-rejected-{uuid4().hex}@example.test"
 
         def reject_turnstile(_record, ip_addr, token, action=False):
             self.assertTrue(ip_addr)

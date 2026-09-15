@@ -202,7 +202,7 @@ class PartnerHubPortal(CustomerPortal):
         error = False
         if order.state not in ("sale", "done"):
             error = _("Only confirmed orders can be changed.")
-        elif order.currency_id.compare_amounts(order.amount_paid, order.amount_total) < 0:
+        elif not order.b2b_collection_active and order.currency_id.compare_amounts(order.amount_paid, order.amount_total) < 0:
             error = _("This order is not fully paid. Contact our team from the order page instead.")
         elif any(line.qty_delivered > 0 for line in order.order_line):
             error = _("Delivered orders must use the return or replacement process.")

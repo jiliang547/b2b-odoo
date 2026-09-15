@@ -187,8 +187,13 @@ class PartnerHubCartForm extends Interaction {
         _root: {"t-on-submit": this.onSubmit},
     };
 
+    start() {
+        this.el.querySelector("button[type='submit']").disabled = false;
+    }
+
     async onSubmit(event) {
         event.preventDefault();
+        if (this.submitting) return;
         const form = this.el;
         const button = form.querySelector("button[type='submit']");
         const status = form.querySelector("[data-lt-cart-status]");
@@ -222,6 +227,7 @@ class PartnerHubCartForm extends Interaction {
         button.style.width = `${buttonRect.width}px`;
         button.style.height = `${buttonRect.height}px`;
         button.disabled = true;
+        this.submitting = true;
         try {
             await this.waitFor(this.services.cart.add({
                 productTemplateId: Number(form.elements.product_template_id.value),
@@ -239,6 +245,7 @@ class PartnerHubCartForm extends Interaction {
                 autocloseDelay: 3000,
             });
         } finally {
+            this.submitting = false;
             button.disabled = false;
             button.style.removeProperty("width");
             button.style.removeProperty("height");
