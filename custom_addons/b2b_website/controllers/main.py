@@ -75,8 +75,6 @@ class PartnerHubWebsite(WebsiteController):
         ], limit=1, order="create_date desc")
 
     def _contact_values(self, form=None, error=None):
-        company = request.env.company.sudo()
-        partner = company.partner_id
         form = dict(form or {})
         if not request.env.user._is_public():
             contact = request.env.user.partner_id
@@ -92,13 +90,7 @@ class PartnerHubWebsite(WebsiteController):
             "request_types": request.env["b2b.contact.request"]._fields[
                 "request_type"
             ].selection,
-            "company_contact": {
-                "name": company.name,
-                "email": company.email or "sales@luckytone.com",
-                "phone": company.phone or "",
-                "address": partner.contact_address
-                or "Contact us for our current office address.",
-            },
+            "company_contact": request.website.b2b_contact_details(),
             "page_name": "partner_contact",
         }
 

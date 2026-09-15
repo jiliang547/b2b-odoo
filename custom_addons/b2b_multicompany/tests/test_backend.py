@@ -81,7 +81,10 @@ class TestCustomerFirstBackend(B2BCollectionCommon):
             order.pricelist_id = self.base_price
 
     def test_multiple_websites_require_choice(self):
-        self.website.copy({'name': 'Backend UAT ambiguous', 'b2b_selling_company_ids': [Command.set(self.seller.ids)]})
+        # A configured website may have a unique domain. The test needs a
+        # second seller mapping, not a duplicate of its production hostname.
+        self.website.copy({'name': 'Backend UAT ambiguous', 'domain': False,
+                           'b2b_selling_company_ids': [Command.set(self.seller.ids)]})
         with self.assertRaises(ValidationError):
             self.customer._b2b_backend_website()
         self.assertEqual(self.customer._b2b_backend_website(self.website), self.website)

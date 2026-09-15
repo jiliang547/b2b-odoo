@@ -499,6 +499,12 @@ body:has(.lt-subnav) .o_notification_manager { top: 86px; }
 .lt-product-card__description { display: -webkit-box; height: 3.2em; margin: 0 0 12px; overflow: hidden; color: var(--lt-muted); font-size: 12px; line-height: 1.6; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .lt-price { min-height: 43px; display: flex; align-items: baseline; gap: 6px; padding-top: 10px; border-top: 1px solid var(--lt-line); }
 .lt-price > span { display: none; }
+.lt-contact-address { white-space: pre-line; }
+.lt-price--pending_approval, .lt-price--pricing_pending {
+    flex-direction: column;
+    align-items: flex-start;
+    > span { display: block; color: var(--lt-muted); font-size: 13px; }
+}
 .lt-price strong { color: var(--lt-ink); font-size: 20px; }
 .lt-price small { color: var(--lt-muted); }
 .lt-price a { color: var(--lt-blue); font-size: 13px; font-weight: 700; }

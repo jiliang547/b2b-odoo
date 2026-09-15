@@ -37,6 +37,20 @@ class Website(models.Model):
     def _b2b_request_company(self):
         return self._b2b_configured_seller(self._b2b_frontend_user().partner_id)
 
+    def _b2b_contact_company(self):
+        self.ensure_one()
+        website = self.sudo()
+        user = self._b2b_frontend_user()
+        brands = self.env['b2b.product.brand'].sudo()
+        if not user._is_public():
+            brands = user.partner_id.sudo().commercial_partner_id.b2b_account_brand_id
+        for brand in (brands, website.b2b_default_account_brand_id):
+            seller = brand.b2b_selling_company_id
+            if seller and seller in website.b2b_selling_company_ids:
+                return seller
+        # Contact is a read-only public page, not a production-readiness check.
+        return super()._b2b_contact_company()
+
     def _b2b_frontend_user(self):
         # Website records may be held in a superuser environment by native
         # rendering helpers. Routing must follow the authenticated visitor.
@@ -44,7 +58,12 @@ class Website(models.Model):
 
     def _b2b_customer_pricelists(self):
         customer = self._b2b_frontend_user().partner_id.sudo().commercial_partner_id
-        seller = self._b2b_request_company()
+        try:
+            seller = self._b2b_request_company()
+        except ValidationError:
+            # Incomplete routing has no displayable prices. Transaction entry
+            # points still reject missing pricing/routing before any ordering.
+            return self.env['product.pricelist'].sudo()
         return self.env['product.pricelist'].sudo().search([
             ('active', '=', True), ('website_id', '=', self.id),
             ('b2b_effective_partner_id', '=', customer.id),
@@ -56,6 +75,11 @@ class Website(models.Model):
             return super().get_pricelist_available(show_visible=show_visible)
         return self._b2b_customer_pricelists()
 
+    def b2b_pricing_pending(self):
+        if not self.b2b_multicompany_enabled or self._b2b_frontend_user()._is_public():
+            return super().b2b_pricing_pending()
+        return not bool(self._b2b_customer_pricelists())
+
     def _get_and_cache_current_pricelist(self):
         if not self.b2b_multicompany_enabled or self._b2b_frontend_user()._is_public():
             return super()._get_and_cache_current_pricelist()
@@ -63,7 +87,10 @@ class Website(models.Model):
         selected = candidates.filtered(lambda p: p.id == request.session.get(PRICELIST_SESSION_CACHE_KEY))[:1]
         selected = selected or candidates[:1]
         if not selected:
-            raise ValidationError(_('Our team must configure your customer-type prices before ordering.'))
+            # Account/header rendering is not an ordering operation. Do not
+            # substitute public pricing or another customer's agreement.
+            request.session.pop(PRICELIST_SESSION_CACHE_KEY, None)
+            return self.env['product.pricelist']
         request.session[PRICELIST_SESSION_CACHE_KEY] = selected.id
         cart = request.cart
         revision = self._b2b_frontend_user().partner_id.sudo().commercial_partner_id.b2b_pricing_revision
@@ -87,8 +114,12 @@ class Website(models.Model):
         # Never restore a submitted quotation, another customer's cart, or a
         # previous seller's cart after an account assignment changes.
         customer = self._b2b_frontend_user().partner_id.sudo().commercial_partner_id
+        try:
+            seller = self._b2b_request_company() if cart else self.env['res.company']
+        except ValidationError:
+            seller = self.env['res.company']
         valid = cart and not self._b2b_frontend_user()._is_public() and (
-            cart.company_id == self._b2b_request_company()
+            cart.company_id == seller
             and cart.partner_id.commercial_partner_id == customer
             and cart.website_id == self and cart.state == 'draft'
             # Opening the payment page initializes collection terms while
@@ -104,6 +135,8 @@ class Website(models.Model):
         return cart.with_company(cart.company_id)
 
     def _prepare_sale_order_values(self, partner_sudo):
+        if self.b2b_pricing_pending():
+            raise ValidationError(_('Your pricing is being configured. Please contact us for assistance.'))
         values = super()._prepare_sale_order_values(partner_sudo)
         if self.b2b_multicompany_enabled:
             seller = self._b2b_configured_seller(partner_sudo)
@@ -223,3 +256,23 @@ class Settings(models.TransientModel):
     _inherit = 'res.config.settings'
     b2b_company_setup_status = fields.Selection(related='website_id.b2b_company_setup_status')
     b2b_fulfilment_mode = fields.Selection(related='website_id.b2b_fulfilment_mode', readonly=False)
+
+
+class ProductService(models.AbstractModel):
+    _inherit = 'b2b.product.service'
+
+    def can_view_price(self, partner=None, website=None):
+        allowed = super().can_view_price(partner=partner, website=website)
+        website = website or self.env['website'].get_current_website()
+        if allowed and not self.env.user._is_internal() and website.b2b_pricing_pending():
+            return False
+        return allowed
+
+    def price_state(self, partner=None, website=None):
+        website = website or self.env['website'].get_current_website()
+        if website.b2b_multicompany_enabled and not self.env.user._is_public():
+            if website.b2b_require_approved_checkout and not self.commercial_partner(partner).b2b_approved:
+                return 'pending_approval'
+            if website.b2b_pricing_pending():
+                return 'pricing_pending'
+        return super().price_state(partner=partner, website=website)

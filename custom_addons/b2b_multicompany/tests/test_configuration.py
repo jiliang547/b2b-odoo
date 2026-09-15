@@ -25,6 +25,110 @@ class TestSellingConfiguration(TransactionCase):
             'b2b_factory_company_id': cls.factory.id,
             'b2b_default_account_brand_id': cls.brand.id})
 
+    def test_contact_details_follow_customer_brand_without_company_access(self):
+        other = self.env['res.company'].create({'name': 'UAT Default Contact Seller'})
+        default_brand = self.env['b2b.product.brand'].create({
+            'name': 'UAT Default Contact Brand', 'b2b_selling_company_id': other.id})
+        self.website.write({'b2b_selling_company_ids': [Command.link(other.id)],
+                            'b2b_default_account_brand_id': default_brand.id})
+        self.seller.write({'email': 'seller-contact@example.test', 'phone': '+1 202 555 0100',
+                           'street': '123 UAT Seller Street'})
+        contact = self.env['res.partner'].create({'name': 'UAT Brand Contact', 'parent_id': self.customer.id})
+        user = self.env['res.users'].create({'name': contact.name, 'login': 'uat-brand-contact',
+            'partner_id': contact.id, 'company_id': self.website.company_id.id,
+            'company_ids': [Command.set(self.website.company_id.ids)],
+            'group_ids': [Command.set(self.env.ref('base.group_portal').ids)]})
+        website = self.website.with_user(user)
+        with MockRequest(website.env, website=website):
+            details = website.b2b_contact_details()
+            self.assertEqual(details['name'], self.seller.name)
+            self.assertEqual(details['email'], 'seller-contact@example.test')
+            self.assertIn('123 UAT Seller Street', details['address'])
+            self.assertEqual(set(details), {'name', 'email', 'phone', 'address'})
+            self.assertNotIn(self.seller, user.company_ids)
+            self.assertEqual(website.env.company, self.website.company_id)
+
+    def test_contact_default_brand_fallback_and_missing_fields(self):
+        public_website = self.website.with_user(self.website.user_id)
+        with MockRequest(public_website.env, website=public_website):
+            self.assertEqual(public_website.b2b_contact_details()['name'], self.seller.name)
+            self.seller.write({'email': False, 'phone': False, 'street': False, 'street2': False,
+                               'city': False, 'state_id': False, 'zip': False, 'country_id': False})
+            details = public_website.b2b_contact_details()
+            self.assertFalse(details['email'])
+            self.assertFalse(details['phone'])
+            self.assertEqual(details['address'], 'Contact us for our current office address.')
+            self.website.b2b_default_account_brand_id = False
+            self.assertEqual(public_website.b2b_contact_details()['name'], self.website.company_id.name)
+
+    def test_contact_incomplete_setup_has_no_pricing_exception(self):
+        user = self.env['res.users'].create({'name': 'UAT Contact Fallback', 'login': 'uat-contact-fallback',
+            'company_id': self.website.company_id.id,
+            'company_ids': [Command.set(self.website.company_id.ids)],
+            'group_ids': [Command.set(self.env.ref('base.group_portal').ids)]})
+        website = self.website.with_user(user)
+        with MockRequest(website.env, website=website):
+            self.assertEqual(website.b2b_contact_details()['name'], self.seller.name)
+            self.website.b2b_default_account_brand_id = False
+            self.assertEqual(website.b2b_contact_details()['name'], self.website.company_id.name)
+            self.assertFalse(website._get_and_cache_current_pricelist())
+            self.assertFalse(website.b2b_currency_pricelists())
+            with self.assertRaises(ValidationError):
+                website._prepare_sale_order_values(user.partner_id)
+
+    def test_missing_customer_pricing_allows_reading_but_blocks_cart(self):
+        from odoo.addons.b2b_website.controllers.website_sale import PartnerHubCart, PartnerHubCartPayment
+        from odoo.exceptions import UserError
+        from odoo.addons.website_sale.models.website import PRICELIST_SESSION_CACHE_KEY
+        user = self.env['res.users'].create({
+            'name': 'UAT Missing Pricing', 'login': 'uat-missing-pricing',
+            'partner_id': self.customer.id,
+            'company_id': self.website.company_id.id,
+            'company_ids': [Command.set(self.website.company_id.ids)],
+            'group_ids': [Command.set(self.env.ref('base.group_portal').ids)],
+        })
+        category = self.env['b2b.customer.type'].create({'name': 'UAT Unconfigured Prices'})
+        self.customer.b2b_customer_type_id = category
+        self.website.write({'b2b_price_display_mode': 'approved', 'b2b_require_approved_checkout': True})
+        website = self.website.with_user(user)
+        service = self.env['b2b.product.service'].with_user(user)
+        with MockRequest(website.env, website=website) as http_request:
+            http_request.session[PRICELIST_SESSION_CACHE_KEY] = self.env['product.pricelist'].search([], limit=1).id
+            self.assertFalse(website._get_and_cache_current_pricelist())
+            self.assertNotIn(PRICELIST_SESSION_CACHE_KEY, http_request.session)
+            self.assertFalse(website.b2b_currency_pricelists())
+            self.assertEqual(service.price_state(website=website), 'pending_approval')
+            self.customer.b2b_approved = True
+            self.assertEqual(service.price_state(website=website), 'pricing_pending')
+            self.assertFalse(service.can_view_price(website=website))
+            with self.assertRaises(UserError):
+                PartnerHubCart().add_to_cart(product_template_id=0, product_id=0)
+            with self.assertRaises(UserError):
+                PartnerHubCart().update_cart(line_id=0, quantity=2)
+            with self.assertRaises(UserError):
+                PartnerHubCartPayment().shop_payment_transaction(order_id=0, access_token='')
+            with self.assertRaises(ValidationError):
+                website._prepare_sale_order_values(user.partner_id)
+            base = self.env['product.pricelist'].create({'name': 'UAT Restored Prices', 'company_id': False})
+            self.env['b2b.customer.type.pricelist'].create({
+                'customer_type_id': category.id, 'website_id': self.website.id, 'pricelist_id': base.id})
+            self.assertFalse(website.b2b_pricing_pending())
+            self.assertEqual(service.price_state(website=website), 'visible')
+            self.assertEqual(website._get_and_cache_current_pricelist().b2b_effective_partner_id, self.customer)
+
+    def test_full_accounting_is_installed_without_elevating_b2b_finance(self):
+        accounting = self.env['ir.module.module'].search([('name', '=', 'accountant')])
+        self.assertEqual(accounting.state, 'installed')
+        manager = self.env.ref('account.group_account_manager')
+        self.assertIn(self.env.ref('account.group_account_user'), manager.implied_ids)
+        finance = self.env['res.users'].create({
+            'name': 'UAT Accounting Dependency Finance',
+            'login': 'uat-accounting-dependency-finance',
+            'group_ids': [Command.set(self.env.ref('b2b_website.group_b2b_finance').ids)],
+        })
+        self.assertTrue(finance.has_group('account.group_account_invoice'))
+        self.assertFalse(finance.has_group('account.group_account_manager'))
+
     def test_setup_native_pages_support_list_form_navigation(self):
         self.env.user.company_ids = [Command.link(self.seller.id)]
         wizard = self.env['b2b.business.setup'].create({

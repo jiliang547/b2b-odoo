@@ -2,10 +2,12 @@ from werkzeug.exceptions import NotFound
 from werkzeug.urls import urlencode
 
 from odoo import _
+from odoo.exceptions import UserError
 from odoo.http import request, route
 from odoo.addons.payment.controllers.post_processing import PaymentPostProcessing
 from odoo.addons.website_sale.controllers.main import WebsiteSale
 from odoo.addons.website_sale.controllers.cart import Cart
+from odoo.addons.website_sale.controllers.payment import PaymentPortal
 from odoo.addons.website_sale.controllers.variant import WebsiteSaleVariantController
 
 
@@ -172,6 +174,24 @@ class PartnerHubWebsiteSale(WebsiteSale):
 
 
 class PartnerHubCart(Cart):
+    def _check_ordering_access(self):
+        if not _can_checkout():
+            message = (_('Your pricing is being configured. Please contact us for assistance.')
+                       if request.website.b2b_pricing_pending()
+                       and request.env.user.partner_id.commercial_partner_id.b2b_approved
+                       else _('Your account needs approval before ordering.'))
+            raise UserError(message)
+
+    @route()
+    def add_to_cart(self, *args, **kwargs):
+        self._check_ordering_access()
+        return super().add_to_cart(*args, **kwargs)
+
+    @route()
+    def update_cart(self, *args, **kwargs):
+        self._check_ordering_access()
+        return super().update_cart(*args, **kwargs)
+
     @route()
     def cart(self, id=None, access_token=None, revive_method="", **post):
         if not _can_view_cart_prices():
@@ -179,6 +199,15 @@ class PartnerHubCart(Cart):
         return super().cart(
             id=id, access_token=access_token, revive_method=revive_method, **post
         )
+
+
+class PartnerHubCartPayment(PaymentPortal):
+    @route()
+    def shop_payment_transaction(self, order_id, access_token, **kwargs):
+        # Express checkout uses this route without opening /shop/payment.
+        # Leave existing-order portal payment routes and callbacks unchanged.
+        PartnerHubCart()._check_ordering_access()
+        return super().shop_payment_transaction(order_id, access_token, **kwargs)
 
 
 class PartnerHubVariantController(WebsiteSaleVariantController):
@@ -192,6 +221,8 @@ class PartnerHubVariantController(WebsiteSaleVariantController):
             raise NotFound()
         if product_id and int(product_id) not in product.product_variant_ids.ids:
             raise NotFound()
+        if request.website.b2b_pricing_pending():
+            raise UserError(_('Your pricing is being configured. Please contact us for assistance.'))
         info = super().get_combination_info_website(
             product_template_id,
             product_id,

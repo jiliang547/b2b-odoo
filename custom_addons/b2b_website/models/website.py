@@ -1,4 +1,4 @@
-from odoo import Command, api, models
+from odoo import Command, _, api, models
 from odoo.http import request
 from odoo.addons.website_sale.models.website import (
     PRICELIST_SELECTED_SESSION_CACHE_KEY,
@@ -128,6 +128,22 @@ class Website(models.Model):
                 partner_sudo.commercial_partner_id.sudo().b2b_pricing_revision
             )
         return values
+
+    def b2b_pricing_pending(self):
+        """Extension point for pricing adapters; never grants ordering access."""
+        return False
+
+    def _b2b_contact_company(self):
+        self.ensure_one()
+        return self.sudo().company_id
+
+    def b2b_contact_details(self):
+        """Expose only public contact fields, not cross-company record access."""
+        company = self._b2b_contact_company()
+        address = company.partner_id._display_address(without_company=True).strip()
+        return {'name': company.name, 'email': company.email or '',
+                'phone': company.phone or '',
+                'address': address or _('Contact us for our current office address.')}
 
     def b2b_currency_pricelists(self):
         """Return one native selectable pricelist per currency in UI order."""

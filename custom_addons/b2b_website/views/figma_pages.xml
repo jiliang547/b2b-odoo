@@ -15,9 +15,9 @@
                     <div class="lt-nav-actions">
                         <t t-set="lt_pricelists" t-value="website.b2b_currency_pricelists()"/>
                         <details class="lt-locale-menu">
-                            <summary><i class="fa fa-globe"/><strong t-out="(request.lang.url_code or 'en').split('_')[0].upper()"/><span>/</span><strong t-out="request.pricelist.currency_id.name"/><i class="fa fa-angle-down"/></summary>
+                            <summary><i class="fa fa-globe"/><strong t-out="(request.lang.url_code or 'en').split('_')[0].upper()"/><t t-if="lt_pricelists"><span>/</span><strong t-out="request.pricelist.currency_id.name"/></t><i class="fa fa-angle-down"/></summary>
                             <div class="lt-locale-menu__panel">
-                                <section><p>Currency</p><div class="lt-locale-options"><a t-foreach="lt_pricelists" t-as="pl" t-att-class="'is-active' if pl == request.pricelist else ''" t-att-href="'/shop/change_pricelist/%s' % pl.id" t-att-title="pl.name" t-out="pl.currency_id.name"/></div></section>
+                                <section t-if="lt_pricelists"><p>Currency</p><div class="lt-locale-options"><a t-foreach="lt_pricelists" t-as="pl" t-att-class="'is-active' if pl == request.pricelist else ''" t-att-href="'/shop/change_pricelist/%s' % pl.id" t-att-title="pl.name" t-out="pl.currency_id.name"/></div></section>
                                 <section t-if="len(frontend_languages) &gt; 1"><p>Language</p><div class="lt-language-options"><a t-foreach="website.b2b_frontend_languages(frontend_languages)" t-as="lg" t-att-class="'js_change_lang is-active' if lg.code == lang else 'js_change_lang'" t-att-href="url_localized(lang_code=lg.code, prefetch_langs=True, force_default_lang=True)" t-att-data-url_code="lg.url_code" t-out="website.b2b_language_label(lg)"/></div></section>
                             </div>
                         </details>

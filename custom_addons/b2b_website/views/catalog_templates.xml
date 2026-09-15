@@ -28,7 +28,7 @@
                         </form>
                     </aside>
                     <div class="lt-catalog-results">
-                        <p class="lt-results-bar"><strong><t t-out="total"/> products</strong><span t-if="price_state == 'visible'">Partner pricing active</span><span t-elif="price_state == 'login'">Sign in for partner pricing</span><span t-elif="price_state == 'quote'">Request a quote for pricing</span><span t-else="">Contact sales for pricing</span></p>
+                        <p class="lt-results-bar"><strong><t t-out="total"/> products</strong><span t-if="price_state == 'visible'">Partner pricing active</span><span t-elif="price_state == 'pending_approval'">Your account is awaiting approval.</span><span t-elif="price_state == 'pricing_pending'">Your pricing is being configured.</span><span t-elif="price_state == 'login'">Sign in for partner pricing</span><span t-elif="price_state == 'quote'">Request a quote for pricing</span><span t-else="">Contact sales for pricing</span></p>
                         <div t-if="products" class="lt-product-grid" data-lt-product-grid=""><t t-foreach="products" t-as="product"><t t-call="b2b_website.product_card"/></t></div>
                         <div t-else="" class="lt-empty"><div class="lt-empty__icon"><i class="fa fa-search"/></div><h2>No matching products</h2><p>Adjust your filters, or contact us if you expect access to a product family.</p><a class="lt-btn lt-btn--outline" href="/products">Reset filters</a></div>
                         <div t-if="pager" class="lt-product-pagination" aria-label="Product pages"><t t-call="portal.pager"><t t-set="classname" t-value="'lt-product-pagination__list'"/></t></div>

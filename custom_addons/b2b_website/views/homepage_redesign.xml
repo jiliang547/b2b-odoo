@@ -22,6 +22,8 @@
                             <del t-if="section == 'special' and price.get('base_price') and price.get('base_price') &gt; price.get('price', 0)" t-out="price.get('base_price')" t-options="{'widget': 'monetary', 'display_currency': price.get('currency')}"/>
                         </div>
                         <a t-elif="price.get('state') == 'login'" class="pg-featured-card__price-link" t-att-href="'/web/login?redirect=%s' % request.httprequest.path">Sign in to view price</a>
+                        <a t-elif="price.get('state') == 'pending_approval'" class="pg-featured-card__price-link" href="/my">Your account is awaiting approval.</a>
+                        <a t-elif="price.get('state') == 'pricing_pending'" class="pg-featured-card__price-link" href="/contact">Your pricing is being configured. Contact us</a>
                         <a t-else="" class="pg-featured-card__price-link" href="/contact">Contact sales for pricing</a>
                         <span class="pg-featured-card__moq">MOQ: <t t-out="procurement.get('minimum_quantity', 1)"/> <t t-out="procurement.get('uom_name') or 'pcs'"/></span>
                     </div>

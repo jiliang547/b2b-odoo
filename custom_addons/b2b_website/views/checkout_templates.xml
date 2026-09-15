@@ -14,6 +14,13 @@
         </t>
     </template>
 
+    <template id="ordering_unavailable_pricing_state" inherit_id="b2b_website.ordering_unavailable">
+        <xpath expr="//div[hasclass('lt-state-card')]/p" position="replace">
+            <p t-if="request.env['b2b.product.service'].price_state(website=website) == 'pricing_pending'">Your pricing is being configured. Please contact us for assistance.</p>
+            <p t-else="">Your account may need approval or price access before products can be added to an order.</p>
+        </xpath>
+    </template>
+
     <template id="payment_submit_for_review" inherit_id="website_sale.payment" name="Submit Order for Review">
         <xpath expr="//div[@id='address_on_payment']" position="before">
             <section class="card border-primary-subtle mb-4" aria-labelledby="b2b_review_checkout_title">

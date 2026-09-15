@@ -1,5 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <template id="contact_channels" name="Partner Contact Channels">
+        <t t-set="company_contact" t-value="website.b2b_contact_details()"/>
+        <aside class="lt-contact-aside">
+            <section><h3>Contact Channels</h3>
+                <article><i class="fa fa-envelope-o"/><div><strong>Sales Inquiry</strong><p>Pricing, bulk orders and partnerships</p>
+                    <a t-if="company_contact.get('email')" t-att-href="'mailto:%s' % company_contact['email']" t-out="company_contact['email']"/>
+                    <p t-else="">Please use the message form to contact our team.</p>
+                </div></article>
+                <article><i class="fa fa-wrench"/><div><strong>Technical Support</strong><p>Installation and troubleshooting</p><a t-att-href="'/service-center' if not request.env.user._is_public() else '/web/login?redirect=/service-center'">Open Service Center</a></div></article>
+                <article><i class="fa fa-flask"/><div><strong>Sample Requests</strong><p>Request evaluation units from a product page</p><a t-att-href="'/samples' if not request.env.user._is_public() else '/web/login?redirect=/samples'">Open Sample Center</a></div></article>
+            </section>
+            <section><h3>Headquarters</h3><strong t-out="company_contact['name']"/>
+                <p class="lt-contact-address" t-out="company_contact['address']"/>
+                <p t-if="company_contact['phone']"><i class="fa fa-phone"/> <t t-out="company_contact['phone']"/></p>
+            </section>
+        </aside>
+    </template>
+
     <template id="partner_contact" name="Partner Contact">
         <t t-call="b2b_website.partner_layout">
             <section class="lt-page-hero lt-page-hero--compact"><div class="container"><nav class="lt-breadcrumb lt-breadcrumb--dark" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><span>Contact</span></nav><h1>Get in touch with our sales, technical support and partner service teams.</h1><p>Tell us what you need, and the right member of our team will get back to you.</p></div></section>
@@ -20,7 +38,7 @@
                         <button type="submit" class="lt-btn lt-btn--blue" data-lt-submitting-label.translate="Sending…">Send Message <i class="fa fa-arrow-right"/></button>
                     </form>
                 </div>
-                <aside class="lt-contact-aside"><section><h3>Contact Channels</h3><article><i class="fa fa-envelope-o"/><div><strong>Sales Inquiry</strong><p>Pricing, bulk orders and partnerships</p><a t-att-href="'mailto:%s' % company_contact.get('email')" t-out="company_contact.get('email')"/></div></article><article><i class="fa fa-wrench"/><div><strong>Technical Support</strong><p>Installation and troubleshooting</p><a t-att-href="'/service-center' if not request.env.user._is_public() else '/web/login?redirect=/service-center'">Open Service Center</a></div></article><article><i class="fa fa-flask"/><div><strong>Sample Requests</strong><p>Request evaluation units from a product page</p><a t-att-href="'/samples' if not request.env.user._is_public() else '/web/login?redirect=/samples'">Open Sample Center</a></div></article></section><section><h3>Headquarters</h3><strong t-out="company_contact.get('name')"/><p t-out="company_contact.get('address')"/><p t-if="company_contact.get('phone')"><i class="fa fa-phone"/> <t t-out="company_contact.get('phone')"/></p></section></aside>
+                <t t-call="b2b_website.contact_channels"/>
             </div></section>
         </t>
     </template>

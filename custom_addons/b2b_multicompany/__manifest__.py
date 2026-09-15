@@ -1,6 +1,6 @@
 {
     'name': 'Partner Hub Multi-company Sales',
-    'version': '19.0.1.3.3',
+    'version': '19.0.1.3.5',
     'license': 'LGPL-3',
     'author': 'Lucky Tone',
     'depends': ['b2b_website', 'stock_dropshipping', 'sale_purchase_stock_inter_company_rules'],
