@@ -34,8 +34,8 @@
     <template id="portal_request_order_change" name="Request an Order Change">
         <t t-call="portal.portal_layout"><t t-set="no_index" t-value="True"/>
             <nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my/orders">Orders</a><span>/</span><a t-att-href="sale_order.get_portal_url()" t-out="sale_order.name"/><span>/</span>Request Change</nav>
-            <header class="lt-portal-heading"><div><h1>Request an Order Change</h1><p>Tell us what should change. Your paid order stays unchanged until a proposal is approved and you accept it.</p></div></header>
-            <div class="lt-portal-card">
+            <header class="lt-portal-heading"><div><h1>Request an Order Change</h1><p>Tell us what should change. Your order stays unchanged until a proposal is approved and you accept it.</p></div></header>
+            <div class="lt-portal-card"><div class="lt-card-body lt-change-request-body">
                 <div t-if="error" class="alert alert-danger" role="alert" t-out="error"/>
                 <dl class="lt-payment-summary"><div><dt>Order</dt><dd t-out="sale_order.name"/></div><div><dt>Order total</dt><dd><span t-field="sale_order.amount_total" t-options="{'widget':'monetary','display_currency':sale_order.currency_id}"/></dd></div><div><dt>Confirmed payments</dt><dd><span t-field="sale_order.amount_paid" t-options="{'widget':'monetary','display_currency':sale_order.currency_id}"/></dd></div></dl>
                 <form t-if="not error" t-att-action="'/my/orders/%s/request-change' % sale_order.id" method="post" class="mt-4">
@@ -45,6 +45,7 @@
                     <div class="lt-actions"><button type="submit" class="lt-btn lt-btn--blue" data-lt-stable-submit="">Submit Request</button><a class="lt-btn lt-btn--outline" t-att-href="sale_order.get_portal_url()">Cancel</a></div>
                 </form>
                 <div t-else="" class="lt-actions"><a class="lt-btn lt-btn--blue" t-att-href="sale_order.get_portal_url()">Back to Order</a></div>
+            </div>
             </div>
         </t>
     </template>

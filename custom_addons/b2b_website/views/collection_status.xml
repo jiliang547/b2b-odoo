@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="portal_collection_status" name="Verified customer payment status">
+        <t t-set="payment_summary" t-value="order._b2b_portal_payment_summary()"/>
+        <div class="d-flex flex-column gap-2 text-wrap">
+            <span class="fw-semibold" t-out="payment_summary['label']"/>
+            <small t-if="payment_summary['pending']" class="text-muted">Payment Verification Pending</small>
+            <small><span>Received:</span> <span t-field="order.b2b_net_received"/> · <span>Outstanding:</span> <span t-field="order.b2b_balance"/></small>
+        </div>
+    </template>
+    <template id="collection_list_status" inherit_id="b2b_website.portal_orders_figma">
+        <xpath expr="//thead/tr/th[4]" position="replace"><th>Order Status</th><th>Payment Status</th></xpath>
+        <xpath expr="//tbody/tr/td[4]" position="after"><td><t t-if="order.b2b_collection_active" t-call="b2b_website.portal_collection_status"/><span t-else="">—</span></td></xpath>
+        <xpath expr="//span[@t-if=&quot;order.state == 'sale'&quot;]" position="replace"><span t-if="order.state == 'sale'" class="lt-status-badge lt-status-badge--sale">Order Confirmed</span></xpath>
+    </template>
+    <template id="collection_overview_status" inherit_id="b2b_website.portal_home_figma">
+        <xpath expr="//span[@t-if=&quot;order.state == 'sale'&quot;]" position="replace"><span t-if="order.state == 'sale'" class="lt-status-badge lt-status-badge--sale">Order Confirmed</span></xpath>
+        <xpath expr="//a[@t-foreach='recent_orders']/div" position="inside"><small t-if="order.b2b_collection_active" t-out="order._b2b_portal_payment_summary()['label']"/></xpath>
+    </template>
+    <template id="collection_quote_status" inherit_id="b2b_website.portal_quotes_consistent_layout">
+        <xpath expr="//thead/tr/th[5]" position="after"><th>Payment Status</th></xpath>
+        <xpath expr="//tbody/tr/td[5]" position="after"><td><t t-if="quotation.b2b_collection_active" t-call="b2b_website.portal_collection_status"><t t-set="order" t-value="quotation"/></t><span t-else="">—</span></td></xpath>
+    </template>
+    <template id="collection_detail_status" inherit_id="sale.sale_order_portal_template" priority="110">
+        <xpath expr="//div[@id='sale_order_sidebar_button']" position="before">
+            <section t-if="sale_order.b2b_collection_active and sale_order.b2b_review_state != 'pending'" class="card my-3" aria-label="Order and payment status"><div class="card-body">
+                <h5>Order Status</h5><p t-out="sale_order._b2b_customer_order_status()"/>
+                <h5>Payment Status</h5><t t-call="b2b_website.portal_collection_status"><t t-set="order" t-value="sale_order"/></t>
+                <a t-if="sale_order._b2b_portal_payment_summary()['requested']" class="btn btn-primary mt-3" t-att-href="'/my/orders/%s/collection' % sale_order.id">Pay Remaining Balance</a>
+            </div></section>
+        </xpath>
+    </template>
+    <template id="collection_summary_status" inherit_id="b2b_website.portal_collection" active="True">
+        <xpath expr="//dl[hasclass('row')]" position="before"><h3>Payment Status</h3><t t-call="b2b_website.portal_collection_status"/><hr/></xpath>
+        <xpath expr="//dt[.='Required for Current Stage']" position="replace"><dt class="col-7">Due Now</dt></xpath>
+    </template>
+    <template id="collection_confirmation_status" inherit_id="b2b_website.confirmation_partner_hub">
+        <xpath expr="//dl[hasclass('lt-payment-summary')]/div[dt='Status']/dd" position="replace"><dd t-out="'Order Confirmed' if order.state == 'sale' else ('Order Cancelled' if order.state == 'cancel' else 'Quotation')"/></xpath>
+        <xpath expr="//dl[hasclass('lt-payment-summary')]" position="after"><div t-if="order.b2b_collection_active" class="mb-4"><h3>Payment Status</h3><t t-call="b2b_website.portal_collection_status"/></div></xpath>
+    </template>
+    <record id="order_request_balance_payment" model="ir.ui.view">
+        <field name="name">sale.order.request.balance.payment</field><field name="model">sale.order</field><field name="inherit_id" ref="b2b_website.order_collection_form"/>
+        <field name="arch" type="xml"><xpath expr="//page[@name='b2b_collection']/field[@name='b2b_bank_instructions']" position="before">
+            <group string="Customer Payment Notification"><field name="b2b_balance_payment_requested" string="Balance Payment Requested"/></group>
+            <button name="action_b2b_request_balance_payment" type="object" string="Request Balance Payment" class="btn-primary" groups="b2b_core.group_b2b_manager" invisible="not b2b_collection_active or state != 'sale' or b2b_balance &lt;= 0 or b2b_balance_payment_requested" confirm="Notify the customer to pay the outstanding balance? This does not change invoice due dates or confirm shipment."/>
+        </xpath></field>
+    </record>
+    <record id="collection_summary_status" model="ir.ui.view"><field name="active" eval="True"/></record>
+</odoo>

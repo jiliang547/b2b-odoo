@@ -9,15 +9,16 @@ def check_manager(env):
 
 class CollectionPolicy(models.Model):
     _name = 'b2b.collection.policy'
-    _description = 'Customer Collection Terms'
+    _description = 'Production / Shipment Collection Conditions'
     _order = 'sequence, id'
 
     name = fields.Char(required=True, translate=True)
     active = fields.Boolean(default=True)
     sequence = fields.Integer(default=10)
     category = fields.Selection([(c, c) for c in 'ABCDE'], required=True, default='A')
-    production_percent = fields.Float(required=True, default=100)
-    shipment_percent = fields.Float(required=True, default=100)
+    production_percent = fields.Float(string='Required % Before Production', required=True, default=100)
+    shipment_percent = fields.Float(string='Cumulative % Before Shipment', required=True, default=100,
+                                   help='Total collected percentage, including the deposit; not an additional payment.')
     payment_term_id = fields.Many2one('account.payment.term', string='Invoice Payment Terms')
     block_overdue = fields.Boolean(default=True, help='For credit/special terms, block release when this company has overdue receivables.')
     note = fields.Text(translate=True)
@@ -39,7 +40,7 @@ class CollectionPolicy(models.Model):
 class Partner(models.Model):
     _inherit = 'res.partner'
 
-    b2b_collection_policy_id = fields.Many2one('b2b.collection.policy', string='Collection Terms')
+    b2b_collection_policy_id = fields.Many2one('b2b.collection.policy', string='Production / Shipment Collection Conditions')
     b2b_account_brand_id = fields.Many2one('b2b.product.brand', string='Account Brand')
 
     @api.model_create_multi

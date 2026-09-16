@@ -1002,6 +1002,17 @@ form[aria-busy="true"] button[type="submit"] { cursor: wait; opacity: .72; }
 .lt-order-list-header { display: flow-root; }
 .lt-card-body { padding: 18px 17px; }
 .lt-card-body > :last-child { margin-bottom: 0; }
+.lt-change-request-body { padding: 24px; }
+.lt-change-request-body .lt-actions { padding-top: 8px; gap: 12px; flex-wrap: wrap; }
+.lt-file-picker { position: relative; display: flex; align-items: center; gap: 12px; min-height: 44px; }
+.lt-file-picker > label { margin: 0; flex-shrink: 0; cursor: pointer; }
+.lt-file-picker-input { position: absolute; left: 0; top: 0; width: 125px; height: 100%; opacity: 0; cursor: pointer; }
+.lt-file-picker:focus-within { outline: 2px solid #2563eb; outline-offset: 3px; border-radius: 4px; }
+.lt-file-picker [data-lt-file-name] { overflow-wrap: anywhere; min-width: 0; }
+@media (max-width: 575.98px) {
+    .lt-change-request-body { padding: 16px; }
+    .lt-change-request-body .lt-actions > * { width: 100%; justify-content: center; }
+}
 .lt-preserve-lines { white-space: pre-wrap; overflow-wrap: anywhere; }
 .lt-order-change-card > .alert { margin: 18px 17px !important; }
 .lt-order-change-confirmation { border-top: 1px solid #e5e7eb; }

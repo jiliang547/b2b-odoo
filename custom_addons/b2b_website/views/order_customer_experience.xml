@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="review_customer_total" inherit_id="sale.sale_order_portal_content" priority="120">
+        <xpath expr="//div[@id='total']" position="before">
+            <p t-if="sale_order.b2b_review_state == 'pending'" class="text-end text-muted">Estimated Total — shipping and final pricing are awaiting confirmation.</p>
+        </xpath>
+    </template>
+    <template id="review_customer_pay_label" inherit_id="sale.sale_order_portal_template" priority="120">
+        <xpath expr="//a[@id='o_sale_portal_paynow']/t[@t-if]" position="replace">
+            <t t-if="sale_order.b2b_review_state == 'ready'"> Review &amp; Pay</t>
+            <t t-elif="not sale_order.signature and sale_order._has_to_be_paid() and not payment_amount"> Accept &amp; Pay</t>
+        </xpath>
+    </template>
+    <template id="review_collection_waiting" inherit_id="b2b_website.portal_collection" priority="120">
+        <xpath expr="//header[hasclass('lt-portal-heading')]" position="after">
+            <div t-if="order.b2b_review_state == 'pending'" class="alert alert-info" role="status"><strong>Awaiting Final Quote</strong><p class="mb-0">We’re confirming shipping costs and any requested adjustments. We’ll notify you when your final quote is ready. No payment is required now.</p></div>
+        </xpath>
+        <xpath expr="//dd[span[@t-field='order.b2b_payable_now']]" position="replace">
+            <dd class="col-5"><span t-if="order.b2b_review_state == 'pending'">Pending final quote</span><span t-else="" t-field="order.b2b_payable_now"/></dd>
+        </xpath>
+    </template>
+    <template id="review_orders_list_status" inherit_id="b2b_website.portal_orders_figma" priority="120">
+        <xpath expr="//span[hasclass('lt-status-badge--awaiting_payment')]" position="replace">
+            <span t-else="" class="lt-status-badge lt-status-badge--awaiting_payment"><t t-if="order.b2b_review_state in ('pending','ready')" t-out="order._b2b_customer_order_status()"/><t t-else="">Awaiting Payment</t></span>
+        </xpath>
+    </template>
+    <template id="review_overview_status" inherit_id="b2b_website.portal_home_figma" priority="120">
+        <xpath expr="//span[hasclass('lt-status-badge--awaiting_payment')]" position="replace">
+            <span t-else="" class="lt-status-badge lt-status-badge--awaiting_payment"><t t-if="order.b2b_review_state in ('pending','ready')" t-out="order._b2b_customer_order_status()"/><t t-else="">Awaiting Payment</t></span>
+        </xpath>
+    </template>
+</odoo>

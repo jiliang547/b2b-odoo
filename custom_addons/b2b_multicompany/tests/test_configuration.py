@@ -1,5 +1,5 @@
 from odoo import Command
-from odoo.exceptions import AccessError, ValidationError
+from odoo.exceptions import AccessError, UserError, ValidationError
 from odoo.tests import TransactionCase, tagged
 from odoo.addons.website_sale.tests.common import MockRequest
 from unittest.mock import patch
@@ -432,6 +432,58 @@ class TestSellingConfiguration(TransactionCase):
         self.assertFalse(order.user_id, 'A website cart must not inherit the superuser as salesperson')
         with self.assertRaises(ValidationError), self.cr.savepoint():
             order.company_id = self.factory
+
+    def test_external_seller_warehouse_and_revision_ignore_current_company(self):
+        manager = self.env['res.users'].with_context(no_reset_password=True).create({
+            'name': 'Warehouse UAT Manager', 'login': 'warehouse-uat-manager',
+            'company_id': self.env.company.id,
+            'company_ids': [Command.set((self.env.company | self.seller).ids)],
+            'group_ids': [Command.set(self.env.ref('b2b_core.group_b2b_manager').ids)]})
+        self.website.b2b_fulfilment_mode = 'external'
+        self.customer.b2b_collection_policy_id = self.env.ref('b2b_website.collection_policy_c')
+        warehouse = self.env['stock.warehouse'].search([('company_id', '=', self.env.company.id)], limit=1)
+        self.assertTrue(warehouse)
+        order = self.env['sale.order'].with_context(default_warehouse_id=warehouse.id).create({
+            'website_id': self.website.id, 'partner_id': self.customer.id})
+        self.assertEqual(order.company_id, self.seller)
+        self.assertFalse(order.warehouse_id)
+        order.user_id = self.env.user
+        self.assertFalse(order.warehouse_id)
+        order.action_confirm()
+        self.assertFalse(order.picking_ids)
+        with self.assertRaises(UserError), self.cr.savepoint():
+            order.write({'warehouse_id': warehouse.id})
+        # Simulate pre-fix data without weakening the runtime company checks.
+        order.flush_recordset()
+        self.env.cr.execute('UPDATE sale_order SET warehouse_id=%s WHERE id=%s', [warehouse.id, order.id])
+        order.invalidate_recordset(['warehouse_id'])
+        change = self.env['b2b.order.change.request'].create({'order_id': order.id, 'requested_changes': 'UAT warehouse revision'})
+        change.with_user(manager).with_context(allowed_company_ids=manager.company_ids.ids).action_start_review()
+        self.assertEqual(change.state, 'under_review')
+        self.assertEqual(change.revision_order_id.company_id, self.seller)
+        self.assertFalse(change.revision_order_id.warehouse_id)
+        result = self.env['sale.order']._b2b_repair_external_warehouses()
+        self.assertIn(order.id, result['repaired'])
+        self.assertFalse(order.warehouse_id)
+        self.assertEqual(order.state, 'sale')
+        self.assertNotIn(order.id, self.env['sale.order']._b2b_repair_external_warehouses()['repaired'])
+        service = self.env['product.product'].create({'name': 'Warehouse Repair Delivered Service', 'type': 'service'})
+        line = self.env['sale.order.line'].create({'order_id': order.id, 'product_id': service.id,
+                                                 'product_uom_qty': 1, 'price_unit': 0})
+        line.qty_delivered = 1
+        order.flush_recordset()
+        self.env.cr.execute('UPDATE sale_order SET warehouse_id=%s WHERE id=%s', [warehouse.id, order.id])
+        order.invalidate_recordset(['warehouse_id'])
+        self.assertIn(order.id, self.env['sale.order']._b2b_repair_external_warehouses()['skipped'])
+        self.assertEqual(order.warehouse_id, warehouse)
+
+    def test_odoo_seller_never_uses_other_company_warehouse(self):
+        warehouse = self.env['stock.warehouse'].create({'name': 'UAT Seller Warehouse', 'code': 'USWH', 'company_id': self.seller.id})
+        order = self.env['sale.order'].create({'website_id': self.website.id, 'partner_id': self.customer.id})
+        self.assertEqual(order.warehouse_id.company_id, self.seller)
+        foreign = self.env['stock.warehouse'].search([('company_id', '=', self.env.company.id)], limit=1)
+        with self.assertRaises(UserError), self.cr.savepoint():
+            order.warehouse_id = foreign
 
     def test_five_sellers_share_catalog_not_orders(self):
         sellers = self.env['res.company'].create([{'name': 'UAT Seller %s' % n} for n in range(5)])

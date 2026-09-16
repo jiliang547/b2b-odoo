@@ -11,14 +11,33 @@ class SaleOrder(models.Model):
     _inherit = 'sale.order'
 
     b2b_collection_active = fields.Boolean(copy=False, readonly=True)
-    b2b_collection_policy_id = fields.Many2one('b2b.collection.policy', copy=True, tracking=True)
+    b2b_collection_policy_id = fields.Many2one('b2b.collection.policy', string='Production / Shipment Collection Conditions', copy=True, tracking=True)
+    b2b_payment_configuration_warning = fields.Text(compute='_compute_b2b_payment_configuration_warning')
     b2b_collection_category = fields.Selection([(c, c) for c in 'ABCDE'], readonly=True, copy=True)
     b2b_production_percent = fields.Float(readonly=True, copy=True)
     b2b_shipment_percent = fields.Float(readonly=True, copy=True)
+
+    @api.depends('b2b_collection_active', 'payment_term_id', 'b2b_collection_policy_id.payment_term_id',
+                 'b2b_production_percent', 'b2b_shipment_percent', 'require_payment', 'prepayment_percent')
+    def _compute_b2b_payment_configuration_warning(self):
+        for order in self:
+            warnings = []
+            if order.b2b_collection_active:
+                reference = order.b2b_collection_policy_id.payment_term_id
+                if reference and order.payment_term_id != reference:
+                    warnings.append(_('The invoice payment terms on this order differ from the current collection template. Review both settings; neither is automatically synchronized when you edit the order payment terms.'))
+                if order.b2b_shipment_percent < 100 and not order.payment_term_id:
+                    warnings.append(_('This order allows shipment before full payment but has no invoice payment terms. Configure the native invoice due dates.'))
+                requires_payment = order.b2b_production_percent > 0
+                if (order.require_payment != requires_payment or (requires_payment
+                        and abs(order.prepayment_percent * 100 - order.b2b_production_percent) > 0.00001)):
+                    warnings.append(_('The online prepayment setting differs from the production collection threshold. Review the settings before requesting payment.'))
+            order.b2b_payment_configuration_warning = '\n'.join(warnings) or False
     b2b_block_overdue = fields.Boolean(readonly=True, copy=True)
     b2b_brand_id = fields.Many2one('b2b.product.brand', string='Order Brand', tracking=True, copy=True)
     b2b_receiving_journal_id = fields.Many2one('account.journal', string='Receiving Bank Journal', tracking=True, copy=True)
     b2b_bank_instructions = fields.Text(readonly=True, copy=False)
+    b2b_pi_bank_instructions = fields.Text(readonly=True, copy=False)
     b2b_brand_logo = fields.Binary(readonly=True, copy=True, attachment=True)
     b2b_configuration_reason = fields.Char(string='Reason for Configuration Change', copy=False)
     b2b_receipt_ids = fields.One2many('b2b.bank.receipt', 'order_id')
@@ -30,6 +49,85 @@ class SaleOrder(models.Model):
     b2b_production_allowed = fields.Boolean(compute='_compute_collection_summary')
     b2b_shipment_allowed = fields.Boolean(compute='_compute_collection_summary')
     b2b_collection_status = fields.Char(compute='_compute_collection_summary')
+    b2b_balance_payment_requested = fields.Boolean(readonly=True, copy=False, tracking=True)
+
+    def _b2b_customer_terms_label(self):
+        """Customer wording derived from the immutable order thresholds."""
+        self.ensure_one()
+        if not self.b2b_collection_active:
+            return _('Pending confirmation')
+        if self.b2b_collection_category == 'A':
+            return _('100% advance payment')
+        if self.b2b_collection_category == 'B':
+            return _('%(deposit)s%% deposit, %(balance)s%% before shipment',
+                     deposit='%g' % self.b2b_production_percent,
+                     balance='%g' % (100 - self.b2b_production_percent))
+        if self.b2b_collection_category == 'C':
+            return _('100% before shipment')
+        if self.b2b_collection_category == 'D':
+            return self.payment_term_id.name or _('Agreed credit terms')
+        return _('As agreed with our team')
+
+    def _b2b_customer_order_status(self):
+        self.ensure_one()
+        if self.state == 'cancel':
+            return _('Order Cancelled')
+        if self.state == 'sale':
+            return _('Order Confirmed')
+        if self.b2b_review_state == 'pending':
+            return _('Awaiting Final Quote')
+        if self.b2b_review_state == 'ready':
+            return _('Ready for Payment')
+        return _('Quotation')
+
+    def _b2b_portal_payment_summary(self):
+        """Presentation only: use verified funds, never declared proof amounts."""
+        self.ensure_one()
+        paid = self.b2b_net_received
+        balance = self.b2b_balance
+        compare = self.currency_id.compare_amounts
+        deposit = self.currency_id.round(self.amount_total * self.b2b_production_percent / 100)
+        if self.state == 'cancel':
+            label = _('Order Cancelled')
+        elif compare(balance, 0) <= 0:
+            label = _('Fully Paid') if compare(self.amount_total, 0) > 0 else _('No Payment Required')
+        elif self.b2b_review_state == 'pending':
+            label = _('Awaiting Final Quote')
+        elif compare(paid, deposit) < 0:
+            label = _('Deposit Payment Required') if self.b2b_collection_category == 'B' else _('Payment Required')
+        elif self.b2b_change_payment_hold:
+            label = _('Order Change Under Review')
+        elif self.b2b_balance_payment_requested:
+            label = _('Balance Payment Required')
+        elif self.b2b_collection_category == 'B' and compare(paid, 0) > 0:
+            label = _('Deposit Received · Balance Outstanding')
+        elif compare(paid, 0) > 0:
+            label = _('Partially Paid · Balance Outstanding')
+        else:
+            label = _('Balance Outstanding')
+        # sudo is limited to an aggregate, after the portal authorizes the order.
+        pending = bool(self.sudo().b2b_receipt_ids.filtered(lambda r: r.state == 'submitted'))
+        return {'label': label, 'pending': pending, 'requested': (
+            self.b2b_balance_payment_requested and self.state == 'sale'
+            and compare(balance, 0) > 0 and self.b2b_review_state != 'pending'
+            and not self.b2b_change_payment_hold)}
+
+    def action_b2b_request_balance_payment(self):
+        check_manager(self.env)
+        self.check_access('write')
+        for order in self:
+            order._b2b_lock_collection()
+            if (not order.b2b_collection_active or order.state != 'sale'
+                    or order.currency_id.compare_amounts(order.b2b_balance, 0) <= 0
+                    or order.b2b_review_state == 'pending' or order.b2b_change_payment_hold):
+                raise UserError(_('Request a balance payment only on a confirmed order with an outstanding balance and no review hold.'))
+            if order.b2b_balance_payment_requested:
+                continue
+            super(SaleOrder, order).write({'b2b_balance_payment_requested': True})
+            order.with_context(mail_notify_force_send=False).message_post(
+                body=_('Please pay the remaining balance for order %s. Open Payments, Bank Transfer & PI in your account to view the current amount and payment instructions.', order.name),
+                partner_ids=order.partner_id.ids, subtype_xmlid='mail.mt_comment')
+        return True
 
     @api.model
     def get_view(self, view_id=None, view_type='form', **options):
@@ -42,13 +140,21 @@ class SaleOrder(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
+            if vals.get('b2b_balance_payment_requested') and not self.env.is_superuser():
+                raise AccessError(_('Use Request Balance Payment to notify the customer.'))
             if set(vals) & {'b2b_collection_policy_id', 'b2b_brand_id', 'b2b_receiving_journal_id', 'b2b_collection_active', 'b2b_production_percent', 'b2b_shipment_percent'}:
                 check_manager(self.env)
                 if not self.env.is_superuser() and vals.get('b2b_collection_active'):
                     raise AccessError(_('Collection activation is controlled by order submission.'))
         orders = super().create(vals_list)
-        for order in orders.filtered(lambda o: o.b2b_receiving_journal_id and not o.b2b_bank_instructions):
-            super(SaleOrder, order).write({'b2b_bank_instructions': order._b2b_bank_text(order.b2b_receiving_journal_id)})
+        for order in orders.filtered('b2b_receiving_journal_id'):
+            snapshots = {}
+            if not order.b2b_bank_instructions:
+                snapshots['b2b_bank_instructions'] = order._b2b_bank_text(order.b2b_receiving_journal_id)
+            if not order.b2b_pi_bank_instructions:
+                snapshots['b2b_pi_bank_instructions'] = order._b2b_pi_bank_text(order.b2b_receiving_journal_id)
+            if snapshots:
+                super(SaleOrder, order).write(snapshots)
         return orders
 
     def _b2b_lock_collection(self):
@@ -73,6 +179,7 @@ class SaleOrder(models.Model):
             'b2b_shipment_percent': policy.shipment_percent, 'b2b_block_overdue': policy.block_overdue,
             'b2b_brand_id': brand.id, 'b2b_receiving_journal_id': journal.id,
             'b2b_brand_logo': brand.logo, 'b2b_bank_instructions': self._b2b_bank_text(journal),
+            'b2b_pi_bank_instructions': self._b2b_pi_bank_text(journal),
             'require_payment': policy.production_percent > 0,
             'prepayment_percent': policy.production_percent / 100 if policy.production_percent else 1.0,
         }
@@ -92,6 +199,33 @@ class SaleOrder(models.Model):
             _('Currency: %s', (journal.currency_id or journal.company_id.currency_id).name),
             _('Payment reference: %s', self.name),
         ]))
+
+    def _b2b_pi_bank_text(self, journal):
+        """Snapshot complete wire details for the PI without expanding the portal card."""
+        if not journal:
+            return ''
+        account = journal.bank_account_id
+        bank = account.bank_id
+        company_partner = journal.company_id.partner_id
+        currency = journal.currency_id or journal.company_id.currency_id
+        company_address = company_partner._display_address(without_company=True)
+        bank_address = ', '.join(filter(None, [
+            bank.street, bank.street2, bank.city, bank.state.name,
+            bank.zip, bank.country.name,
+        ])) if bank else ''
+        details = [
+            _('Beneficiary: %s', account.acc_holder_name or journal.company_id.name),
+            _('%(currency)s Account No.: %(account)s', currency=currency.name, account=account.acc_number),
+            _('SWIFT/BIC: %s', bank.bic or '') if bank else '',
+            _('Beneficiary Address: %s', company_address.replace('\n', ', ')) if company_address else '',
+            _('Bank Name: %s', bank.name or '') if bank else '',
+            _('Bank Address: %s', bank_address) if bank_address else '',
+            _('Clearing Number: %s', account.clearing_number) if account.clearing_number else '',
+            account.note and account.note.strip(),
+            _('Currency: %s', currency.name),
+            _('Payment reference: %s', self.name),
+        ]
+        return '\n'.join(filter(None, details))
 
     def _b2b_loading_native_demo(self):
         # Native load_demo uses sudo + install_demo, including force_demo on
@@ -121,7 +255,9 @@ class SaleOrder(models.Model):
         return True
 
     def write(self, vals):
-        protected = {'b2b_collection_active', 'b2b_collection_category', 'b2b_production_percent', 'b2b_shipment_percent', 'b2b_block_overdue', 'b2b_brand_logo', 'b2b_bank_instructions'}
+        if 'b2b_balance_payment_requested' in vals and not self.env.is_superuser():
+            raise AccessError(_('Use Request Balance Payment to notify the customer.'))
+        protected = {'b2b_collection_active', 'b2b_collection_category', 'b2b_production_percent', 'b2b_shipment_percent', 'b2b_block_overdue', 'b2b_brand_logo', 'b2b_bank_instructions', 'b2b_pi_bank_instructions'}
         if set(vals) & protected and not self.env.is_superuser():
             raise AccessError(_('Collection snapshots are maintained by the collection workflow.'))
         configuration = {'b2b_collection_policy_id', 'b2b_brand_id', 'b2b_receiving_journal_id'}
@@ -151,7 +287,7 @@ class SaleOrder(models.Model):
         for order in configured:
             snapshot = order._b2b_collection_defaults()
             if order.state not in ('draft', 'sent'):
-                snapshot = {key: value for key, value in snapshot.items() if key in {'b2b_brand_id', 'b2b_receiving_journal_id', 'b2b_brand_logo', 'b2b_bank_instructions'}}
+                snapshot = {key: value for key, value in snapshot.items() if key in {'b2b_brand_id', 'b2b_receiving_journal_id', 'b2b_brand_logo', 'b2b_bank_instructions', 'b2b_pi_bank_instructions'}}
             super(SaleOrder, order).write(snapshot)
             order.message_post(body=_('Collection instructions updated: %s. Please download the latest PI.', order.b2b_configuration_reason), partner_ids=order.partner_id.ids)
         return result
@@ -320,11 +456,12 @@ class SaleOrder(models.Model):
             raise UserError(_('The order must be released before a payment PI can be issued.'))
         if not self.b2b_brand_id or not self.b2b_receiving_journal_id:
             raise UserError(_('Our team must configure the order brand and receiving bank account first.'))
-        payload = json.dumps(['pi-layout-v3', self._get_lang(), self.currency_id.name,
+        payload = json.dumps(['pi-layout-v4', self._get_lang(), self.currency_id.name,
             self.company_id.partner_id._display_address(), self.partner_id._display_address(),
             self.partner_invoice_id._display_address(), self.partner_shipping_id._display_address(),
             self.client_order_ref, str(self.date_order), str(self.validity_date), self.payment_term_id.name,
-            self.amount_total, self.b2b_net_received, self.b2b_payable_now, self.b2b_bank_instructions,
+            self.amount_total, self.b2b_net_received, self.b2b_payable_now,
+            self.b2b_bank_instructions, self.b2b_pi_bank_instructions,
             self.b2b_collection_category, self.b2b_collection_policy_id.name, self.b2b_production_percent,
             self.b2b_shipment_percent, self.b2b_brand_logo.decode() if self.b2b_brand_logo else '',
             self.partner_id.display_name, [(l.name, l.product_uom_qty, l.product_uom_id.name,

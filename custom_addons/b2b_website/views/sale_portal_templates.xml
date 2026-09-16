@@ -13,11 +13,15 @@
             <attribute name="t-if">sale_order.b2b_review_state != 'pending' and (sale_order._has_to_be_paid() or (payment_amount and sale_order.amount_paid &lt; sale_order.amount_total and sale_order.state != 'cancel'))</attribute>
         </xpath>
         <xpath expr="//div[@id='sale_order_sidebar_button']" position="before">
+            <div t-if="sale_order.b2b_review_state == 'pending' and request.params.get('review_submitted')" hidden="hidden" data-lt-toast="" data-lt-toast-type="success">Order Submitted — we’ll confirm shipping and final pricing before payment.</div>
             <div t-if="sale_order.b2b_review_state == 'pending'" class="alert alert-warning mt-3" role="status">
-                <strong>Review in progress</strong><br/>Our team is checking this order. Payment will become available after the final amount is released.
+                <strong>Awaiting Final Quote</strong>
+                <p class="mt-2 mb-2">We’re confirming shipping costs and any requested adjustments. We’ll notify you when your final quote is ready. No payment is required now.</p>
+                <small>Submitted → Final Quote → Payment</small>
+                <p class="mt-2 mb-0"><a href="#sale_order_communication">Message our team</a> to share any additional requirements.</p>
             </div>
             <div t-elif="sale_order.b2b_review_state == 'ready'" class="alert alert-info mt-3" role="status">
-                <strong>Ready for payment</strong><br/>The reviewed order is final. Please check the lines below before paying.
+                <strong>Ready for Payment</strong><br/>Your final quote is ready. Review the updated items, shipping and total, then pay according to your agreed terms.
             </div>
             <div t-if="sale_order.b2b_change_revision" class="alert alert-light mt-3" role="status">
                 Order revision <strong t-out="sale_order.b2b_change_revision"/>

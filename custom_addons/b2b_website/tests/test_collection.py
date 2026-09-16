@@ -22,8 +22,7 @@ class B2BCollectionCommon(AccountTestInvoicingCommon):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.website = cls.env.ref('website.default_website')
-        cls.website.company_id = cls.env.company
+        cls.website = cls.env['website'].create({'name': 'Collection Test Website', 'company_id': cls.env.company.id})
         cls.customer = cls.env['res.partner'].sudo().create({'name': 'Collection Test Company', 'is_company': True, 'b2b_approved': True})
         cls.product = cls.env['product.product'].create({'name': 'Collection Test Product', 'type': 'consu', 'list_price': 100, 'taxes_id': [Command.clear()], 'b2b_visibility_mode': 'all'})
         cls.journal = cls.company_data['default_journal_bank']
@@ -51,6 +50,91 @@ class B2BCollectionCommon(AccountTestInvoicingCommon):
 
 @tagged('post_install', '-at_install')
 class TestB2BCollection(B2BCollectionCommon):
+    def test_customer_terms_and_quote_status_preserve_payment_rules(self):
+        order = self._order('b20')
+        self.assertEqual(order._b2b_customer_terms_label(), '20% deposit, 80% before shipment')
+        order.write({'b2b_checkout_mode': 'review', 'b2b_review_state': 'pending'})
+        self.assertEqual(order._b2b_customer_order_status(), 'Awaiting Final Quote')
+        self.assertEqual(order._b2b_portal_payment_summary()['label'], 'Awaiting Final Quote')
+        self.assertFalse(order._has_to_be_paid())
+        order.action_b2b_mark_review_ready()
+        self.assertEqual(order._b2b_customer_order_status(), 'Ready for Payment')
+        self.assertEqual(order.prepayment_percent, 0.2)
+        self.assertEqual(order.b2b_payable_now, 20)
+        self._receipt(order, 20).action_confirm_receipt()
+        self.assertEqual(order._b2b_customer_order_status(), 'Order Confirmed')
+        self.assertFalse(order.b2b_shipment_allowed)
+
+    def test_invoice_terms_warning_does_not_change_collection_thresholds(self):
+        order = self._order('d')
+        self.assertFalse(order.b2b_payment_configuration_warning)
+        order.payment_term_id = False
+        self.assertIn('no invoice payment terms', order.b2b_payment_configuration_warning)
+        self.assertEqual(order.b2b_production_percent, 0)
+        self.assertEqual(order.b2b_shipment_percent, 0)
+        order.payment_term_id = order.b2b_collection_policy_id.payment_term_id
+        self.assertFalse(order.b2b_payment_configuration_warning)
+
+    def test_invoice_schedule_is_independent_of_deposit_clearance(self):
+        order = self._order('b30')
+        order.payment_term_id = self.env.ref('b2b_website.collection_net30')
+        self.assertFalse(order.b2b_payment_configuration_warning)
+        self.assertEqual(order.b2b_production_percent, 30)
+        self.assertEqual(order.b2b_shipment_percent, 100)
+        self.assertEqual(order.prepayment_percent, 0.3)
+        order.prepayment_percent = 0.2
+        self.assertIn('online prepayment', order.b2b_payment_configuration_warning)
+        self.assertEqual(order.b2b_production_percent, 30)
+        order.prepayment_percent = 0.3
+        self.assertFalse(order.b2b_payment_configuration_warning)
+
+    def test_portal_deposit_status_and_balance_request(self):
+        order = self._order('b20')
+        self.assertEqual(order._b2b_portal_payment_summary()['label'], 'Deposit Payment Required')
+        receipt = self._receipt(order, 20)
+        self.assertTrue(order._b2b_portal_payment_summary()['pending'])
+        self.assertEqual(order.b2b_net_received, 0)
+        receipt.action_confirm_receipt()
+        self.assertEqual(order.state, 'sale')
+        self.assertEqual(order._b2b_portal_payment_summary()['label'], 'Deposit Received · Balance Outstanding')
+        self.assertFalse(order._b2b_portal_payment_summary()['requested'])
+        self.assertFalse(order.b2b_shipment_allowed)
+        # A change hold blocks fulfilment, not a required deposit top-up.
+        order.sudo().write({'b2b_change_payment_hold': True})
+        order.order_line.price_unit = 200
+        self.assertEqual(order._b2b_portal_payment_summary()['label'], 'Deposit Payment Required')
+        order.order_line.price_unit = 100
+        self.assertEqual(order._b2b_portal_payment_summary()['label'], 'Order Change Under Review')
+        with self.assertRaises(UserError):
+            order.action_b2b_request_balance_payment()
+        order.sudo().write({'b2b_change_payment_hold': False})
+        with self.assertRaises(AccessError):
+            order.with_user(self.portal_user).action_b2b_request_balance_payment()
+        with self.assertRaises(AccessError):
+            order.with_user(self.operator).write({'b2b_balance_payment_requested': True})
+        order.action_b2b_request_balance_payment()
+        self.assertTrue(order._b2b_portal_payment_summary()['requested'])
+        self.assertEqual(order._b2b_portal_payment_summary()['label'], 'Balance Payment Required')
+        messages = order.message_ids
+        order.action_b2b_request_balance_payment()
+        self.assertEqual(order.message_ids, messages)
+        self._receipt(order, 80).action_confirm_receipt()
+        self.assertEqual(order._b2b_portal_payment_summary()['label'], 'Fully Paid')
+        self.assertFalse(order._b2b_portal_payment_summary()['requested'])
+        with self.assertRaises(UserError):
+            order.action_b2b_request_balance_payment()
+
+    def test_portal_credit_cancel_and_unconfirmed_request(self):
+        order = self._order('b20')
+        with self.assertRaises(UserError):
+            order.action_b2b_request_balance_payment()
+        order._action_cancel()
+        self.assertEqual(order._b2b_portal_payment_summary()['label'], 'Order Cancelled')
+        credit = self._order('d')
+        credit.action_confirm()
+        self.assertEqual(credit._b2b_portal_payment_summary()['label'], 'Balance Outstanding')
+        self.assertFalse(credit._b2b_portal_payment_summary()['requested'])
+
     def test_native_demo_confirmation_does_not_activate_collection(self):
         order = self.env['sale.order'].create({
             'partner_id': self.customer.id, 'website_id': self.website.id,
@@ -81,6 +165,43 @@ class TestB2BCollection(B2BCollectionCommon):
         duplicate = source.copy()
         self.assertIn('Payment reference: %s' % duplicate.name, duplicate.b2b_bank_instructions)
         self.assertNotIn('Payment reference: %s' % source.name, duplicate.b2b_bank_instructions)
+        self.assertIn('Payment reference: %s' % duplicate.name, duplicate.b2b_pi_bank_instructions)
+        self.assertNotIn('Payment reference: %s' % source.name, duplicate.b2b_pi_bank_instructions)
+
+    def test_pi_has_complete_native_bank_details_without_expanding_portal_snapshot(self):
+        self.env.company.partner_id.write({
+            'street': 'RM 3 Unit P, Kaiser Estate Phase 3',
+            'city': 'Hong Kong',
+            'country_id': self.env.ref('base.hk').id,
+        })
+        bank = self.env['res.bank'].create({
+            'name': 'China Merchants Bank Co., Limited (Hong Kong Branch)',
+            'bic': 'CMBCHKHH',
+            'street': '31/F, Three Exchange Square',
+            'street2': '8 Connaught Place',
+            'city': 'Central',
+            'country': self.env.ref('base.hk').id,
+        })
+        self.journal.bank_account_id.write({
+            'acc_holder_name': 'Lucky Tone Technology Co., Limited',
+            'bank_id': bank.id,
+            'clearing_number': '238',
+            'note': 'Bank Code: 238\nBranch Code: 860',
+        })
+        order = self._order('a')
+        self.assertNotIn('Beneficiary Address:', order.b2b_bank_instructions)
+        self.assertNotIn('Branch Code: 860', order.b2b_bank_instructions)
+        self.assertIn('USD Account No.: TEST-NOT-A-REAL-ACCOUNT', order.b2b_pi_bank_instructions)
+        self.assertIn('SWIFT/BIC: CMBCHKHH', order.b2b_pi_bank_instructions)
+        self.assertIn('Beneficiary Address:', order.b2b_pi_bank_instructions)
+        self.assertIn('RM 3 Unit P, Kaiser Estate Phase 3', order.b2b_pi_bank_instructions)
+        self.assertIn('Bank Address: 31/F, Three Exchange Square, 8 Connaught Place, Central', order.b2b_pi_bank_instructions)
+        self.assertIn('Clearing Number: 238', order.b2b_pi_bank_instructions)
+        self.assertIn('Branch Code: 860', order.b2b_pi_bank_instructions)
+        content, _ = self.env['ir.actions.report']._render_qweb_html(
+            'b2b_website.action_report_collection_pi', order.ids)
+        self.assertIn(b'31/F, Three Exchange Square', content)
+        self.assertIn(b'Branch Code: 860', content)
 
     def test_online_deposit_refund_requires_actual_evidence(self):
         order = self._order('b30')
@@ -328,6 +449,9 @@ class TestB2BCollection(B2BCollectionCommon):
             order.order_line.price_unit = 120
             second = order.sudo()._b2b_issue_pi()
             self.assertEqual(second.revision, first.revision + 1)
+            order.sudo().write({'b2b_pi_bank_instructions': order.b2b_pi_bank_instructions + '\nBranch Code: 860'})
+            third = order.sudo()._b2b_issue_pi()
+            self.assertEqual(third.revision, second.revision + 1)
         with self.assertRaises(UserError):
             first.write({'digest': 'tampered'})
 

@@ -21,20 +21,17 @@
         </xpath>
     </template>
 
-    <template id="payment_submit_for_review" inherit_id="website_sale.payment" name="Submit Order for Review">
-        <xpath expr="//div[@id='address_on_payment']" position="before">
-            <section class="card border-primary-subtle mb-4" aria-labelledby="b2b_review_checkout_title">
-                <div class="card-body">
-                    <h4 id="b2b_review_checkout_title">Need us to adjust the order first?</h4>
-                    <p class="text-muted mb-3">Submit the order without payment. Our team can update products, quantities, pricing, or shipping, then release the final order for you to review and pay.</p>
-                    <form action="/shop/submit-for-review" method="post">
+    <template id="payment_submit_for_review" inherit_id="website_sale.navigation_buttons" name="Submit Order for Review">
+        <xpath expr="//t[@t-if=&quot;current_website_checkout_step_href == '/shop/payment'&quot;]" position="inside">
+            <div t-if="not errors and website_sale_order._is_cart_ready()" class="lt-checkout-alternatives d-flex flex-column gap-2">
+                    <form action="/shop/submit-for-review" method="post" data-lt-submit-once="">
                         <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                         <button type="submit" class="btn btn-outline-primary w-100" data-lt-stable-submit="">
-                            <i class="fa fa-comments-o me-2"/>Submit for Review — Pay Later
+                            Submit Order
                         </button>
                     </form>
-                </div>
-            </section>
+                    <small class="text-muted text-center">Confirm shipping and final pricing with our team before payment.</small>
+            </div>
         </xpath>
     </template>
 

@@ -1,4 +1,6 @@
 """An immutable execution owner, independent from the selling legal entity."""
+import logging
+
 from odoo import api, fields, models, _
 from odoo.exceptions import ValidationError
 
@@ -26,8 +28,41 @@ class SaleOrder(models.Model):
                 website.b2b_factory_company_id if mode == 'odoo' else self.env['res.company'])
             vals.update(b2b_fulfilment_mode=mode, b2b_fulfilment_factory_id=factory.id,
                         b2b_external_change_pending=False)
+            if mode == 'external':
+                # Copies can carry a historic cross-company warehouse. External
+                # fulfilment never needs a local stock default on a new order.
+                vals['warehouse_id'] = False
             prepared.append(vals)
         return super().create(prepared)
+
+    @api.depends('user_id', 'company_id', 'website_id', 'b2b_fulfilment_mode')
+    def _compute_warehouse_id(self):
+        external = self.filtered(lambda order: order.b2b_fulfilment_mode == 'external')
+        external.warehouse_id = False
+        for order in self - external:
+            scoped = order.with_company(order.company_id or self.env.company)
+            super(SaleOrder, scoped)._compute_warehouse_id()
+            # website_sale_stock may fall back to the website/operator's
+            # warehouse. It is never valid for a different legal seller.
+            if order.b2b_routed_company and order.warehouse_id.company_id != order.company_id:
+                order.warehouse_id = self.env['stock.warehouse'].search([
+                    ('company_id', '=', order.company_id.id)], limit=1)
+
+    @api.model
+    def _b2b_repair_external_warehouses(self):
+        """Upgrade only: do not touch any order with physical stock history."""
+        repaired, skipped = [], []
+        orders = self.search([('b2b_fulfilment_mode', '=', 'external'), ('warehouse_id', '!=', False)])
+        for order in orders.filtered(lambda item: item.warehouse_id.company_id != item.company_id):
+            if (order.picking_ids or order.order_line.move_ids
+                    or order.order_line.purchase_line_ids
+                    or any(line.qty_delivered for line in order.order_line)):
+                skipped.append(order.id)
+                continue
+            order.with_company(order.company_id).write({'warehouse_id': False})
+            repaired.append(order.id)
+        logging.getLogger(__name__).info('External warehouse repair: cleared=%s; stock-history review required=%s', repaired, skipped)
+        return {'repaired': repaired, 'skipped': skipped}
 
     def write(self, vals):
         for order in self:

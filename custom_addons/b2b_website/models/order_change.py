@@ -232,7 +232,7 @@ class B2BOrderChangeRequest(models.Model):
         for request in self:
             if request.state != "submitted":
                 raise ValidationError(_("Only submitted requests can enter review."))
-            order = request.order_id.sudo()
+            order = request.order_id.sudo().with_company(request.order_id.company_id)
             if any(line.qty_delivered > 0 for line in order.order_line):
                 raise ValidationError(_("Delivered orders must use the return or replacement workflow."))
             revision = order.copy({

@@ -110,6 +110,9 @@ class Website(models.Model):
             ("share", "=", True),
         ]).partner_id.commercial_partner_id
         for line in self.env["sale.order.line"].search([
+            # Proposals are negotiated snapshots, not catalog descriptions.
+            # In particular, sent proposals must remain immutable on upgrades.
+            ("order_id.b2b_is_change_revision", "=", False),
             ("product_id", "!=", False), "|",
             ("order_id.website_id", "!=", False),
             ("order_id.partner_id", "child_of", portal_companies.ids),
