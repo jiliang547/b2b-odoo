@@ -215,6 +215,35 @@ class TestB2BOrderChange(TransactionCase):
         self.assertFalse(order.b2b_change_payment_hold)
         self.assertEqual(order.amount_paid, order.amount_total)
 
+    def test_native_cron_recovers_already_postprocessed_supplement(self):
+        order = self._order()
+        change = self._proposal(order, 125.0)
+        self._customer_accept(change)
+        transaction = self.env['payment.transaction'].create({
+            'provider_id': self.env.ref('payment.payment_provider_demo').id,
+            'payment_method_id': self.env.ref('payment_demo.payment_method_demo').id,
+            'reference': 'RECOVER-%s' % order.id,
+            'amount': order.amount_total - order.amount_paid,
+            'currency_id': order.currency_id.id, 'partner_id': self.partner.id,
+            'operation': 'online_direct', 'state': 'done', 'is_post_processed': True,
+            'sale_order_ids': [Command.set(order.ids)],
+        })
+        self.assertEqual(change.state, 'balance_due')
+        transaction._cron_post_process()
+        self.assertEqual(change.state, 'completed')
+        self.assertFalse(order.b2b_change_payment_hold)
+        completed_at = change.completed_at
+        transaction._cron_post_process()
+        self.assertEqual(change.completed_at, completed_at)
+
+    def test_database_enforces_one_open_change_per_order(self):
+        self.env.cr.execute("SELECT indexdef FROM pg_indexes WHERE tablename = %s AND indexname = %s", [
+            'b2b_order_change_request', 'b2b_order_change_request_one_open_per_order'])
+        definition = self.env.cr.fetchone()
+        self.assertTrue(definition)
+        self.assertIn('UNIQUE', definition[0])
+        self.assertIn('WHERE', definition[0])
+
     def test_equal_change_completes_without_finance(self):
         order = self._order()
         change = self._proposal(order, 100.0)
@@ -321,8 +350,18 @@ class TestB2BOrderChange(TransactionCase):
         with self.assertRaises(AccessError):
             change.with_user(finance_user).write({"requested_changes": "Tampered"})
         self._record_refund(change)
+        adjustment_activity = change.activity_ids.filtered(
+            lambda activity: activity.summary == 'Complete financial adjustment %s' % change.name)
+        self.assertTrue(adjustment_activity)
+        self.assertNotIn(finance_user, adjustment_activity.user_id)
+        other_activity = change.activity_schedule(
+            'mail.mail_activity_data_todo', user_id=self.manager.id,
+            summary='Unrelated manual follow-up')
         change.with_user(finance_user).action_finance_complete()
         self.assertEqual(change.state, "completed")
+        # Odoo 19 archives completed activities; preserve the native audit trail.
+        self.assertFalse(adjustment_activity.active)
+        self.assertTrue(other_activity.active)
 
     def test_finance_refund_must_match_order_and_difference(self):
         order = self._order()

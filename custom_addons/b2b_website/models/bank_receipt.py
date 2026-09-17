@@ -32,6 +32,16 @@ class BankReceipt(models.Model):
     allocated_amount = fields.Float(string='Allocated Amount (Receipt Currency)', digits=(16, 2))
     payment_currency_id = fields.Many2one(related='payment_id.currency_id', string='Receipt Currency')
     order_amount = fields.Monetary(string='Confirmed Credit to Order', readonly=True)
+    effective_credit = fields.Monetary(string='Current Effective Credit', compute='_compute_effective_credit', compute_sudo=True)
+    accounting_effective = fields.Boolean(compute='_compute_effective_credit', compute_sudo=True)
+
+    @api.depends('state', 'order_amount', 'payment_id.state', 'payment_id.move_id.state')
+    def _compute_effective_credit(self):
+        for receipt in self:
+            receipt.accounting_effective = bool(receipt.state == 'confirmed'
+                and receipt.payment_id.state in ('in_process', 'paid')
+                and receipt.payment_id.move_id.state == 'posted')
+            receipt.effective_credit = receipt.order_amount if receipt.accounting_effective else 0
     reviewed_by_id = fields.Many2one('res.users', readonly=True)
     reviewed_at = fields.Datetime(readonly=True)
     submission_key = fields.Char(copy=False, index=True)
@@ -50,9 +60,9 @@ class BankReceipt(models.Model):
                 raise AccessError(_('Receipts must enter the finance review workflow.'))
             vals['name'] = self.env['ir.sequence'].next_by_code('b2b.bank.receipt') or _('Bank Receipt')
         records = super().create(vals_list)
-        finance = self.env['res.users'].sudo().search([('active', '=', True), ('share', '=', False), ('all_group_ids', 'in', self.env.ref('b2b_website.group_b2b_finance').ids)], limit=1)
-        if finance:
-            for receipt in records:
+        for receipt in records:
+            finance = self.env['res.users'].sudo().search([('active', '=', True), ('share', '=', False), ('company_ids', 'in', receipt.company_id.ids), ('all_group_ids', 'in', self.env.ref('b2b_website.group_b2b_finance').ids)], limit=1)
+            if finance:
                 receipt.activity_schedule('mail.mail_activity_data_todo', user_id=finance.id, summary=_('Verify bank transfer %s', receipt.name))
         return records
 

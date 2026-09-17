@@ -10,6 +10,20 @@ from .collection_policy import check_manager
 class SaleOrder(models.Model):
     _inherit = 'sale.order'
 
+    def _b2b_quote_token(self):
+        self.ensure_one()
+        values = self.env['b2b.order.change.request']._snapshot_order(self)
+        values.update(company=self.company_id.id, customer=self.partner_id.id,
+                      currency_id=self.currency_id.id, terms=self.payment_term_id.id,
+                      production=self.b2b_production_percent, shipment=self.b2b_shipment_percent)
+        return hashlib.sha256(json.dumps(values, sort_keys=True).encode()).hexdigest()
+
+    def _b2b_check_commercial_edit(self):
+        for order in self.filtered(lambda o: o.b2b_collection_active and not o.b2b_is_change_revision):
+            order._b2b_lock_collection()
+            if order.sudo().transaction_ids.filtered(lambda tx: tx.state in ('pending', 'authorized')):
+                raise UserError(_('A payment is being processed. Wait for its result or cancel it before changing products, quantities or prices.'))
+
     b2b_collection_active = fields.Boolean(copy=False, readonly=True)
     b2b_collection_policy_id = fields.Many2one('b2b.collection.policy', string='Production / Shipment Collection Conditions', copy=True, tracking=True)
     b2b_payment_configuration_warning = fields.Text(compute='_compute_b2b_payment_configuration_warning')
@@ -217,7 +231,7 @@ class SaleOrder(models.Model):
             _('Beneficiary: %s', account.acc_holder_name or journal.company_id.name),
             _('%(currency)s Account No.: %(account)s', currency=currency.name, account=account.acc_number),
             _('SWIFT/BIC: %s', bank.bic or '') if bank else '',
-            _('Beneficiary Address: %s', company_address.replace('\n', ', ')) if company_address else '',
+            _('Beneficiary Address: %s', ', '.join(line.strip() for line in company_address.splitlines() if line.strip())) if company_address else '',
             _('Bank Name: %s', bank.name or '') if bank else '',
             _('Bank Address: %s', bank_address) if bank_address else '',
             _('Clearing Number: %s', account.clearing_number) if account.clearing_number else '',
@@ -255,6 +269,8 @@ class SaleOrder(models.Model):
         return True
 
     def write(self, vals):
+        if set(vals) & {'order_line', 'currency_id', 'pricelist_id', 'partner_id', 'payment_term_id', 'fiscal_position_id'}:
+            self._b2b_check_commercial_edit()
         if 'b2b_balance_payment_requested' in vals and not self.env.is_superuser():
             raise AccessError(_('Use Request Balance Payment to notify the customer.'))
         protected = {'b2b_collection_active', 'b2b_collection_category', 'b2b_production_percent', 'b2b_shipment_percent', 'b2b_block_overdue', 'b2b_brand_logo', 'b2b_bank_instructions', 'b2b_pi_bank_instructions'}
@@ -307,7 +323,7 @@ class SaleOrder(models.Model):
         transactions = self.transaction_ids.filtered(lambda t: t.state == 'done' and t.operation != 'validation')
         refunds = transactions.child_transaction_ids.filtered(lambda t: t.state == 'done' and t.operation == 'refund') - transactions
         amount = sum(transactions.mapped('amount')) - sum(abs(t.amount) for t in refunds)
-        for receipt in self.b2b_receipt_ids.filtered(lambda r: r.state == 'confirmed' and r.payment_id.state in ('in_process', 'paid')):
+        for receipt in self.b2b_receipt_ids.filtered('accounting_effective'):
             # A native transaction payment is already counted above.
             if receipt.payment_id not in transactions.mapped('payment_id'):
                 amount += receipt.order_amount
@@ -321,7 +337,7 @@ class SaleOrder(models.Model):
                 amount -= payment.currency_id._convert(payment.amount, self.currency_id, payment.company_id, payment.date)
         return self.currency_id.round(amount)
 
-    @api.depends('b2b_collection_active', 'transaction_ids.state', 'transaction_ids.amount', 'transaction_ids.child_transaction_ids.state', 'transaction_ids.child_transaction_ids.amount', 'b2b_receipt_ids.state', 'b2b_receipt_ids.order_amount', 'b2b_receipt_ids.payment_id.state', 'b2b_change_request_ids.state', 'b2b_change_request_ids.delta_amount', 'b2b_change_request_ids.refund_amount', 'b2b_change_request_ids.refund_transaction_id', 'b2b_change_request_ids.refund_payment_id.state')
+    @api.depends('b2b_collection_active', 'transaction_ids.state', 'transaction_ids.amount', 'transaction_ids.child_transaction_ids.state', 'transaction_ids.child_transaction_ids.amount', 'b2b_receipt_ids.state', 'b2b_receipt_ids.order_amount', 'b2b_receipt_ids.payment_id.state', 'b2b_receipt_ids.payment_id.move_id.state', 'b2b_change_request_ids.state', 'b2b_change_request_ids.delta_amount', 'b2b_change_request_ids.refund_amount', 'b2b_change_request_ids.refund_transaction_id', 'b2b_change_request_ids.refund_payment_id.state')
     def _compute_amount_paid(self):
         super()._compute_amount_paid()
         for order in self.filtered('b2b_collection_active'):

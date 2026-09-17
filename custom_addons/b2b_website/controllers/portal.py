@@ -1,4 +1,5 @@
 from werkzeug.exceptions import NotFound
+from psycopg2 import IntegrityError
 
 from odoo import _
 from odoo.exceptions import AccessError, ValidationError
@@ -215,17 +216,24 @@ class PartnerHubPortal(CustomerPortal):
         ], limit=1):
             error = _("Another change request is already open for this order.")
 
-        if request.httprequest.method == "POST" and not error:
+        can_submit = not error
+        if request.httprequest.method == "POST" and can_submit:
             requested_changes = (post.get("requested_changes") or "").strip()
             if len(requested_changes) < 10:
                 error = _("Please describe the requested change in at least 10 characters.")
             else:
                 try:
-                    change = request.env["b2b.order.change.request"].sudo().create({
-                        "order_id": order.id,
-                        "requested_changes": requested_changes[:4000],
-                        "customer_note": (post.get("customer_note") or "").strip()[:2000],
-                    })
+                    with request.env.cr.savepoint():
+                        change = request.env["b2b.order.change.request"].sudo().create({
+                            "order_id": order.id,
+                            "requested_changes": requested_changes[:4000],
+                            "customer_note": (post.get("customer_note") or "").strip()[:2000],
+                        })
+                except IntegrityError as exception:
+                    if exception.diag.constraint_name != 'b2b_order_change_request_one_open_per_order':
+                        raise
+                    error = _("Another change request is already open for this order.")
+                    can_submit = False
                 except ValidationError as exception:
                     error = str(exception)
                 else:
@@ -236,6 +244,8 @@ class PartnerHubPortal(CustomerPortal):
             "sale_order": order,
             "error": error,
             "page_name": "request_order_change",
+            "can_submit": can_submit,
+            "form_values": post,
         })
         return request.render("b2b_website.portal_request_order_change", values)
 

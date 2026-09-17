@@ -38,6 +38,10 @@ class PaymentTransaction(models.Model):
         )._check_amount_and_confirm_order()
 
     def _post_process(self):
+        # Apply business consequences before native processing can commit while
+        # rendering reports. A persisted native completion flag must not hide a
+        # still-pending order change from subsequent polling/cron retries.
+        self.filtered(lambda tx: tx.state == 'done').sale_order_ids.b2b_change_request_ids._on_order_payment_updated()
         result = super()._post_process()
         completed_transactions = self.filtered(
             lambda transaction: transaction.state in ("authorized", "done")
@@ -53,6 +57,16 @@ class PaymentTransaction(models.Model):
             and order.b2b_review_state in ("pending", "ready")
         ).write({"b2b_review_state": "confirmed"})
         completed_orders.mapped("b2b_change_request_ids")._on_order_payment_updated()
+        return result
+
+    def _cron_post_process(self):
+        result = super()._cron_post_process()
+        # Reuse the native payment recovery job, including older transactions
+        # whose native flag was committed before a failed business hook.
+        changes = self.env['b2b.order.change.request'].search([
+            ('state', '=', 'balance_due'), ('order_id.state', '=', 'sale'),
+        ])
+        changes._on_order_payment_updated()
         return result
 
 

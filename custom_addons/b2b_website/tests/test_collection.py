@@ -11,7 +11,17 @@ from types import SimpleNamespace
 from unittest.mock import patch, PropertyMock
 from uuid import uuid4
 from werkzeug.datastructures import FileStorage
-from odoo.addons.b2b_website.controllers.collection import CollectionPortal
+from PIL import Image
+from odoo.tools.pdf import PdfWriter
+from odoo.addons.b2b_website.controllers.collection import CollectionPortal, validate_payment_proof
+from odoo.addons.b2b_website.controllers.collection_payment import CollectionSalePortal
+from odoo.addons.sale.controllers.portal import CustomerPortal as NativeSalePortal
+
+
+def valid_png():
+    stream = BytesIO()
+    Image.new('RGB', (2, 2), 'white').save(stream, format='PNG')
+    return stream.getvalue()
 
 
 class B2BCollectionCommon(AccountTestInvoicingCommon):
@@ -50,6 +60,61 @@ class B2BCollectionCommon(AccountTestInvoicingCommon):
 
 @tagged('post_install', '-at_install')
 class TestB2BCollection(B2BCollectionCommon):
+    def test_uat_payment_link_handles_quote_and_confirmed_order(self):
+        order = self._order('b20')
+        self._receipt(order, 5).action_confirm_receipt()
+        portal = CollectionSalePortal()
+        with patch.object(CollectionSalePortal, 'env', new_callable=PropertyMock, return_value=self.env), \
+                patch.object(portal, '_document_check_access', return_value=order), \
+                patch.object(NativeSalePortal, 'portal_order_page', return_value='page') as native:
+            CollectionSalePortal.portal_order_page.__wrapped__(portal, order.id, payment_amount='15')
+            self.assertIsNone(native.call_args.kwargs['payment_amount'])
+            self._receipt(order, 15).action_confirm_receipt()
+            self.assertEqual(order.state, 'sale')
+            order.order_line.price_unit = 120
+            CollectionSalePortal.portal_order_page.__wrapped__(portal, order.id, payment_amount='80')
+            self.assertEqual(native.call_args.kwargs['payment_amount'], 4)
+
+    def test_uat_quote_fingerprint_and_pending_edit_guard(self):
+        order = self._order('b20')
+        first = order._b2b_quote_token()
+        order.order_line.price_unit = 120
+        self.assertNotEqual(first, order._b2b_quote_token())
+        provider = self.env.ref('payment.payment_provider_demo').sudo().copy({'company_id': self.env.company.id})
+        self.env['payment.transaction'].create({
+            'provider_id': provider.id,
+            'payment_method_id': self.env.ref('payment_demo.payment_method_demo').id,
+            'reference': 'UAT-PENDING-%s' % order.id, 'amount': 24,
+            'currency_id': order.currency_id.id, 'partner_id': self.customer.id,
+            'operation': 'online_direct', 'state': 'pending',
+            'sale_order_ids': [Command.set(order.ids)],
+        })
+        with self.assertRaises(UserError), self.env.cr.savepoint():
+            order.order_line.price_unit = 130
+        self.assertEqual(order.amount_total, 120)
+
+    def test_uat_proof_content_validation(self):
+        for content in (b'%PDF-1.7\n%%EOF', b'\x89PNG\r\n\x1a\n', b'\xff\xd8\xff', b'', b'x' * (8 * 1024 * 1024 + 1)):
+            with self.assertRaises(ValidationError):
+                validate_payment_proof(content)
+        self.assertEqual(validate_payment_proof(valid_png()), 'image/png')
+        stream = BytesIO()
+        writer = PdfWriter()
+        writer.add_blank_page(width=72, height=72)
+        writer.write(stream)
+        self.assertEqual(validate_payment_proof(stream.getvalue()), 'application/pdf')
+
+    def test_uat_reversed_receipt_is_not_effective(self):
+        order = self._order()
+        receipt = self._receipt(order, 100)
+        receipt.action_confirm_receipt()
+        self.assertEqual(receipt.effective_credit, 100)
+        receipt.payment_id.action_draft()
+        self.assertEqual(receipt.state, 'confirmed')
+        self.assertFalse(receipt.accounting_effective)
+        self.assertEqual(receipt.effective_credit, 0)
+        self.assertEqual(order._b2b_received_amount(), 0)
+
     def test_customer_terms_and_quote_status_preserve_payment_rules(self):
         order = self._order('b20')
         self.assertEqual(order._b2b_customer_terms_label(), '20% deposit, 80% before shipment')
@@ -402,10 +467,18 @@ class TestB2BCollection(B2BCollectionCommon):
     def test_upload_controller_records_evidence_without_credit(self):
         order = self._order()
         portal = CollectionPortal()
-        upload = FileStorage(stream=BytesIO(b'%PDF-1.4\n% LOCAL TEST EVIDENCE'), filename='test-proof.pdf')
-        fake = SimpleNamespace(env=self.env(user=self.portal_user), httprequest=SimpleNamespace(files={'proof': upload}))
-        with patch.object(CollectionPortal, 'env', new_callable=PropertyMock, return_value=self.env), patch('odoo.addons.b2b_website.controllers.collection.request', fake), patch.object(portal, '_render', return_value='submitted'):
-            self.assertEqual(portal.upload_proof(order.id, amount='100', transfer_date=str(fields.Date.today()), reference='UPLOAD-UAT', submission_key=str(uuid4())).get_data(as_text=True), 'submitted')
+        upload = FileStorage(stream=BytesIO(valid_png()), filename='test-proof.png')
+        from werkzeug.utils import redirect
+        fake = SimpleNamespace(env=self.env(user=self.portal_user), session={}, redirect=redirect,
+                               httprequest=SimpleNamespace(files={'proof': upload}))
+        with patch.object(CollectionPortal, 'env', new_callable=PropertyMock, return_value=self.env), patch('odoo.addons.b2b_website.controllers.collection.request', fake), patch.object(portal, '_render', return_value='submitted') as render:
+            response = portal.upload_proof(order.id, amount='100', transfer_date=str(fields.Date.today()), reference='UPLOAD-UAT', submission_key=str(uuid4()))
+            self.assertEqual(response.status_code, 303)
+            self.assertEqual(response.location, '/my/orders/%s/collection' % order.id)
+            portal.collection(order.id)
+            self.assertTrue(render.call_args.kwargs['submitted'])
+            portal.collection(order.id)
+            self.assertFalse(render.call_args.kwargs['submitted'])
         self.assertEqual(len(order.b2b_receipt_ids), 1)
         self.assertEqual(order.b2b_receipt_ids.state, 'submitted')
         self.assertTrue(order.b2b_receipt_ids.attachment_ids)
@@ -512,7 +585,7 @@ class TestB2BCollectionHttp(B2BCollectionCommon, HttpCase):
         payload = {name: re.search(r'name="%s" value="([^"]+)"' % name, page.text).group(1)
                    for name in ('csrf_token', 'submission_key')}
         payload.update(amount='100', transfer_date=str(fields.Date.today()), reference='HTTP-UPLOAD-UAT')
-        png = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1cAAAAASUVORK5CYII=')
+        png = valid_png()
         url = '/my/orders/%s/collection/proof' % order.id
         response = self.url_open(url, data=payload, files={'proof': ('receipt.png', png, 'image/png')})
         self.assertEqual(response.status_code, 200)

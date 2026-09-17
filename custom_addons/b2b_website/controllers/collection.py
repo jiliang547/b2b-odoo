@@ -1,6 +1,8 @@
 import base64
 import math
 import uuid
+from io import BytesIO
+from PIL import Image
 from datetime import timedelta
 
 from werkzeug.exceptions import NotFound
@@ -9,7 +11,33 @@ from werkzeug.utils import secure_filename
 from odoo import _, fields, http
 from odoo.http import request
 from odoo.exceptions import UserError, ValidationError
+from odoo.tools.pdf import PdfReader
 from .website_sale import _can_checkout
+
+
+def validate_payment_proof(data):
+    message = _('Upload a PDF, PNG or JPG file no larger than 8 MB. The file must be readable and not password protected.')
+    if not data or len(data) > 8 * 1024 * 1024:
+        raise ValidationError(message)
+    try:
+        if data.startswith(b'%PDF-'):
+            pdf = PdfReader(BytesIO(data), strict=False)
+            if pdf.is_encrypted or not 0 < len(pdf.pages) <= 200:
+                raise ValueError('Unreadable or excessive PDF')
+            for page in pdf.pages:
+                if not page.mediabox:
+                    raise ValueError('Missing page')
+            return 'application/pdf'
+        with Image.open(BytesIO(data)) as picture:
+            if picture.format not in ('PNG', 'JPEG') or picture.width * picture.height > 40_000_000:
+                raise ValueError('Unsupported image')
+            kind = Image.MIME[picture.format]
+            picture.verify()
+        with Image.open(BytesIO(data)) as picture:
+            picture.load()
+        return kind
+    except Exception as exc:
+        raise ValidationError(message) from exc
 
 
 class CollectionPortal(http.Controller):
@@ -24,18 +52,20 @@ class CollectionPortal(http.Controller):
             raise NotFound()
         return order
 
-    def _render(self, order, error=None, submitted=False):
+    def _render(self, order, error=None, submitted=False, form_values=None):
         return request.render('b2b_website.portal_collection', {
             'order': order, 'error': error, 'submitted': submitted,
             'submission_key': str(uuid.uuid4()),
             'receipts': order.b2b_receipt_ids.sorted('id', reverse=True),
             'pis': order.b2b_pi_ids,
+            'form_values': form_values or {},
         })
 
     @http.route('/my/orders/<int:order_id>/collection', type='http', auth='user', website=True, methods=['GET'])
     def collection(self, order_id, **kw):
         order = self._order(order_id)
-        return self._render(order)
+        submitted_order = request.session.pop('b2b_proof_submitted_order', None)
+        return self._render(order, submitted=submitted_order == order.id)
 
     @http.route('/my/orders/<int:order_id>/collection/proof', type='http', auth='user', website=True, methods=['POST'], csrf=True)
     def upload_proof(self, order_id, **post):
@@ -62,17 +92,17 @@ class CollectionPortal(http.Controller):
                     raise UserError(_('Enter the bank reference and a valid transfer date.'))
                 upload = request.httprequest.files.get('proof')
                 data = upload.read(8 * 1024 * 1024 + 1) if upload else b''
-                kind = 'application/pdf' if data.startswith(b'%PDF-') else ('image/png' if data.startswith(b'\x89PNG\r\n\x1a\n') else ('image/jpeg' if data.startswith(b'\xff\xd8\xff') else None))
-                if not kind or len(data) > 8 * 1024 * 1024:
-                    raise UserError(_('Upload a PDF, PNG or JPG file no larger than 8 MB.'))
+                kind = validate_payment_proof(data)
                 receipt = Receipt.create({'order_id': order.id, 'declared_amount': amount, 'transfer_date': date, 'transfer_reference': reference, 'submission_key': key, 'customer_note': (post.get('note') or '')[:2000]})
                 attachment = request.env['ir.attachment'].sudo().create({'name': secure_filename(upload.filename) or 'payment-proof', 'datas': base64.b64encode(data), 'mimetype': kind, 'res_model': receipt._name, 'res_id': receipt.id, 'public': False})
                 receipt.attachment_ids = [(4, attachment.id)]
         except (UserError, ValidationError) as exc:
-            return self._render(order, error=str(exc))
+            return self._render(order, error=str(exc), form_values=post)
         except (ValueError, TypeError):
-            return self._render(order, error=_('Please check the amount, date and form, then submit again.'))
-        return self._render(order, submitted=True)
+            return self._render(order, error=_('Please check the amount, date and form, then submit again.'), form_values=post)
+        # Refresh must fetch current receipts rather than replay the upload POST.
+        request.session['b2b_proof_submitted_order'] = order.id
+        return request.redirect('/my/orders/%s/collection' % order.id, code=303)
 
     @http.route('/my/orders/<int:order_id>/collection/proof/<int:receipt_id>/<int:attachment_id>', type='http', auth='user', website=True)
     def evidence(self, order_id, receipt_id, attachment_id, **kw):

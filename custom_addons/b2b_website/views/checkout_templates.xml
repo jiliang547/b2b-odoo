@@ -57,7 +57,7 @@
                                 <a class="lt-btn lt-btn--ghost-dark" href="/contact">Contact support</a>
                             </div>
                         </div>
-                        <div t-else="" name="o_payment_status" class="lt-state-card lt-payment-status" data-lt-payment-status="" t-att-data-provider-code="tx.provider_code" t-att-data-payment-state="tx.state">
+                        <div t-else="" name="lt_payment_status" class="lt-state-card lt-payment-status" data-lt-payment-status="" t-att-data-provider-code="tx.provider_code" t-att-data-payment-state="tx.state">
                             <div data-lt-payment-processing="">
                                 <i class="fa fa-circle-notch fa-spin lt-payment-status__spinner"/>
                                 <span class="lt-kicker">PAYMENT PROCESSING</span>

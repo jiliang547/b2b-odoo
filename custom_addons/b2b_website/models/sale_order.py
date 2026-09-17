@@ -227,14 +227,18 @@ class SaleOrderLine(models.Model):
         self._b2b_check_revision_orders_editable(
             self.env["sale.order"].browse(order_ids).exists()
         )
+        self.env['sale.order'].browse(order_ids).exists()._b2b_check_commercial_edit()
         return super().create(vals_list)
 
     def write(self, vals):
         self._b2b_check_revision_orders_editable(self.mapped("order_id"))
+        if set(vals) & {'product_id', 'product_uom_qty', 'product_uom_id', 'price_unit', 'discount', 'tax_ids', 'name', 'order_id'}:
+            (self.order_id | self.env['sale.order'].browse(vals.get('order_id', [])))._b2b_check_commercial_edit()
         return super().write(vals)
 
     def unlink(self):
         self._b2b_check_revision_orders_editable(self.mapped("order_id"))
+        self.order_id._b2b_check_commercial_edit()
         return super().unlink()
 
 
