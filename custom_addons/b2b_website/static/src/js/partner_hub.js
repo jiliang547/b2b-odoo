@@ -581,7 +581,14 @@ function initializeRegistrationContacts() {
     };
     const email = form.querySelector("#login");
     const validateEmail = () => {
-        const invalid = Boolean(email.value.trim()) && email.validity.typeMismatch;
+        const value = email.value.trim();
+        const domain = value.slice(value.lastIndexOf("@") + 1).toLowerCase();
+        const labels = domain.split(".");
+        const validDomain = labels.length >= 2
+            && labels.every((label) => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i.test(label))
+            && (/^[a-z]{2,63}$/i.test(labels.at(-1)) || labels.at(-1).startsWith("xn--"));
+        const invalid = Boolean(value)
+            && (email.validity.typeMismatch || email.validity.patternMismatch || !validDomain);
         show(
             email,
             invalid

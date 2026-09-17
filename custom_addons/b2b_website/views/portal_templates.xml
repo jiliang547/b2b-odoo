@@ -53,7 +53,9 @@
     <template id="portal_order_change" name="Order Change Detail">
         <t t-call="portal.portal_layout"><t t-set="no_index" t-value="True"/>
             <div t-if="submitted" hidden="hidden" data-lt-toast="" data-lt-toast-type="success">Your order change request was submitted.</div>
-            <div t-if="action_error" hidden="hidden" data-lt-toast="" data-lt-toast-type="warning">This action is no longer available. The order change status has been refreshed.</div>
+            <div t-if="action_error == 'payment_processing'" hidden="hidden" data-lt-toast="" data-lt-toast-type="warning">An online payment for this order is still being processed. Your revised order was not applied. Please wait for the payment result or contact our team.</div>
+            <div t-elif="action_error == 'business_rule'" hidden="hidden" data-lt-toast="" data-lt-toast-type="warning">We could not apply this revision. Your original order remains unchanged. Please contact our team for assistance.</div>
+            <div t-elif="action_error" hidden="hidden" data-lt-toast="" data-lt-toast-type="warning">This action is no longer available. The order change status has been refreshed.</div>
             <nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my/order-changes">Order Changes</a><span>/</span><t t-out="change.name"/></nav>
             <header class="lt-portal-heading lt-portal-heading--action"><div><h1 t-out="change.name"/><p>For order <a t-att-href="change.order_id.get_portal_url()" t-out="change.order_id.name"/> · Revision <t t-out="change.revision_number"/></p></div><span t-att-class="'lt-status-badge lt-status-badge--%s' % change.state" t-out="dict(change._fields['state'].selection).get(change.state)"/></header>
             <div class="lt-detail-grid">

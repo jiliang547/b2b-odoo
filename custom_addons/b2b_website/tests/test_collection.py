@@ -57,9 +57,77 @@ class B2BCollectionCommon(AccountTestInvoicingCommon):
         receipt = self.env['b2b.bank.receipt'].create({'order_id': order.id, 'declared_amount': amount, 'transfer_reference': 'UAT-%s' % payment.id, 'payment_id': payment.id, 'allocated_amount': amount})
         return receipt
 
+    def _online_transaction(self, order, amount, state='pending', provider_code='demo', reference=None):
+        if provider_code == 'demo':
+            provider = self.env.ref('payment.payment_provider_demo').sudo().copy({'company_id': self.env.company.id})
+            method = self.env.ref('payment_demo.payment_method_demo')
+        else:
+            provider = self.env.ref('payment.payment_provider_transfer').sudo().copy({'company_id': self.env.company.id})
+            method = self.env.ref('payment_custom.payment_method_wire_transfer')
+        return self.env['payment.transaction'].create({
+            'provider_id': provider.id,
+            'payment_method_id': method.id,
+            'reference': reference or 'COLLECTION-%s-%s' % (provider_code.upper(), order.id),
+            'amount': amount,
+            'currency_id': order.currency_id.id,
+            'partner_id': self.customer.id,
+            'operation': 'online_direct',
+            'state': state,
+            'sale_order_ids': [Command.set(order.ids)],
+        })
+
 
 @tagged('post_install', '-at_install')
 class TestB2BCollection(B2BCollectionCommon):
+    def test_bank_receipt_closes_pending_demo_transaction(self):
+        order = self._order()
+        pending = self._online_transaction(order, 100, reference='DEMO-BEFORE-BANK-%s' % order.id)
+        receipt = self._receipt(order, 100)
+        receipt.action_confirm_receipt()
+        self.assertEqual(pending.state, 'cancel')
+        self.assertEqual(receipt.state, 'confirmed')
+        self.assertEqual(order.b2b_balance, 0)
+
+    def test_bank_receipt_blocks_unresolved_real_provider(self):
+        order = self._order()
+        pending = self._online_transaction(order, 100, provider_code='custom', reference='REAL-BEFORE-BANK-%s' % order.id)
+        receipt = self._receipt(order, 100)
+        with self.assertRaisesRegex(UserError, 'still being processed'):
+            receipt.action_confirm_receipt()
+        self.assertEqual(pending.state, 'pending')
+        self.assertEqual(receipt.state, 'submitted')
+
+    def test_fully_paid_order_closes_legacy_demo_before_change(self):
+        order = self._order()
+        pending = self._online_transaction(order, 100, reference='LEGACY-DEMO-%s' % order.id)
+        self._online_transaction(order, 100, state='done', reference='PAID-ELSEWHERE-%s' % order.id)
+        order.action_confirm()
+        change = self.env['b2b.order.change.request'].create({
+            'order_id': order.id,
+            'requested_changes': 'Reduce the paid order after resolving the simulated transaction.',
+        })
+        change.action_start_review()
+        change.revision_order_id.order_line.price_unit = 80
+        change.action_send_proposal()
+        self.assertEqual(pending.state, 'cancel')
+        change.with_user(self.portal_user).action_customer_accept()
+        self.assertEqual(order.amount_total, 80)
+
+    def test_real_pending_payment_blocks_proposal_before_customer(self):
+        order = self._order()
+        pending = self._online_transaction(order, 100, provider_code='custom', reference='REAL-CHANGE-%s' % order.id)
+        self._online_transaction(order, 100, state='done', reference='PAID-WITH-PENDING-%s' % order.id)
+        order.action_confirm()
+        change = self.env['b2b.order.change.request'].create({
+            'order_id': order.id,
+            'requested_changes': 'This proposal must not reach the customer while payment is unresolved.',
+        })
+        change.action_start_review()
+        change.revision_order_id.order_line.price_unit = 80
+        with self.assertRaisesRegex(UserError, pending.reference):
+            change.action_send_proposal()
+        self.assertEqual(change.state, 'under_review')
+
     def test_uat_payment_link_handles_quote_and_confirmed_order(self):
         order = self._order('b20')
         self._receipt(order, 5).action_confirm_receipt()

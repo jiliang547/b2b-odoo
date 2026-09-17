@@ -250,7 +250,12 @@ class OrderChange(models.Model):
             if (change.order_id.b2b_fulfilment_mode == 'external' or factories.filtered(lambda o: o.state == 'sale')) and (
                 not change.b2b_factory_permission_by or change.b2b_factory_permission_digest != change._b2b_permission_digest()
             ):
-                raise UserError(_('Operations must confirm that the factory permits this exact proposal before proceeding. If the proposal changed, confirm again.'))
+                raise UserError(_(
+                    'Factory approval is required before this proposal can be sent. '
+                    'Open the Factory Permission tab, enter the approver or approval reference, '
+                    'and click Confirm Factory Permission. Then click Send to Customer again. '
+                    'If you edit the proposal afterward, confirm the updated proposal again.'
+                ))
 
     def action_send_proposal(self):
         self._b2b_check_factory_permission()

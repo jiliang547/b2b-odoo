@@ -290,6 +290,10 @@ class B2BOrderChangeRequest(models.Model):
         for request in self:
             if request.state != "under_review" or not request.revision_order_id:
                 raise ValidationError(_("Prepare the proposed revision before sending it."))
+            request.order_id._b2b_lock_collection()
+            if request.order_id.currency_id.compare_amounts(request.order_id.b2b_balance, 0) <= 0:
+                request.order_id._b2b_resolve_safe_demo_payment_conflicts()
+            request.order_id._b2b_check_unresolved_online_payments()
             if any(line.qty_delivered > 0 for line in request.order_id.sudo().order_line):
                 raise ValidationError(_("Delivered orders must use the return or replacement workflow."))
             proposed_amount = request.revision_order_id.sudo().amount_total
@@ -380,6 +384,9 @@ class B2BOrderChangeRequest(models.Model):
             request.order_id._b2b_lock_collection()
             if request.state != "customer_confirmation":
                 raise ValidationError(_("This proposal is not awaiting customer confirmation."))
+            if request.order_id.currency_id.compare_amounts(request.order_id.b2b_balance, 0) <= 0:
+                request.order_id._b2b_resolve_safe_demo_payment_conflicts()
+            request.order_id._b2b_check_unresolved_online_payments()
             request.write({"state": "applying", "customer_confirmed_at": fields.Datetime.now()})
             request.order_id.b2b_change_payment_hold = True
             request._apply_revision()

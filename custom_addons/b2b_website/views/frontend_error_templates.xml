@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="partner_hub_error_content" name="Partner Hub Error Content">
+        <div id="wrap" class="oe_structure">
+            <section class="py-5">
+                <div class="container py-5 text-center" style="max-width: 760px;">
+                    <div class="text-uppercase fw-semibold text-primary mb-3">POWER &amp; GRACE PARTNER HUB</div>
+                    <h1>We could not complete that action</h1>
+                    <p class="lead text-muted mt-3">Your information has not been partially changed. Please return to the previous page and try again, or contact our team if the problem continues.</p>
+                    <div class="d-flex flex-wrap justify-content-center gap-3 mt-4">
+                        <a class="btn btn-primary" href="javascript:window.history.back()">Go Back</a>
+                        <a class="btn btn-outline-primary" href="/contact">Contact Support</a>
+                        <a class="btn btn-link" href="/">Partner Hub Home</a>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </template>
+
+    <!-- Expected portal business exceptions should be handled inline. These
+         inherited templates are the final branded safety net for any route
+         that still reaches the native HTTP exception renderer. -->
+    <template id="partner_hub_error_4xx" inherit_id="http_routing.4xx" name="Partner Hub Generic Request Error">
+        <xpath expr="//div[@id='wrap']" position="replace"><t t-call="b2b_website.partner_hub_error_content"/></xpath>
+    </template>
+    <template id="partner_hub_error_400" inherit_id="http_routing.400" name="Partner Hub Bad Request">
+        <xpath expr="//div[@id='wrap']" position="replace"><t t-call="b2b_website.partner_hub_error_content"/></xpath>
+    </template>
+    <template id="partner_hub_error_403" inherit_id="http_routing.403" name="Partner Hub Access Error">
+        <xpath expr="//div[@id='wrap']" position="replace"><t t-call="b2b_website.partner_hub_error_content"/></xpath>
+    </template>
+    <template id="partner_hub_error_404" inherit_id="http_routing.404" name="Partner Hub Not Found">
+        <xpath expr="//div[@id='wrap']" position="replace"><t t-call="b2b_website.partner_hub_error_content"/></xpath>
+    </template>
+    <template id="partner_hub_error_422" inherit_id="http_routing.422" name="Partner Hub Business Error">
+        <xpath expr="//div[@id='wrap']" position="replace"><t t-call="b2b_website.partner_hub_error_content"/></xpath>
+    </template>
+
+    <!-- The 500 template must remain self-contained because the database
+         cursor can already be broken while it is rendered. -->
+    <template id="partner_hub_error_500" inherit_id="http_routing.500" name="Partner Hub Internal Error">
+        <xpath expr="//body" position="replace">
+            <body style="margin:0;background:#f7f8fa;color:#172033;font-family:Arial,sans-serif;">
+                <main style="max-width:760px;margin:10vh auto;padding:48px 32px;text-align:center;background:#fff;border-radius:16px;box-shadow:0 12px 40px rgba(23,32,51,.08);">
+                    <div style="font-weight:700;letter-spacing:.08em;color:#315efb;">POWER &amp; GRACE PARTNER HUB</div>
+                    <h1 style="font-size:32px;margin:20px 0 12px;">We could not complete that action</h1>
+                    <p style="font-size:17px;line-height:1.6;color:#667085;">Please try again. If the problem continues, contact our team and include the time the error occurred.</p>
+                    <p style="margin-top:28px;"><a href="/" style="display:inline-block;padding:12px 22px;border-radius:8px;background:#315efb;color:#fff;text-decoration:none;">Partner Hub Home</a></p>
+                </main>
+            </body>
+        </xpath>
+    </template>
+</odoo>

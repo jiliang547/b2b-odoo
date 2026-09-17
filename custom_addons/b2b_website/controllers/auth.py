@@ -85,7 +85,7 @@ class PartnerHubAuth(AuthSignupHome):
         values = self._prepare_signup_values(qcontext)
         full_name = (qcontext.get("name") or "").strip()[:160]
         raw_login = (qcontext.get("login") or "").strip()
-        login = email_normalize(raw_login)
+        login = self._registration_email(raw_login)
         if raw_login and not login:
             qcontext["login_error"] = _(
                 "Please enter a valid business email address, such as name@company.com."
@@ -136,6 +136,34 @@ class PartnerHubAuth(AuthSignupHome):
             "terms_version": qcontext["terms_version"],
         }
         return values, application_values
+
+    @staticmethod
+    def _registration_email(value):
+        """Return a normalized login only when it has a public-style domain."""
+        normalized = email_normalize((value or "").strip())
+        if not normalized or len(normalized) > 254 or "@" not in normalized:
+            return False
+        try:
+            domain = normalized.rsplit("@", 1)[1].encode("idna").decode("ascii")
+        except (UnicodeError, ValueError):
+            return False
+        labels = domain.split(".")
+        valid = (
+            len(domain) <= 253
+            and len(labels) >= 2
+            and all(
+                re.fullmatch(
+                    r"[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?",
+                    label,
+                )
+                for label in labels
+            )
+            and (
+                re.fullmatch(r"[a-zA-Z]{2,63}", labels[-1])
+                or labels[-1].startswith("xn--")
+            )
+        )
+        return normalized if valid else False
 
     @staticmethod
     def _registration_website(value):

@@ -2,7 +2,7 @@ from werkzeug.exceptions import NotFound
 from psycopg2 import IntegrityError
 
 from odoo import _
-from odoo.exceptions import AccessError, ValidationError
+from odoo.exceptions import AccessError, UserError, ValidationError
 from odoo.http import request, route
 from odoo.addons.portal.controllers.portal import CustomerPortal, pager as portal_pager
 
@@ -271,11 +271,20 @@ class PartnerHubPortal(CustomerPortal):
     def portal_accept_order_change(self, change_id, **post):
         change = self._portal_change_sudo(change_id)
         try:
-            request.env["b2b.order.change.request"].browse(change.id).action_customer_accept()
+            # The workflow writes an intermediate state before applying the
+            # revision. A savepoint is required when converting an expected
+            # business exception into a branded redirect; otherwise those
+            # intermediate writes could be committed by the HTTP request.
+            with request.env.cr.savepoint():
+                request.env["b2b.order.change.request"].browse(change.id).action_customer_accept()
+        except UserError:
+            change.order_id.invalidate_recordset()
+            error = "payment_processing" if change.order_id._b2b_unresolved_online_payments() else "business_rule"
+            return request.redirect("/my/order-changes/%s?action_error=%s" % (change.id, error))
         except (AccessError, ValidationError):
             # A second click or a concurrent staff update must return to the
             # branded portal instead of exposing Odoo's generic error page.
-            return request.redirect("/my/order-changes/%s?action_error=1" % change.id)
+            return request.redirect("/my/order-changes/%s?action_error=state_changed" % change.id)
         return request.redirect("/my/order-changes/%s" % change.id)
 
     @route(
@@ -285,9 +294,10 @@ class PartnerHubPortal(CustomerPortal):
     def portal_decline_order_change(self, change_id, **post):
         change = self._portal_change_sudo(change_id)
         try:
-            request.env["b2b.order.change.request"].browse(change.id).action_customer_cancel()
-        except (AccessError, ValidationError):
-            return request.redirect("/my/order-changes/%s?action_error=1" % change.id)
+            with request.env.cr.savepoint():
+                request.env["b2b.order.change.request"].browse(change.id).action_customer_cancel()
+        except (AccessError, UserError, ValidationError):
+            return request.redirect("/my/order-changes/%s?action_error=state_changed" % change.id)
         return request.redirect("/my/order-changes/%s" % change.id)
 
     @route(
