@@ -2,6 +2,7 @@
 
 import {Component, onWillStart, useState} from "@odoo/owl";
 import {registry} from "@web/core/registry";
+import {user} from "@web/core/user";
 import {useService} from "@web/core/utils/hooks";
 
 export class B2BManagementDashboard extends Component {
@@ -12,10 +13,21 @@ export class B2BManagementDashboard extends Component {
         this.orm = useService("orm");
         this.state = useState({
             loading: true,
-            pendingApprovals: 0,
+            newContactRequests: 0,
+            pendingRegistrations: 0,
+            pendingApplications: 0,
+            pendingOrderReviews: 0,
+            orderChanges: 0,
             samples: 0,
             openService: 0,
             failedJobs: 0,
+            pendingBankReceipts: 0,
+            canReviewFinance: false,
+            canUseSales: false,
+            canManageB2B: false,
+            canUseService: false,
+            canViewErp: false,
+            canUseRepairs: false,
         });
         onWillStart(async () => {
             const safeCount = async (model, domain) => {
@@ -25,18 +37,41 @@ export class B2BManagementDashboard extends Component {
                     return 0;
                 }
             };
-            const [pendingApprovals, samples, openService, failedJobs] = await Promise.all([
-                safeCount("res.partner", [["b2b_approved", "=", false], ["is_company", "=", true], ["customer_rank", ">", 0]]),
+            const [canUseSales, canManageB2B, canUseService, canViewErp, canUseRepairs, canReviewFinance] = await Promise.all([
+                user.hasGroup("sales_team.group_sale_salesman"),
+                user.hasGroup("b2b_core.group_b2b_manager"),
+                user.hasGroup("helpdesk.group_helpdesk_user"),
+                user.hasGroup("b2b_core.group_b2b_operator"),
+                user.hasGroup("stock.group_stock_user"),
+                user.hasGroup("b2b_website.group_b2b_finance"),
+            ]);
+            const [newContactRequests, pendingRegistrations, pendingApplications, pendingOrderReviews, orderChanges, samples, openService, failedJobs] = await Promise.all([
+                safeCount("b2b.contact.request", [["state", "=", "new"]]),
+                safeCount("b2b.registration.application", [["state", "=", "pending"]]),
+                safeCount("b2b.contact.request", [["request_type", "=", "partnership"], ["state", "in", ["new", "in_progress"]]]),
+                safeCount("sale.order", [["website_id", "!=", false], ["state", "=", "sent"], ["b2b_review_state", "=", "pending"]]),
+                safeCount("b2b.order.change.request", [["state", "in", ["submitted", "under_review", "customer_confirmation", "balance_due", "finance_review", "applying"]]]),
                 safeCount("b2b.sample.request", [["state", "in", ["submitted", "under_review"]]]),
                 safeCount("helpdesk.ticket", [["stage_id.fold", "=", false]]),
                 safeCount("b2b.integration.job", [["state", "in", ["failed", "dead"]]]),
             ]);
             Object.assign(this.state, {
                 loading: false,
-                pendingApprovals,
+                canReviewFinance,
+                pendingBankReceipts: canReviewFinance ? await safeCount("b2b.bank.receipt", [["state", "=", "submitted"]]) : 0,
+                newContactRequests,
+                pendingRegistrations,
+                pendingApplications,
+                pendingOrderReviews,
+                orderChanges,
                 samples,
                 openService,
                 failedJobs,
+                canUseSales,
+                canManageB2B,
+                canUseService,
+                canViewErp,
+                canUseRepairs,
             });
         });
     }

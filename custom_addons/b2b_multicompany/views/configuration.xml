@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="order_change_factory_permission" model="ir.ui.view">
+        <field name="name">b2b.change.factory.permission</field>
+        <field name="model">b2b.order.change.request</field>
+        <field name="inherit_id" ref="b2b_website.view_b2b_order_change_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="inside"><field name="b2b_factory_change" invisible="1"/></xpath>
+            <xpath expr="//notebook" position="inside">
+                <page string="Factory Permission" invisible="not b2b_factory_change" groups="b2b_core.group_b2b_manager">
+                    <div class="alert alert-info" role="status">Verify with the production provider before sending a change. With External ERP, record the external permission here; no local factory documents are required. Until production status integration is available, every external proposal requires this verification. Customer acceptance updates the commercial order, not the external production system.</div>
+                    <group>
+                        <field name="b2b_factory_permission_note" readonly="state != 'under_review'"/>
+                        <field name="b2b_factory_permission_by"/>
+                        <field name="b2b_factory_permission_at"/>
+                    </group>
+                    <button name="action_confirm_factory_permission" type="object" string="Confirm Factory Permission" class="btn-primary" invisible="state != 'under_review'" confirm="Have you verified that the factory permits this exact proposed change?"/>
+                </page>
+            </xpath>
+        </field>
+    </record>
+    <record id="brand_seller_form" model="ir.ui.view">
+        <field name="name">b2b.brand.legal.seller</field>
+        <field name="model">b2b.product.brand</field>
+        <field name="inherit_id" ref="b2b_website.brand_collection_configuration"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="inside">
+                <group string="Legal Seller" groups="b2b_core.group_b2b_manager">
+                    <field name="b2b_selling_company_id" options="{'no_create': True}"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+    <record id="partner_seller_form" model="ir.ui.view">
+        <field name="name">b2b.customer.legal.seller</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="b2b_website.partner_collection_configuration"/>
+        <field name="arch" type="xml">
+            <field name="b2b_account_brand_id" position="before">
+                <field name="b2b_selling_company_id" options="{'no_create': True}"/>
+            </field>
+            <xpath expr="//page[@name='b2b_partner_hub']" position="inside">
+                <group string="Selling Company" invisible="b2b_is_commercial_entity" groups="b2b_core.group_b2b_operator">
+                    <field name="b2b_effective_selling_company_id"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+    <record id="website_company_settings" model="ir.ui.view">
+        <field name="name">b2b.website.selling.companies</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="b2b_website.res_config_settings_view_form_b2b_website"/>
+        <field name="arch" type="xml">
+            <xpath expr="//block[@id='b2b_partner_hub_settings']" position="inside">
+                <setting string="Multi-company Sales Configuration" help="External ERP needs legal sellers and a default account brand, not a factory. Select Odoo Fulfilment only when native supply and stock operations are required. New orders use the selected provider; existing orders keep theirs.">
+                    <field name="b2b_fulfilment_mode"/>
+                    <field name="b2b_company_setup_status" readonly="1"/>
+                    <field name="b2b_selling_company_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                    <field name="b2b_factory_company_id" invisible="b2b_fulfilment_mode != 'odoo'" options="{'no_create': True}"/>
+                </setting>
+            </xpath>
+        </field>
+    </record>
+    <record id="receipt_company_list" model="ir.ui.view">
+        <field name="name">b2b.receipt.company.list</field>
+        <field name="model">b2b.bank.receipt</field>
+        <field name="inherit_id" ref="b2b_website.bank_receipt_list"/>
+        <field name="arch" type="xml"><field name="order_id" position="after"><field name="company_id" optional="show"/></field></field>
+    </record>
+    <record id="receipt_company_form" model="ir.ui.view">
+        <field name="name">b2b.receipt.company.form</field>
+        <field name="model">b2b.bank.receipt</field>
+        <field name="inherit_id" ref="b2b_website.bank_receipt_form"/>
+        <field name="arch" type="xml"><field name="company_id" position="attributes"><attribute name="invisible">0</attribute><attribute name="readonly">1</attribute></field></field>
+    </record>
+    <record id="receipt_company_search" model="ir.ui.view">
+        <field name="name">b2b.receipt.company.search</field>
+        <field name="model">b2b.bank.receipt</field>
+        <field name="inherit_id" ref="b2b_website.bank_receipt_search"/>
+        <field name="arch" type="xml"><field name="order_id" position="after"><field name="company_id"/><filter name="group_seller" string="Selling Company" context="{'group_by':'company_id'}"/></field></field>
+    </record>
+</odoo>

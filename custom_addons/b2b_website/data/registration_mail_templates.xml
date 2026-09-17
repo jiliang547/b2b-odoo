@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="mail_template_registration_verify" model="mail.template">
+            <field name="name">Partner Hub: Verify Registration Email</field>
+            <field name="model_id" ref="model_b2b_registration_application"/>
+            <field name="subject">Verify your Partner Hub email</field>
+            <field name="email_from">{{ object.website_id.company_id.email or user.email }}</field>
+            <field name="email_to">{{ object.business_email }}</field>
+            <field name="description">Sent after a visitor submits the Partner Hub registration form.</field>
+            <field name="body_html" type="html">
+                <div style="font-family:Arial,sans-serif;color:#111827;line-height:1.6">
+                    <p>Dear <t t-out="object.full_name"/>,</p>
+                    <p>Thank you for registering with the POWER &amp; GRACE Partner Hub. Confirm your business email before our partner team reviews your application.</p>
+                    <p style="margin:24px 0"><a t-att-href="object.get_verification_url()" style="background:#E8380C;color:#fff;text-decoration:none;padding:12px 22px;border-radius:6px;font-weight:700">Verify Email</a></p>
+                    <p>This link expires in 24 hours. If you did not submit this registration, you can ignore this email.</p>
+                </div>
+            </field>
+        </record>
+        <record id="mail_template_registration_approved" model="mail.template">
+            <field name="name">Partner Hub: Registration Approved</field>
+            <field name="model_id" ref="model_b2b_registration_application"/>
+            <field name="subject">Your Partner Hub access is active</field>
+            <field name="email_from">{{ object.website_id.company_id.email or user.email }}</field>
+            <field name="email_to">{{ object.business_email }}</field>
+            <field name="description">Sent when a B2B Manager approves a verified registration.</field>
+            <field name="body_html" type="html">
+                <div style="font-family:Arial,sans-serif;color:#111827;line-height:1.6">
+                    <p>Dear <t t-out="object.full_name"/>,</p>
+                    <p>Your Partner Hub registration has been approved and your company access is now active.</p>
+                    <p style="margin:24px 0"><a t-att-href="object.get_base_url() + '/web/login'" style="background:#E8380C;color:#fff;text-decoration:none;padding:12px 22px;border-radius:6px;font-weight:700">Sign in to Partner Hub</a></p>
+                </div>
+            </field>
+        </record>
+        <record id="mail_template_registration_rejected" model="mail.template">
+            <field name="name">Partner Hub: Registration Needs Attention</field>
+            <field name="model_id" ref="model_b2b_registration_application"/>
+            <field name="subject">Update on your Partner Hub registration</field>
+            <field name="email_from">{{ object.website_id.company_id.email or user.email }}</field>
+            <field name="email_to">{{ object.business_email }}</field>
+            <field name="description">Sent when a B2B Manager rejects a verified registration.</field>
+            <field name="body_html" type="html">
+                <div style="font-family:Arial,sans-serif;color:#111827;line-height:1.6">
+                    <p>Dear <t t-out="object.full_name"/>,</p>
+                    <p>We could not approve your Partner Hub registration at this time.</p>
+                    <p><strong>Reason:</strong> <t t-out="object.rejection_reason"/></p>
+                    <p>Please contact our team if the submitted information needs to be corrected.</p>
+                </div>
+            </field>
+        </record>
+    </data>
+</odoo>

@@ -1,0 +1,2 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_business_setup_manager,Business setup manager,model_b2b_business_setup,b2b_core.group_b2b_manager,1,1,1,1

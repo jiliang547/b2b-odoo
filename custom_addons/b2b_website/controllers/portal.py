@@ -1,11 +1,34 @@
 from werkzeug.exceptions import NotFound
+from psycopg2 import IntegrityError
 
 from odoo import _
+from odoo.exceptions import AccessError, ValidationError
 from odoo.http import request, route
 from odoo.addons.portal.controllers.portal import CustomerPortal, pager as portal_pager
 
 
 class PartnerHubPortal(CustomerPortal):
+    def _parse_form_data(self, form_data):
+        """Portal contacts may edit themselves, never commercial master data."""
+        personal_data = dict(form_data)
+        personal_data.pop("company_name", None)
+        personal_data.pop("vat", None)
+        return super()._parse_form_data(personal_data)
+
+    def _create_or_update_address(self, partner_sudo, **form_data):
+        if (
+            partner_sudo
+            and partner_sudo.is_company
+            and partner_sudo == request.env.user.partner_id.commercial_partner_id
+        ):
+            return partner_sudo, {
+                "messages": [_("Company master data can only be changed by authorized staff.")],
+                "invalid_fields": ["name"],
+            }
+        form_data.pop("company_name", None)
+        form_data.pop("vat", None)
+        return super()._create_or_update_address(partner_sudo, **form_data)
+
     def _website_payment_order_ids(self, partner):
         """Return attempted website orders within the current portal company.
 
@@ -32,9 +55,12 @@ class PartnerHubPortal(CustomerPortal):
         attempted_order_ids = self._website_payment_order_ids(partner)
         return [
             ("partner_id", "child_of", [partner.commercial_partner_id.id]),
-            "|",
+            "|", "|",
             ("state", "=", "sale"),
             ("id", "in", attempted_order_ids),
+            "&",
+            ("state", "=", "sent"),
+            ("b2b_review_state", "in", ("pending", "ready")),
         ]
 
     def _prepare_quotations_domain(self, partner):
@@ -44,7 +70,26 @@ class PartnerHubPortal(CustomerPortal):
             ("partner_id", "child_of", [partner.commercial_partner_id.id]),
             ("state", "=", "sent"),
             ("id", "not in", attempted_order_ids),
+            ("b2b_review_state", "=", "none"),
         ]
+
+    def _order_change_domain(self):
+        company = request.env.user.partner_id.commercial_partner_id
+        return [("commercial_partner_id", "=", company.id)]
+
+    def _portal_order_sudo(self, order_id):
+        company = request.env.user.partner_id.commercial_partner_id
+        order = request.env["sale.order"].sudo().browse(order_id).exists()
+        if not order or order.partner_id.commercial_partner_id != company:
+            raise NotFound()
+        return order
+
+    def _portal_change_sudo(self, change_id):
+        company = request.env.user.partner_id.commercial_partner_id
+        change = request.env["b2b.order.change.request"].sudo().browse(change_id).exists()
+        if not change or change.commercial_partner_id != company:
+            raise NotFound()
+        return change
 
     def _sample_domain(self):
         company = request.env.user.partner_id.commercial_partner_id
@@ -56,14 +101,25 @@ class PartnerHubPortal(CustomerPortal):
 
     def _prepare_home_portal_values(self, counters):
         values = super()._prepare_home_portal_values(counters)
-        company = request.env.user.partner_id.commercial_partner_id
-        sale_domain = self._prepare_orders_domain(request.env.user.partner_id)
-        quotation_domain = self._prepare_quotations_domain(request.env.user.partner_id)
+        contact = request.env.user.partner_id
+        company = contact.commercial_partner_id
+        has_linked_company = company != contact
+        sale_domain = self._prepare_orders_domain(contact)
+        quotation_domain = self._prepare_quotations_domain(contact)
         ticket_domain = [("partner_id", "child_of", company.id)]
         Sample = request.env["b2b.sample.request"]
         Order = request.env["sale.order"]
         Ticket = request.env["helpdesk.ticket"]
         Inquiry = request.env["b2b.contact.request"]
+        Registration = request.env["b2b.registration.application"]
+        registration = Registration.search([
+            ("partner_id", "=", contact.id),
+        ], order="create_date desc", limit=1)
+        open_company_request = Inquiry.search([
+            ("partner_id", "=", contact.id),
+            ("request_type", "=", "company_change"),
+            ("state", "in", ("new", "in_progress")),
+        ], limit=1, order="create_date desc")
         can_read_orders = Order.has_access("read")
         can_read_tickets = Ticket.has_access("read")
         recent_orders = (
@@ -77,7 +133,7 @@ class PartnerHubPortal(CustomerPortal):
 
         # The Figma dashboard is backed exclusively by records visible to the
         # current portal user; no demo counters or sudoed records are exposed.
-        values.update({
+        dashboard_values = {
             "sample_count": Sample.search_count(self._sample_domain()),
             "inquiry_count": Inquiry.search_count(self._inquiry_domain()),
             "order_count": Order.search_count(sale_domain) if can_read_orders else 0,
@@ -85,6 +141,9 @@ class PartnerHubPortal(CustomerPortal):
                 Order.search_count(quotation_domain) if can_read_orders else 0
             ),
             "ticket_count": Ticket.search_count(ticket_domain) if can_read_tickets else 0,
+            "order_change_count": request.env["b2b.order.change.request"].search_count(
+                self._order_change_domain()
+            ),
             "recent_orders": recent_orders,
             "recent_samples": Sample.search(
                 self._sample_domain(), order="create_date desc", limit=2
@@ -93,8 +152,143 @@ class PartnerHubPortal(CustomerPortal):
                 self._inquiry_domain(), order="create_date desc", limit=2
             ),
             "recent_tickets": recent_tickets,
-        })
+            "b2b_has_linked_company": has_linked_company,
+            "b2b_open_company_request": open_company_request,
+            "b2b_registration_application": registration,
+            "b2b_show_company_prompt": bool(
+                not has_linked_company
+                and not contact.b2b_approved
+                and not open_company_request
+                and registration.state not in ("pending", "rejected")
+            ),
+        }
+        # Native /my/counters expects the response to contain only requested
+        # placeholders. Returning dashboard-only keys makes Odoo's own counter
+        # interaction address DOM nodes that do not exist.
+        if counters:
+            values.update({key: value for key, value in dashboard_values.items() if key in counters})
+        else:
+            values.update(dashboard_values)
         return values
+
+    @route(
+        ["/my/order-changes", "/my/order-changes/page/<int:page>"],
+        type="http", auth="user", website=True,
+    )
+    def portal_order_changes(self, page=1, **kwargs):
+        Change = request.env["b2b.order.change.request"]
+        domain = self._order_change_domain()
+        total = Change.search_count(domain)
+        pager = portal_pager(
+            url="/my/order-changes", total=total, page=max(page, 1), step=20
+        )
+        changes = Change.search(
+            domain, order="create_date desc", limit=20, offset=pager["offset"]
+        )
+        values = self._prepare_portal_layout_values()
+        values.update({
+            "changes": changes,
+            "pager": pager,
+            "page_name": "order_changes",
+            "default_url": "/my/order-changes",
+        })
+        return request.render("b2b_website.portal_my_order_changes", values)
+
+    @route(
+        "/my/orders/<int:order_id>/request-change",
+        type="http", auth="user", website=True, methods=["GET", "POST"], csrf=True,
+    )
+    def portal_request_order_change(self, order_id, **post):
+        order = self._portal_order_sudo(order_id)
+        error = False
+        if order.state not in ("sale", "done"):
+            error = _("Only confirmed orders can be changed.")
+        elif not order.b2b_collection_active and order.currency_id.compare_amounts(order.amount_paid, order.amount_total) < 0:
+            error = _("This order is not fully paid. Contact our team from the order page instead.")
+        elif any(line.qty_delivered > 0 for line in order.order_line):
+            error = _("Delivered orders must use the return or replacement process.")
+        elif request.env["b2b.order.change.request"].sudo().search_count([
+            ("order_id", "=", order.id),
+            ("state", "in", (
+                "submitted", "under_review", "customer_confirmation",
+                "balance_due", "finance_review", "applying",
+            )),
+        ], limit=1):
+            error = _("Another change request is already open for this order.")
+
+        can_submit = not error
+        if request.httprequest.method == "POST" and can_submit:
+            requested_changes = (post.get("requested_changes") or "").strip()
+            if len(requested_changes) < 10:
+                error = _("Please describe the requested change in at least 10 characters.")
+            else:
+                try:
+                    with request.env.cr.savepoint():
+                        change = request.env["b2b.order.change.request"].sudo().create({
+                            "order_id": order.id,
+                            "requested_changes": requested_changes[:4000],
+                            "customer_note": (post.get("customer_note") or "").strip()[:2000],
+                        })
+                except IntegrityError as exception:
+                    if exception.diag.constraint_name != 'b2b_order_change_request_one_open_per_order':
+                        raise
+                    error = _("Another change request is already open for this order.")
+                    can_submit = False
+                except ValidationError as exception:
+                    error = str(exception)
+                else:
+                    return request.redirect("/my/order-changes/%s?submitted=1" % change.id)
+
+        values = self._prepare_portal_layout_values()
+        values.update({
+            "sale_order": order,
+            "error": error,
+            "page_name": "request_order_change",
+            "can_submit": can_submit,
+            "form_values": post,
+        })
+        return request.render("b2b_website.portal_request_order_change", values)
+
+    @route(
+        "/my/order-changes/<int:change_id>",
+        type="http", auth="user", website=True,
+    )
+    def portal_order_change(self, change_id, **kwargs):
+        change = self._portal_change_sudo(change_id)
+        values = self._prepare_portal_layout_values()
+        values.update({
+            "change": change,
+            "page_name": "order_change_detail",
+            "submitted": kwargs.get("submitted"),
+            "action_error": kwargs.get("action_error"),
+        })
+        return request.render("b2b_website.portal_order_change", values)
+
+    @route(
+        "/my/order-changes/<int:change_id>/accept",
+        type="http", auth="user", website=True, methods=["POST"], csrf=True,
+    )
+    def portal_accept_order_change(self, change_id, **post):
+        change = self._portal_change_sudo(change_id)
+        try:
+            request.env["b2b.order.change.request"].browse(change.id).action_customer_accept()
+        except (AccessError, ValidationError):
+            # A second click or a concurrent staff update must return to the
+            # branded portal instead of exposing Odoo's generic error page.
+            return request.redirect("/my/order-changes/%s?action_error=1" % change.id)
+        return request.redirect("/my/order-changes/%s" % change.id)
+
+    @route(
+        "/my/order-changes/<int:change_id>/decline",
+        type="http", auth="user", website=True, methods=["POST"], csrf=True,
+    )
+    def portal_decline_order_change(self, change_id, **post):
+        change = self._portal_change_sudo(change_id)
+        try:
+            request.env["b2b.order.change.request"].browse(change.id).action_customer_cancel()
+        except (AccessError, ValidationError):
+            return request.redirect("/my/order-changes/%s?action_error=1" % change.id)
+        return request.redirect("/my/order-changes/%s" % change.id)
 
     @route(
         ["/my/inquiries", "/my/inquiries/page/<int:page>"],

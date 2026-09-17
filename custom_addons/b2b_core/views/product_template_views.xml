@@ -17,6 +17,7 @@
                                    required="is_published"/>
                             <field name="b2b_application_ids" widget="many2many_tags"/>
                             <field name="b2b_model_number"/>
+                            <field name="b2b_default_moq"/>
                             <field name="is_published" invisible="1"/>
                             <div class="alert alert-warning" role="alert" invisible="public_categ_ids">
                                 Select the most specific Website Category before publishing. Parent categories are included automatically in website navigation.

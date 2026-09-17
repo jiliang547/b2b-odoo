@@ -1,6 +1,6 @@
 # POWER & GRACE Partner Hub 项目交接记录
 
-更新时间：2026-08-24（Asia/Shanghai）
+更新时间：2026-08-25（Asia/Shanghai）
 
 本文档用于把当前开发上下文交给新的 Codex 开发窗口。开始工作前，应先阅读本文档，再按任务需要阅读仓库内的架构、部署和测试文档。文档不包含任何管理员密码、数据库密码、GitHub Token 或 ERP Token。
 
@@ -62,13 +62,13 @@ GitHub 仓库：
 
 `agent/figma-b2b-redesign`
 
-截至 2026-08-24：
+截至 2026-08-25：
 
-- 当前分支 HEAD：`f7c18ba Add brand form entry from list view`
-- 远端开发分支 HEAD：`f7c18ba`
-- 远端 `main`：`24556ab Merge pull request #9 from jiliang547/agent/figma-b2b-redesign`
-- `origin/main` 与 `origin/agent/figma-b2b-redesign` 的代码树完全一致。
-- 创建本文档前业务代码工作区干净；创建后只有本交接文档是新增未提交文件，不存在未提交的业务代码修改。
+- 当前分支 HEAD：`8a484a7 Complete partner portal content and sample workflow`
+- 远端开发分支 HEAD：`8a484a7`
+- 远端 `main`：`b3886a7 Merge pull request #10 from jiliang547/agent/figma-b2b-redesign`
+- PR #10 已把 `8a484a7` 合并到 `main`；`origin/main` 与 `origin/agent/figma-b2b-redesign` 的代码树完全一致。
+- 本交接文档已包含在 `8a484a7` 中；2026-08-25 本次只是继续更新交接内容。
 
 目前采用的协作方式：Codex 在 `agent/figma-b2b-redesign` 上提交并推送，用户在 GitHub 上把该分支合并到 `main`，随后由 Odoo.sh 构建 `main`。不要未经用户要求直接在 `main` 开发或推送。
 
@@ -133,7 +133,7 @@ Database: b2b_v41_test_20260817
 - `http://127.0.0.1:8070`：本项目实际测试实例，明确加载工作区 `custom_addons`。
 - `http://127.0.0.1:8069`：Odoo Windows 默认服务；不要把它误认为当前项目测试实例，也不要无故停止。
 
-截至交接时，8070 和 8069 都在监听，8070 的登录页返回 HTTP 200。进程 PID 会变化，不要在脚本中写死 PID。
+截至 2026-08-25 本次交接检查时，`8070` **未启动**。这是进程状态，不代表模块损坏；新窗口如需本地测试，应先按第 7 节启动。进程 PID 会变化，不要在脚本中写死 PID。`8069` 是 Windows 默认实例，操作前必须重新核对，不要无故停止。
 
 常用日志位于仓库根目录，例如：
 
@@ -231,9 +231,9 @@ Odoo.sh 上安装入口模块为：
 |---|---:|---|
 | `b2b_core` | `19.0.1.1.2` | 客户审批、人群标签、产品可见性、价格状态、品牌/应用分类、产品资源策略 |
 | `b2b_erp_connector` | `19.0.1.0.0` | 幂等 ERP Job、重试、适配器边界、订单状态 DTO |
-| `b2b_sample` | `19.0.1.1.0` | 样品申请、审批、Portal 隔离、ERP 交接 |
-| `b2b_website` | `19.0.1.6.4` | 首页、产品、Portal、订单、询盘、售后、资源和 Figma UI |
-| `b2b_management` | `19.0.1.2.0` | 后台 B2B Management 应用和导航 |
+| `b2b_sample` | `19.0.1.2.0` | 付费样品申请、报价、Portal 隔离、支付后 ERP 交接 |
+| `b2b_website` | `19.0.1.7.1` | 首页、产品、Portal、订单、询盘、售后、FAQ、Shipping、资源和 Figma UI |
+| `b2b_management` | `19.0.1.2.1` | 后台 B2B Management 应用、FAQ 和运营导航 |
 | `b2b_payment_demo_fix` | `19.0.1.0.0` | Odoo Demo Payment 状态兼容；安装 `payment_demo` 时自动安装 |
 
 ## 10. 当前核心业务逻辑
@@ -318,10 +318,15 @@ Odoo 原生有两套分类，必须保留各自用途：
 
 ### 10.7 样品申请
 
-- 普通 Portal 用户可提交样品申请。
-- 后台在 B2B Management 的 Sample Requests 审批。
+- 样品不是免费审批后直接发货；当前闭环已经调整为 **原生 Odoo 付费报价流程**。
+- 已审批且允许样品申请的 Portal 用户可从商品页或 Sample Center 提交申请，并填写/选择交付地址。
+- 后台在 `B2B Management → Operations → Sample Requests` 审批，按钮为 `Approve & Create Quotation`。
+- 审批会幂等创建且只创建一张原生 `sale.order` 报价单；报价要求 100% 付款，产品价格、税费、币种、地址和支付全部复用 Odoo 原生逻辑。
+- 客户在 `My Account → Sample Requests` 打开记录，通过 `Review & Pay` 查看报价并付款。
+- 只有原生报价确认后，样品申请才进入 Order Confirmed / ERP Pending 等履约状态；未付款不会进入 ERP 履约。
+- 拒绝申请会取消仍处于 Draft/Sent 的关联报价，避免留下可支付的无效报价。
 - Portal 只能访问自己商业公司范围内的申请。
-- 审批后可生成幂等 ERP Job；真实 ERP 未接入时使用关闭或开发 Mock 状态。
+- 确认订单后可生成幂等 ERP Job；真实 ERP 未接入时使用关闭或开发 Mock 状态。
 
 ### 10.8 售后服务
 
@@ -342,6 +347,24 @@ Odoo 原生有两套分类，必须保留各自用途：
 
 - 未审批用户的 Company Profile 操作通过申请流程处理，不直接向 Portal 暴露 Contacts 写权限。
 - 多个账户是否显示在 Company Users，取决于这些联系人的 `commercial_partner_id` 是否真正归属于同一个公司，以及对应 Portal 账户记录是否正确关联。
+
+### 10.11 FAQ、Shipping 与页脚入口
+
+- `/faq` 是可运营维护的 FAQ 页面，分类和问题来自自定义缺口模型 `b2b.faq.category` / `b2b.faq.item`。
+- 后台入口：`B2B Management → Configuration → Frequently Asked Questions`；分类入口为同级 `FAQ Categories`。
+- FAQ 支持分类、排序、发布状态、富文本答案和可选操作链接。
+- `/shipping` 是按当前 Figma 写死的 Shipping Costs and Delivery Times 静态说明页；页面中的时间是规划参考，最终费用和交期以报价/订单为准。
+- 页脚 Products 栏当前为 All Products、Downloads、Frequently asked questions、Shipping and Delivery。
+
+### 10.12 网站 Logo 与社交平台配置
+
+- 顶部和底部网站 Logo 现在读取 Odoo 原生 `website.logo`，不再引用写死的图片地址。
+- TikTok、Facebook、LinkedIn 使用 Odoo 原生 `website.social_tiktok`、`website.social_facebook`、`website.social_linkedin` 和 `/website/social/...` 跳转路由。
+- 运营入口：`B2B Management → Configuration → Settings → Partner Hub`。
+- `Partner Hub branding → Partner Hub Logo`：配置网站顶部和底部 Logo。
+- `Partner Hub social links`：填写 TikTok、Facebook、LinkedIn 完整公开 URL。
+- 未配置的平台显示灰色禁用图标，不产生错误跳转。
+- 注意不要把“网站 Logo”和 Our Brands 的商品品牌 Logo 混淆；后者仍在 `Product Brands` 对应品牌表单中配置。
 
 ## 11. B2B Management 与权限
 
@@ -381,6 +404,7 @@ Odoo 原生有两套分类，必须保留各自用途：
 - `9e2315f`：可配置首页、多层类目、Featured Products、Brands、目录/价格/UI 细节。
 - `8e938fd`：商品 Website Categories 上架入口和品牌/应用权限修复。
 - `f7c18ba`：品牌列表完整表单入口。
+- `8a484a7`：付费样品报价闭环、FAQ/Shipping、My 页面统一、Contact/Partner Application 文案、社交链接和可配置网站 Logo。
 
 当前首页包含：
 
@@ -391,6 +415,15 @@ Odoo 原生有两套分类，必须保留各自用途：
 - Our Brands（最多 6 个）。
 - Project Support 和 Warranty Policy 静态入口。
 - 语言与币种选择，数据来自 Odoo 网站配置。
+
+最近一轮公共站点还完成：
+
+- 首页三个板块副标题移除。
+- My 页面全部面包屑补齐 `Home / Overview / ...`，左侧导航默认折叠并支持展开。
+- My 页面面包屑、标题、副标题使用统一高度，切换子页面时减少上下跳动。
+- 登录、注册和重置密码页统一显示 `POWER & GRACE PARTNER HUB`。
+- 顶部 Logo、通知、购物车、账户等交互元素不再在 Hover 时出现文字下划线。
+- Contact 页面和 Partner Application 页面使用最新确认文案。
 
 ## 13. 测试状态
 
@@ -427,6 +460,14 @@ Odoo 原生有两套分类，必须保留各自用途：
 
 修改前端后还应实际用浏览器测试访客、未审批 Portal、已审批客户和管理员四类会话，不能只做 XML 解析。
 
+`8a484a7` 提交前还完成以下本地验证：
+
+- `b2b_website` 在数据库 `b2b_v41_test_20260817` 升级成功，日志正常出现 `Modules loaded`。
+- XML 共 17 个视图文件解析通过；Python compileall、JavaScript `node --check` 和 `git diff --check` 通过。
+- `/`、`/contact`、`/contactus`、`/partner-application`、`/web/login` 返回 HTTP 200，最新文案和动态 Logo 生效。
+- 动态 Logo `/web/image/website/1/logo` 返回 HTTP 200；三组原生社交路由已渲染。
+- 使用临时 Portal 账号检查 `/my`、Orders、Quotes、Sample Requests、Inquiries、Company、Company Users、Personal Profile、Addresses，均返回 HTTP 200，并包含 Home/Overview 面包屑、统一 heading 和默认折叠侧栏；测试账号随后已删除。
+
 ## 14. 环境配置要点
 
 Odoo 后台 Website / Partner Hub 设置中需要确认：
@@ -437,6 +478,8 @@ Odoo 后台 Website / Partner Hub 设置中需要确认：
 - 是否要求审批后 Checkout。
 - 是否要求审批后 Sample。
 - B2B Helpdesk Team。
+- Partner Hub Logo。
+- TikTok、Facebook、LinkedIn 完整 URL。
 
 商品配置要确认：
 
@@ -468,6 +511,7 @@ Odoo.sh 售后测试前必须配置 Helpdesk Team；支付测试前必须配置 
 4. 跨公司无权访问目前可能返回 403 或 404，权限隔离有效，用户已同意暂不为状态码差异改动。
 5. 支付状态期间后台打印行为被用户明确要求暂不处理。
 6. Odoo.sh 必须在合并代码后执行模块 Upgrade；若只重新 Build 而没有升级模块，最新菜单、ACL 和 QWeb 视图可能不生效。
+7. `8a484a7` 已合并到 GitHub `main`，但本文档无法确认用户是否已在 Odoo.sh 对数据库执行最新模块 Upgrade；新窗口处理线上问题时要先核对 Build 和模块版本。
 
 ## 16. 开发时不要做的事情
 
@@ -508,4 +552,4 @@ https://www.figma.com/make/CEJSGAT1ncfFp6Pcc3Aebj/B2B-%E4%BC%81%E4%B8%9A%E9%97%A
 
 ## 18. 当前交接结论
 
-截至 2026-08-24，开发分支、GitHub main 与本地业务代码内容一致，最后功能是 Product Brands 列表增加完整表单入口。下一窗口可以直接在当前仓库和开发分支继续工作；开始前仍应重新 `git fetch`，因为用户可能在窗口切换期间继续合并或部署。本文档本身尚未提交 GitHub。
+截至 2026-08-25，开发分支 `8a484a7` 已由 PR #10 合并到 GitHub `main`（merge commit `b3886a7`），两者代码树一致。最新版本包含付费样品报价闭环、FAQ/Shipping、My 页面布局统一、Contact/Partner Application 新文案、三组社交链接和可配置网站 Logo。当前本地 8070 未启动，继续本地开发前先启动服务并确认数据库模块版本。新窗口应先 `git fetch`，再检查用户是否在切换窗口期间产生了新的合并或 Odoo.sh 部署。

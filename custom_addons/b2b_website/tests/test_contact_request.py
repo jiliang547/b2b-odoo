@@ -1,5 +1,5 @@
 from odoo.addons.mail.tests.common import mail_new_test_user
-from odoo.exceptions import AccessError
+from odoo.exceptions import AccessError, ValidationError
 from odoo.tests import TransactionCase, tagged
 
 
@@ -159,3 +159,38 @@ class TestContactRequestSecurity(TransactionCase):
     def test_public_user_has_no_model_access(self):
         with self.assertRaises(AccessError):
             self.contact_request.with_user(self.env.ref("base.public_user")).read(["name"])
+
+    def test_duplicate_open_company_request_is_rejected(self):
+        with self.assertRaises(ValidationError):
+            self.env["b2b.contact.request"].create({
+                "request_type": "company_change",
+                "subject": "Duplicate company request",
+                "contact_name": self.contact.name,
+                "email": self.contact.email,
+                "message": "This request must not create a duplicate review item.",
+                "partner_id": self.contact.id,
+                "website_id": self.website.id,
+            })
+
+    def test_request_company_follows_contact_commercial_partner(self):
+        standalone = self.env["res.partner"].create({
+            "name": "Standalone Portal Contact",
+            "email": "standalone-company-request@example.test",
+        })
+        company_request = self.env["b2b.contact.request"].create({
+            "request_type": "company_change",
+            "subject": "Company setup request",
+            "contact_name": standalone.name,
+            "email": standalone.email,
+            "message": "Please link this account to its verified company.",
+            "partner_id": standalone.id,
+            "website_id": self.website.id,
+        })
+        self.assertEqual(company_request.commercial_partner_id, standalone)
+
+        new_company = self.env["res.partner"].create({
+            "name": "Verified Standalone Company",
+            "is_company": True,
+        })
+        standalone.parent_id = new_company
+        self.assertEqual(company_request.commercial_partner_id, new_company)

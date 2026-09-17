@@ -1,6 +1,10 @@
 /** @odoo-module **/
 
+import { _t, translationIsReady } from "@web/core/l10n/translation";
+
 import {rpc} from "@web/core/network/rpc";
+import {registry} from "@web/core/registry";
+import {Interaction} from "@web/public/interaction";
 
 function synchronizeCartQuantity(quantity) {
     const cartQuantity = Math.max(0, Number(quantity) || 0);
@@ -177,43 +181,91 @@ function initializeQuantityControls() {
     });
 }
 
-function initializeCartForms() {
-    document.querySelectorAll("[data-lt-cart-form]").forEach((form) => {
-        form.addEventListener("submit", async (event) => {
-            event.preventDefault();
-            const button = form.querySelector("button[type='submit']");
-            const status = form.querySelector("[data-lt-cart-status]");
-            const quantity = Number(form.elements.add_qty.value);
-            const minimum = Number(form.elements.add_qty.min || 0);
-            const maximum = Number(form.elements.add_qty.max || 10000);
-            if (!Number.isFinite(quantity) || quantity < minimum || quantity > maximum) {
-                status.textContent = `Enter a quantity between ${formatQuantity(minimum)} and ${formatQuantity(maximum)}.`;
-                return;
-            }
-            const step = Number(form.elements.add_qty.step || 1);
-            if (!isQuantityAligned(quantity, minimum, step)) {
-                status.textContent = `Start at ${formatQuantity(minimum)} and order in steps of ${formatQuantity(step)}.`;
-                return;
-            }
-            button.disabled = true;
-            status.textContent = "Adding product…";
-            try {
-                const result = await rpc("/shop/cart/add", {
-                    product_template_id: Number(form.elements.product_template_id.value),
-                    product_id: Number(form.elements.product_id.value),
-                    uom_id: Number(form.elements.uom_id.value),
-                    quantity,
+class PartnerHubCartForm extends Interaction {
+    static selector = "[data-lt-cart-form]";
+    dynamicContent = {
+        _root: {"t-on-submit": this.onSubmit},
+    };
+
+    start() {
+        this.el.querySelector("button[type='submit']").disabled = false;
+    }
+
+    async onSubmit(event) {
+        event.preventDefault();
+        if (this.submitting) return;
+        const form = this.el;
+        const button = form.querySelector("button[type='submit']");
+        const status = form.querySelector("[data-lt-cart-status]");
+        const quantityInput = form.elements.add_qty;
+        const quantity = Number(quantityInput.value);
+        const minimum = Number(quantityInput.min || 0);
+        const maximum = Number(quantityInput.max || 10000);
+        const showValidation = (message) => {
+            if (status) {
+                status.textContent = message;
+            } else {
+                this.services.notification.add(message, {
+                    type: "warning",
+                    autocloseDelay: 3000,
                 });
-                synchronizeCartQuantity(result.cart_quantity);
-                status.textContent = "Added to cart.";
-                button.disabled = false;
-            } catch (_error) {
-                button.disabled = false;
-                status.textContent = "We could not add this product. Please try again.";
             }
-        });
-    });
+        };
+        if (!Number.isFinite(quantity) || quantity < minimum || quantity > maximum) {
+            showValidation(_t("Enter a quantity between %s and %s.", formatQuantity(minimum), formatQuantity(maximum)));
+            return;
+        }
+        const step = Number(quantityInput.step || 1);
+        if (!isQuantityAligned(quantity, minimum, step)) {
+            showValidation(_t("Start at %s and order in steps of %s.", formatQuantity(minimum), formatQuantity(step)));
+            return;
+        }
+        if (status) {
+            status.textContent = "";
+        }
+        const buttonRect = button.getBoundingClientRect();
+        button.style.width = `${buttonRect.width}px`;
+        button.style.height = `${buttonRect.height}px`;
+        button.disabled = true;
+        this.submitting = true;
+        try {
+            await this.waitFor(this.services.cart.add({
+                productTemplateId: Number(form.elements.product_template_id.value),
+                productId: Number(form.elements.product_id.value),
+                uomId: Number(form.elements.uom_id.value),
+                quantity,
+            }, {
+                showQuantity: true,
+            }));
+        } catch (error) {
+            const message = error?.data?.message
+                || _t("We could not add this product. Please try again.");
+            this.services.notification.add(message, {
+                type: "danger",
+                autocloseDelay: 3000,
+            });
+        } finally {
+            this.submitting = false;
+            button.disabled = false;
+            button.style.removeProperty("width");
+            button.style.removeProperty("height");
+        }
+    }
 }
+
+class PartnerHubToast extends Interaction {
+    static selector = "[data-lt-toast]";
+
+    start() {
+        this.services.notification.add(this.el.textContent.trim(), {
+            type: this.el.dataset.ltToastType || "success",
+            autocloseDelay: Number(this.el.dataset.ltToastDuration || 3000),
+        });
+    }
+}
+
+registry.category("public.interactions").add("b2b_website.cart_form", PartnerHubCartForm);
+registry.category("public.interactions").add("b2b_website.toast", PartnerHubToast);
 
 function initializeVariantPickers() {
     document.querySelectorAll("[data-lt-variant-picker]").forEach((picker) => {
@@ -258,7 +310,7 @@ function initializeVariantPickers() {
                     element.textContent = formatQuantity(minimum);
                 });
                 panel.querySelectorAll("[data-lt-procurement-uom], [data-lt-minimum-uom], [data-lt-price-uom]").forEach((element) => {
-                    element.textContent = info.b2b_uom_name || "unit";
+                    element.textContent = info.b2b_uom_name || _t("unit");
                 });
                 const stockBadge = panel.querySelector("[data-lt-stock-badge]");
                 if (stockBadge) {
@@ -266,22 +318,22 @@ function initializeVariantPickers() {
                     stockBadge.classList.add(`lt-stock-badge--${info.b2b_stock_state || "available"}`);
                 }
                 const stockLabel = panel.querySelector("[data-lt-stock-label]");
-                if (stockLabel) stockLabel.textContent = info.b2b_stock_label || "Available";
+                if (stockLabel) stockLabel.textContent = info.b2b_stock_label || _t("Available");
                 const stockQuantity = panel.querySelector("[data-lt-stock-quantity]");
                 if (stockQuantity) {
                     stockQuantity.classList.toggle("d-none", !info.b2b_show_stock_quantity);
-                    stockQuantity.textContent = ` (${formatQuantity(info.b2b_stock_quantity || 0)} ${info.b2b_uom_name || "unit"})`;
+                    stockQuantity.textContent = ` (${formatQuantity(info.b2b_stock_quantity || 0)} ${info.b2b_uom_name || _t("unit")})`;
                 }
                 const leadTime = panel.querySelector("[data-lt-lead-time]");
                 if (leadTime) {
                     leadTime.textContent = info.b2b_lead_time_days == null
-                        ? "Contact sales"
+                        ? _t("Contact sales")
                         : info.b2b_lead_time_days > 0
-                            ? `${formatQuantity(info.b2b_lead_time_days)} days`
-                            : "Ready to ship";
+                            ? _t("%s days", formatQuantity(info.b2b_lead_time_days))
+                            : _t("Ready to ship");
                 }
                 panel.querySelectorAll("[data-lt-variant-sku]").forEach((element) => {
-                    element.textContent = info.b2b_sku || "Model on request";
+                    element.textContent = info.b2b_sku || _t("Model on request");
                 });
                 const image = document.querySelector("[data-lt-gallery-image]");
                 if (image && info.product_id) {
@@ -308,6 +360,30 @@ function initializeVariantPickers() {
                         ? `/web/login?redirect=${encodeURIComponent(info.b2b_sample_url)}`
                         : info.b2b_sample_url;
                 }
+                const resourceList = document.querySelector("[data-lt-resource-list]");
+                const resourceEmpty = document.querySelector("[data-lt-resource-empty]");
+                if (resourceList && Array.isArray(info.b2b_resources)) {
+                    resourceList.replaceChildren(...info.b2b_resources.map((resource) => {
+                        const article = document.createElement("article");
+                        article.className = "lt-resource-card";
+                        const icon = document.createElement("div");
+                        icon.className = "lt-resource-card__icon";
+                        icon.textContent = resource.format || "FILE";
+                        const copy = document.createElement("div");
+                        const heading = document.createElement("h3");
+                        heading.textContent = resource.name;
+                        const meta = document.createElement("p");
+                        meta.textContent = [resource.version && `v${resource.version}`, resource.language, resource.format, resource.size_mb && `${resource.size_mb} MB`].filter(Boolean).join(" · ");
+                        copy.append(heading, meta);
+                        const link = document.createElement("a");
+                        link.className = "lt-btn lt-btn--outline lt-btn--small";
+                        link.href = resource.url;
+                        link.textContent = _t("Download");
+                        article.append(icon, copy, link);
+                        return article;
+                    }));
+                    resourceEmpty?.toggleAttribute("hidden", info.b2b_resources.length > 0);
+                }
             } catch (_error) {
                 if (currentRequest === requestNumber) {
                     form?.querySelector("button[type='submit']")?.setAttribute("disabled", "disabled");
@@ -320,6 +396,31 @@ function initializeVariantPickers() {
         });
         quantityInput?.addEventListener("change", refreshCombination);
     });
+}
+
+function initializeServiceProductFilter() {
+    const order = document.getElementById("service-order");
+    const product = document.querySelector("[data-lt-service-product]");
+    if (!order || !product) return;
+    const options = [...product.querySelectorAll("option[data-order-id]")];
+    const refresh = () => {
+        const orderId = order.value;
+        let first = null;
+        options.forEach((option) => {
+            const visible = Boolean(orderId && option.dataset.orderId === orderId);
+            option.hidden = !visible;
+            option.disabled = !visible;
+            if (visible && !first) first = option;
+        });
+        if (!options.some((option) => !option.hidden && option.value === product.value)) {
+            product.value = "";
+        }
+        product.options[0].textContent = orderId
+            ? (first ? _t("Select an ordered product") : _t("No eligible products on this order"))
+            : _t("Select an order first");
+    };
+    order.addEventListener("change", refresh);
+    refresh();
 }
 
 function initializeCategoryBrowsers() {
@@ -366,7 +467,7 @@ function initializeCategoryBrowsers() {
                 breadcrumbs.replaceChildren();
                 const all = document.createElement("button");
                 all.type = "button";
-                all.textContent = brandId ? "Brand" : "All";
+                all.textContent = brandId ? _t("Brand") : _t("All");
                 all.addEventListener("click", () => load(false, false));
                 breadcrumbs.append(all);
                 data.breadcrumbs.forEach((category, index) => {
@@ -389,7 +490,7 @@ function initializeCategoryBrowsers() {
             } catch (_error) {
                 const message = document.createElement("p");
                 message.className = "lt-alert lt-alert--error";
-                message.textContent = "Categories could not be loaded. Please try again.";
+                message.textContent = _t("Categories could not be loaded. Please try again.");
                 grid.replaceChildren(message);
             } finally {
                 // Measure the natural content height without letting the browser paint
@@ -467,7 +568,256 @@ function initializeFeaturedProducts() {
     });
 }
 
+function initializeRegistrationContacts() {
+    const form = document.querySelector(".lt-registration-form");
+    if (!form) return;
+    const country = form.querySelector("#country_id");
+    const validators = [];
+    const show = (input, message) => {
+        input.setCustomValidity(message);
+        input.dataset.ltContactValidity = message;
+        input.setAttribute("aria-invalid", String(Boolean(message)));
+        document.getElementById(input.id + "_error").textContent = message;
+    };
+    const email = form.querySelector("#login");
+    const validateEmail = () => {
+        const invalid = Boolean(email.value.trim()) && email.validity.typeMismatch;
+        show(
+            email,
+            invalid
+                ? _t("Please enter a valid business email address, such as name@company.com.")
+                : ""
+        );
+        return !invalid;
+    };
+    email.addEventListener("blur", validateEmail);
+    email.addEventListener("invalid", validateEmail);
+    email.addEventListener("input", () => show(email, ""));
+    validators.push(validateEmail);
+    form.querySelectorAll("[data-lt-phone]").forEach((group) => {
+        const select = group.querySelector("select");
+        const input = group.querySelector("input");
+        const trigger = group.querySelector("[data-lt-phone-trigger]");
+        const menu = group.querySelector("[data-lt-phone-menu]");
+        const menuOptions = [...group.querySelectorAll("[data-lt-phone-option]")];
+        const flag = group.querySelector("[data-lt-phone-flag]");
+        const codeLabel = group.querySelector("[data-lt-phone-code]");
+        const triggerLabel = trigger.getAttribute("aria-label");
+        let manual = Boolean(select.value) && select.dataset.defaultCountry !== "1";
+        const selectedMenuOption = () => menuOptions.find(
+            (option) => option.dataset.countryId === select.value
+        );
+        const updateDisplay = () => {
+            const option = select.selectedOptions[0];
+            const code = option?.dataset.code || "";
+            const countryName = option?.dataset.countryName || "";
+            const flagUrl = option?.dataset.flag || "";
+            flag.src = flagUrl;
+            flag.hidden = !flagUrl;
+            codeLabel.textContent = code ? `+${code}` : "+";
+            trigger.setAttribute(
+                "aria-label",
+                countryName && code ? `${triggerLabel}: ${countryName}, +${code}` : triggerLabel
+            );
+            menuOptions.forEach((menuOption) => {
+                const selected = menuOption.dataset.countryId === select.value;
+                menuOption.classList.toggle("is-selected", selected);
+                menuOption.setAttribute("aria-selected", String(selected));
+            });
+        };
+        const closeMenu = (restoreFocus = false) => {
+            menu.hidden = true;
+            trigger.setAttribute("aria-expanded", "false");
+            if (restoreFocus) trigger.focus();
+        };
+        const openMenu = () => {
+            menu.hidden = false;
+            trigger.setAttribute("aria-expanded", "true");
+            const selected = selectedMenuOption() || menuOptions[0];
+            selected?.focus();
+            selected?.scrollIntoView({block: "nearest"});
+        };
+        const moveMenuFocus = (step) => {
+            const activeIndex = menuOptions.indexOf(document.activeElement);
+            const nextIndex = activeIndex < 0
+                ? 0
+                : (activeIndex + step + menuOptions.length) % menuOptions.length;
+            menuOptions[nextIndex]?.focus();
+        };
+        const sync = () => {
+            if (
+                !manual && country.value
+                && [...select.options].some((option) => option.value === country.value)
+            ) {
+                select.value = country.value;
+            }
+            updateDisplay();
+        };
+        sync();
+        const validate = () => {
+            let value = input.value.trim();
+            if (/^[+0-9\s().-]*$/.test(value)) {
+                value = value.replace(/[\s().-]/g, "");
+                if (value.startsWith("00")) value = "+" + value.slice(2);
+                if (value.startsWith("+")) {
+                    const matches = [...select.options].filter(o => o.dataset.code && value.slice(1).startsWith(o.dataset.code))
+                        .sort((a, b) => b.dataset.code.length - a.dataset.code.length);
+                    const chosen = matches.find(o => o.value === select.value) || matches[0];
+                    if (chosen) {
+                        select.value = chosen.value;
+                        manual = true;
+                        updateDisplay();
+                        value = value.slice(chosen.dataset.code.length + 1);
+                    }
+                }
+                input.value = value;
+            }
+            const code = select.selectedOptions[0]?.dataset.code || "";
+            const invalid = value ? (!code || !/^[0-9]+$/.test(value) || value.length < 4 || code.length + value.length > 15) : input.required;
+            show(input, invalid ? _t("Please enter a valid number and select its country code.") : "");
+            return !invalid;
+        };
+        country.addEventListener("change", () => { sync(); if (input.value) validate(); });
+        select.addEventListener("change", () => {
+            manual = true;
+            delete select.dataset.defaultCountry;
+            updateDisplay();
+            if (input.value) validate();
+        });
+        trigger.addEventListener("click", () => {
+            if (menu.hidden) openMenu();
+            else closeMenu();
+        });
+        trigger.addEventListener("keydown", (event) => {
+            if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+            event.preventDefault();
+            openMenu();
+            if (event.key === "Home") menuOptions[0]?.focus();
+            if (event.key === "End") menuOptions.at(-1)?.focus();
+        });
+        menu.addEventListener("click", (event) => {
+            const option = event.target.closest("[data-lt-phone-option]");
+            if (!option) return;
+            select.value = option.dataset.countryId;
+            select.dispatchEvent(new Event("change", {bubbles: true}));
+            closeMenu(true);
+        });
+        menu.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") {
+                event.preventDefault();
+                closeMenu(true);
+            } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                event.preventDefault();
+                moveMenuFocus(event.key === "ArrowDown" ? 1 : -1);
+            } else if (event.key === "Home" || event.key === "End") {
+                event.preventDefault();
+                menuOptions[event.key === "Home" ? 0 : menuOptions.length - 1]?.focus();
+            }
+        });
+        document.addEventListener("pointerdown", (event) => {
+            if (!menu.hidden && !group.contains(event.target)) closeMenu();
+        });
+        group.addEventListener("focusout", () => {
+            window.setTimeout(() => {
+                if (!group.contains(document.activeElement)) closeMenu();
+            });
+        });
+        input.addEventListener("blur", validate);
+        input.addEventListener("input", () => show(input, ""));
+        validators.push(validate);
+    });
+    const website = form.querySelector("#company_website");
+    const validateWebsite = () => {
+        let value = website.value.trim();
+        let valid = !value;
+        if (value) {
+            if (!value.includes("://")) value = "https://" + value;
+            try {
+                const url = new URL(value);
+                const host = url.hostname;
+                const labels = host.split(".");
+                valid = value.length <= 500 && !/[\s\\]/.test(value)
+                    && ["http:", "https:"].includes(url.protocol) && !url.username && !url.password
+                    && !value.split("/")[2]?.includes("@")
+                    && host.length <= 253 && labels.length >= 2
+                    && labels.every(label => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i.test(label))
+                    && (/^[a-z]{2,63}$/i.test(labels.at(-1)) || labels.at(-1).startsWith("xn--"));
+            } catch { valid = false; }
+        }
+        if (valid) website.value = value;
+        show(website, valid ? "" : _t("Please enter a valid company website, such as www.company.com."));
+        return valid;
+    };
+    website.addEventListener("blur", validateWebsite);
+    website.addEventListener("input", () => show(website, ""));
+    validators.push(validateWebsite);
+    form.addEventListener("submit", (event) => {
+        const results = validators.map(validate => validate());
+        if (results.includes(false)) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            form.reportValidity();
+        }
+    }, true);
+}
+
+function initializeLocalizedValidationMessages() {
+    const fieldTypes = [HTMLInputElement, HTMLSelectElement, HTMLTextAreaElement];
+    const isFormField = (field) => fieldTypes.some((fieldType) => field instanceof fieldType);
+    const clearManagedMessage = (field) => {
+        if (!isFormField(field) || field.dataset.ltManagedValidity !== "1") {
+            return;
+        }
+        field.setCustomValidity("");
+        delete field.dataset.ltManagedValidity;
+    };
+
+    document.addEventListener("input", (event) => clearManagedMessage(event.target), true);
+    document.addEventListener("change", (event) => clearManagedMessage(event.target), true);
+    document.addEventListener("invalid", (event) => {
+        const field = event.target;
+        if (!isFormField(field)) {
+            return;
+        }
+        if (field.dataset.ltContactValidity) return;
+
+        field.setCustomValidity("");
+        if (field.validity.valid) {
+            return;
+        }
+
+        let message = (field.name === "terms" ? _t("Please accept the Terms of Use and Privacy Policy.") : field.dataset.ltValidationMessage);
+        if (!message && field.validity.valueMissing) {
+            if (field instanceof HTMLSelectElement) {
+                message = _t("Please select an item from the list.");
+            } else if (field.type === "checkbox") {
+                message = _t("Please select this option.");
+            } else if (field.type === "radio") {
+                message = _t("Please select an option.");
+            } else {
+                message = _t("Please fill out this field.");
+            }
+        } else if (!message && field.validity.typeMismatch) {
+            message = field.type === "email"
+                ? _t("Please enter a valid email address.")
+                : _t("Please enter a valid value.");
+        } else if (!message && field.validity.patternMismatch) {
+            message = field.title || _t("Please match the requested format.");
+        } else if (!message && field.validity.rangeUnderflow) {
+            message = _t("Value must be greater than or equal to %s.", field.min);
+        } else if (!message && field.validity.rangeOverflow) {
+            message = _t("Value must be less than or equal to %s.", field.max);
+        } else if (!message && field.validity.stepMismatch) {
+            message = _t("Please enter a valid value.");
+        }
+        field.setCustomValidity(message || _t("Please enter a valid value."));
+        field.dataset.ltManagedValidity = "1";
+    }, true);
+}
+
 function initializePartnerHub() {
+    initializeLocalizedValidationMessages();
+    initializeRegistrationContacts();
     initializeNavigation();
     initializeFilters();
     initializeCatalogView();
@@ -475,16 +825,17 @@ function initializePartnerHub() {
     initializeDetailTabs();
     initializeQuantityControls();
     initializeVariantPickers();
+    initializeServiceProductFilter();
     initializeCategoryBrowsers();
     initializeFeaturedProducts();
     initializeHorizontalCarousels();
-    initializeCartForms();
     initializeCartQuantity();
     initializeAccountMenus();
     initializePortalSidebar();
     initializeFaq();
     initializeSubmissionForms();
     initializePaymentStatus();
+    initializeCompanyOnboarding();
 }
 
 function initializeFaq() {
@@ -527,7 +878,7 @@ function initializePortalSidebar() {
     const sync = () => {
         const expanded = !shell.classList.contains("is-sidebar-collapsed");
         toggle.setAttribute("aria-expanded", String(expanded));
-        toggle.setAttribute("aria-label", expanded ? "Collapse account navigation" : "Expand account navigation");
+        toggle.setAttribute("aria-label", expanded ? _t("Collapse account navigation") : _t("Expand account navigation"));
     };
     toggle.addEventListener("click", () => {
         shell.classList.toggle("is-sidebar-collapsed");
@@ -541,6 +892,8 @@ function resetSubmissionForm(form) {
     form.removeAttribute("aria-busy");
     form.querySelectorAll("button[type='submit'], input[type='submit']").forEach((button) => {
         button.disabled = false;
+        button.style.removeProperty("width");
+        button.style.removeProperty("height");
         if (button.dataset.ltOriginalLabel) {
             if (button instanceof HTMLInputElement) {
                 button.value = button.dataset.ltOriginalLabel;
@@ -549,10 +902,6 @@ function resetSubmissionForm(form) {
             }
         }
     });
-    const status = form.querySelector("[data-lt-submit-status]");
-    if (status) {
-        status.textContent = "";
-    }
 }
 
 function initializeSubmissionForms() {
@@ -566,21 +915,20 @@ function initializeSubmissionForms() {
             form.dataset.ltSubmitting = "true";
             form.setAttribute("aria-busy", "true");
             form.querySelectorAll("button[type='submit'], input[type='submit']").forEach((button) => {
+                const buttonRect = button.getBoundingClientRect();
+                button.style.width = `${buttonRect.width}px`;
+                button.style.height = `${buttonRect.height}px`;
                 button.dataset.ltOriginalLabel ||= button instanceof HTMLInputElement
                     ? button.value
                     : button.innerHTML;
                 button.disabled = true;
-                const label = button.dataset.ltSubmittingLabel || "Submitting…";
+                const label = button.dataset.ltSubmittingLabel || _t("Submitting…");
                 if (button instanceof HTMLInputElement) {
                     button.value = label;
                 } else {
                     button.innerHTML = `<i class="fa fa-circle-notch fa-spin" aria-hidden="true"></i> ${label}`;
                 }
             });
-            const status = form.querySelector("[data-lt-submit-status]");
-            if (status) {
-                status.textContent = "Please wait. Your request is being submitted.";
-            }
         });
     });
     window.addEventListener("pageshow", () => {
@@ -595,7 +943,7 @@ function initializePaymentStatus() {
     }
     const startedAt = Date.now();
     const provider = statusPage.dataset.providerCode;
-    const thresholdSeconds = provider === "demo" ? 8 : 45;
+    const thresholdSeconds = provider === "demo" ? 30 : 60;
     const elapsed = statusPage.querySelector("[data-lt-payment-elapsed]");
     const liveStatus = statusPage.querySelector("[data-lt-payment-live]");
     const processing = statusPage.querySelector("[data-lt-payment-processing]");
@@ -604,13 +952,36 @@ function initializePaymentStatus() {
     const updateConnectivity = () => {
         if (liveStatus) {
             liveStatus.textContent = navigator.onLine
-                ? "Automatic payment checks are continuing."
-                : "Connection lost. We will continue checking when you are back online.";
+                ? _t("Automatic payment checks are continuing.")
+                : _t("Connection lost. We will continue checking when you are back online.");
         }
     };
     updateConnectivity();
     window.addEventListener("online", updateConnectivity);
     window.addEventListener("offline", updateConnectivity);
+
+    // Keep Odoo's native post-processing endpoint as the single source of
+    // truth.  The Partner Hub replaces the native status-page layout, so it
+    // also owns a small defensive poller: this guarantees the final redirect
+    // even when the native public interaction was initialized before the
+    // replacement status node became available.
+    let pollDelay = 0;
+    const pollPayment = async () => {
+        try {
+            const result = await rpc("/payment/status/poll", {
+                csrf_token: window.odoo?.csrf_token,
+            });
+            if (["authorized", "done", "cancel", "error"].includes(result.state)) {
+                window.location.assign(result.landing_route);
+                return;
+            }
+        } catch (_error) {
+            // Transient network and post-processing errors are retried below.
+        }
+        pollDelay = Math.min(pollDelay ? pollDelay * 1.5 : 3000, 30000);
+        window.setTimeout(pollPayment, pollDelay);
+    };
+    pollPayment();
 
     const timer = window.setInterval(() => {
         const seconds = Math.floor((Date.now() - startedAt) / 1000);
@@ -626,7 +997,12 @@ function initializePaymentStatus() {
     }, 1000);
 
     statusPage.querySelector("[data-lt-payment-recheck]")?.addEventListener("click", () => {
-        window.location.reload();
+        processing?.removeAttribute("hidden");
+        pending?.setAttribute("hidden", "hidden");
+        statusPage.classList.remove("is-pending");
+        if (liveStatus) {
+            liveStatus.textContent = _t("Automatic payment checks are continuing.");
+        }
     });
 }
 
@@ -655,8 +1031,40 @@ function initializeAccountMenus() {
     });
 }
 
-if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initializePartnerHub, {once: true});
-} else {
-    initializePartnerHub();
+function initializeCompanyOnboarding() {
+    const dialog = document.querySelector("[data-lt-company-onboarding]");
+    if (!dialog) {
+        return;
+    }
+    const storageKey = `lt-company-onboarding-${dialog.dataset.ltCompanyOnboarding}`;
+    try {
+        if (window.sessionStorage.getItem(storageKey)) {
+            return;
+        }
+        window.sessionStorage.setItem(storageKey, "shown");
+    } catch (_error) {
+        // The reminder can still be displayed when browser storage is blocked.
+    }
+    const close = () => {
+        dialog.hidden = true;
+        document.body.classList.remove("lt-has-company-onboarding-dialog");
+    };
+    dialog.querySelectorAll("[data-lt-company-onboarding-close]").forEach(
+        (button) => button.addEventListener("click", close)
+    );
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !dialog.hidden) {
+            close();
+        }
+    });
+    dialog.hidden = false;
+    document.body.classList.add("lt-has-company-onboarding-dialog");
+    dialog.querySelector("a, button:not(.lt-company-onboarding-dialog__backdrop)")?.focus();
 }
+
+// Lazy frontend assets may execute after DOMContentLoaded but before translations.
+// Both prerequisites are needed before assigning translated strings to the DOM.
+const domReady = document.readyState === "loading"
+    ? new Promise((resolve) => document.addEventListener("DOMContentLoaded", resolve, {once: true}))
+    : Promise.resolve();
+Promise.all([domReady, translationIsReady]).then(initializePartnerHub);

@@ -4,12 +4,34 @@
 
 1. Connect this GitHub repository to an Odoo.sh Odoo 19 Enterprise project.
 2. Push/deploy the implementation branch to Development.
-3. Update the Apps list and install `Lucky Tone B2B Management`. It installs
-   the four dependent modules.
+3. Update the Apps list and install `Lucky Tone B2B Management`. Its dependencies
+   include multi-company sales and the native Dropship/intercompany modules.
+   Existing installations must upgrade `b2b_management` after deploying this
+   version; pushing files alone is not a database module upgrade. There is no
+   separate multi-company app installation or activation switch for operators.
 4. Confirm Enterprise dependencies and the Helpdesk ticket inherited view load.
 5. Run the module test suite with `--test-tags /b2b_core,/b2b_erp_connector,/b2b_sample,/b2b_website`.
 
 ## 2. Business configuration
+
+Current fulfilment mode is **External ERP**. Use **B2B Management → Business
+Setup** for centralized seller/brand setup and batch customer assignment. A
+factory, local stock warehouse and internal supply prices are required only
+when selecting **Odoo Fulfilment**. The factory setup items below describe that
+optional native mode, not prerequisites for External ERP. Each new order keeps
+its execution-provider snapshot; pre-existing routed factory orders are migrated
+as Odoo fulfilment and are not silently switched. API integration is a separate
+workstream; external revisions remain explicitly pending external execution.
+
+- In Website → Settings → Partner Hub → Multi-company Sales Configuration,
+  configure permitted legal sellers and the fulfilment provider, and set the
+  default account brand to a permitted seller. Routing follows this configuration
+  automatically. Odoo fulfilment additionally requires a factory. Partial setup blocks routed ordering; an untouched existing
+  website retains its single-company flow. No real companies/accounts are seeded.
+- Configure each customer's seller/brand, each seller's native bank journals,
+  payment methods and technical Dropship warehouse, and the factory's warehouse,
+  intercompany rules and product vendor prices. Routing status is not a declaration
+  that these operational settings or acceptance tests are complete.
 
 - Create customer companies/contacts and grant Portal access by invitation.
 - Assign the customer's native Odoo Pricelist.

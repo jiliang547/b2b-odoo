@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_collection_policies" model="ir.actions.act_window">
+        <field name="name">Production / Shipment Collection Conditions</field>
+    </record>
+    <record id="menu_collection_policies" model="ir.ui.menu">
+        <field name="name">Production / Shipment Collection Conditions</field>
+    </record>
+    <record id="collection_policy_configuration_clarity" model="ir.ui.view">
+        <field name="name">collection.policy.configuration.clarity</field>
+        <field name="model">b2b.collection.policy</field>
+        <field name="inherit_id" ref="view_collection_policy_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='shipment_percent']" position="attributes">
+                <attribute name="string">Cumulative % Before Shipment</attribute>
+            </xpath>
+            <xpath expr="//div[@role='status']" position="replace">
+                <div class="alert alert-info" role="status">
+                    Invoice Payment Terms calculate invoice installments and due dates. Production and shipment percentages control payment clearance, not invoice due dates or actual ERP progress.
+                    <br/>Example: collect 30% before production and a cumulative 100% before shipment. This does not mean the balance is due in 30 days.
+                    <br/>When applied to an order, a configured Invoice Payment Terms value is copied to the native order field. If blank, the order's existing invoice terms are retained. Editing invoice terms alone does not change collection thresholds.
+                    <br/>Template changes do not rewrite existing order snapshots. Apply Collection Configuration is available on eligible quotations and requires a reason.
+                </div>
+            </xpath>
+        </field>
+    </record>
+    <record id="order_collection_configuration_clarity" model="ir.ui.view">
+        <field name="name">sale.order.collection.configuration.clarity</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="order_collection_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='b2b_collection']/group" position="before">
+                <div class="alert alert-info" role="status">
+                    Invoice terms control invoice due dates. Collection thresholds control payment clearance for production and shipment. Editing one does not automatically update the other. Shipment percentages include the deposit.
+                </div>
+                <div class="alert alert-warning" role="status" invisible="not b2b_payment_configuration_warning">
+                    <field name="b2b_payment_configuration_warning" nolabel="1" readonly="1"/>
+                </div>
+                <group string="Invoice Schedule (Native Payment Terms)">
+                    <field name="payment_term_id" string="Order Invoice Payment Terms"/>
+                    <div class="text-muted">This is the same Payment Terms field shown on the quotation, not a second configuration. Existing posted invoices are not rewritten by changing this order.</div>
+                </group>
+            </xpath>
+            <xpath expr="//field[@name='b2b_production_percent']" position="attributes">
+                <attribute name="string">Required % Before Production</attribute>
+            </xpath>
+            <xpath expr="//field[@name='b2b_shipment_percent']" position="attributes">
+                <attribute name="string">Cumulative % Before Shipment</attribute>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- Native company-specific sequences take precedence. These shared
+         fallbacks cover newly configured legal sellers without resetting
+         or renumbering any existing company's sequence. -->
+    <record id="sequence_order_change_shared" model="ir.sequence">
+        <field name="name">Multi-company Order Change Request</field>
+        <field name="code">b2b.order.change.request</field>
+        <field name="prefix">OCR/MC/%(year)s/</field>
+        <field name="padding">5</field>
+        <field name="company_id" eval="False"/>
+    </record>
+    <record id="sequence_bank_receipt_shared" model="ir.sequence">
+        <field name="name">Multi-company Bank Transfer Evidence</field>
+        <field name="code">b2b.bank.receipt</field>
+        <field name="prefix">BTR/MC/%(year)s/</field>
+        <field name="padding">5</field>
+        <field name="company_id" eval="False"/>
+    </record>
+</odoo>

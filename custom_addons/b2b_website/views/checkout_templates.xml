@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <!-- Native optional Promo Code view: hide its shared cart/checkout entry,
+         without removing pricelist codes or changing discount calculations. -->
+    <record id="website_sale.reduction_code" model="ir.ui.view">
+        <field name="active" eval="False"/>
+    </record>
     <template id="checkout_layout_partner_style" inherit_id="website_sale.checkout_layout" name="Partner Hub Checkout Style">
         <xpath expr="//div[@id='wrap']" position="attributes"><attribute name="class" add="lt-checkout" separator=" "/></xpath>
     </template>
@@ -7,6 +12,27 @@
         <t t-call="b2b_website.partner_layout"><t t-set="no_index" t-value="True"/>
             <section class="lt-section"><div class="container lt-narrow"><div class="lt-state-card"><i class="fa fa-lock"/><span class="lt-kicker">ACCOUNT ACCESS</span><h1>Ordering is not enabled yet</h1><p>Your account may need approval or price access before products can be added to an order.</p><div class="lt-actions"><a class="lt-btn lt-btn--primary" href="/my">Open my account</a><a class="lt-btn lt-btn--ghost-dark" href="/contact">Contact us</a></div></div></div></section>
         </t>
+    </template>
+
+    <template id="ordering_unavailable_pricing_state" inherit_id="b2b_website.ordering_unavailable">
+        <xpath expr="//div[hasclass('lt-state-card')]/p" position="replace">
+            <p t-if="request.env['b2b.product.service'].price_state(website=website) == 'pricing_pending'">Your pricing is being configured. Please contact us for assistance.</p>
+            <p t-else="">Your account may need approval or price access before products can be added to an order.</p>
+        </xpath>
+    </template>
+
+    <template id="payment_submit_for_review" inherit_id="website_sale.navigation_buttons" name="Submit Order for Review">
+        <xpath expr="//t[@t-if=&quot;current_website_checkout_step_href == '/shop/payment'&quot;]" position="inside">
+            <div t-if="not errors and website_sale_order._is_cart_ready()" class="lt-checkout-alternatives d-flex flex-column gap-2">
+                    <form action="/shop/submit-for-review" method="post" data-lt-submit-once="">
+                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                        <button type="submit" class="btn btn-outline-primary w-100" data-lt-stable-submit="">
+                            Submit Order
+                        </button>
+                    </form>
+                    <small class="text-muted text-center">Confirm shipping and final pricing with our team before payment.</small>
+            </div>
+        </xpath>
     </template>
 
     <template id="payment_status_partner_hub" inherit_id="payment.payment_status" name="Partner Hub Payment Status" priority="90">
@@ -31,7 +57,7 @@
                                 <a class="lt-btn lt-btn--ghost-dark" href="/contact">Contact support</a>
                             </div>
                         </div>
-                        <div t-else="" name="o_payment_status" class="lt-state-card lt-payment-status" data-lt-payment-status="" t-att-data-provider-code="tx.provider_code" t-att-data-payment-state="tx.state">
+                        <div t-else="" name="lt_payment_status" class="lt-state-card lt-payment-status" data-lt-payment-status="" t-att-data-provider-code="tx.provider_code" t-att-data-payment-state="tx.state">
                             <div data-lt-payment-processing="">
                                 <i class="fa fa-circle-notch fa-spin lt-payment-status__spinner"/>
                                 <span class="lt-kicker">PAYMENT PROCESSING</span>
@@ -47,14 +73,14 @@
                                 <p t-else="">The payment response was received, but order confirmation is taking longer than expected. You can safely leave this page while automatic processing continues.</p>
                                 <div class="lt-actions">
                                     <a class="lt-btn lt-btn--primary" href="/my/orders">View my orders</a>
-                                    <button class="lt-btn lt-btn--ghost-dark" type="button" data-lt-payment-recheck="">Check again</button>
+                                    <button class="lt-btn lt-btn--ghost-dark" type="button" data-lt-payment-recheck="">Continue waiting</button>
                                     <a class="lt-btn lt-btn--ghost-dark" href="/contact">Contact support</a>
                                 </div>
                             </div>
                             <dl class="lt-payment-summary">
                                 <div><dt>Reference</dt><dd t-out="tx.reference"/></div>
                                 <div><dt>Amount</dt><dd><span t-field="tx.amount" t-options="{'widget': 'monetary', 'display_currency': tx.currency_id}"/></dd></div>
-                                <div><dt>Current state</dt><dd t-out="{'draft': 'Draft', 'pending': 'Pending', 'authorized': 'Authorized', 'done': 'Paid', 'cancel': 'Cancelled', 'error': 'Error'}.get(tx.state, tx.state)"/></div>
+                                <div><dt>Current state</dt><dd t-out="dict(tx._fields['state']._description_selection(request.env)).get(tx.state, tx.state)"/></div>
                                 <div><dt>Waiting time</dt><dd data-lt-payment-elapsed="">0s</dd></div>
                             </dl>
                             <p class="lt-help">Do not submit another payment while this transaction is pending.</p>

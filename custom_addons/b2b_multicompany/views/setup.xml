@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_setup_bank_journals" model="ir.ui.view">
+        <field name="name">b2b.setup.native.bank.journals</field><field name="model">account.journal</field>
+        <field name="arch" type="xml"><list string="Bank Journals"><field name="name"/><field name="company_id"/><field name="currency_id"/><field name="bank_account_id"/><field name="type"/></list></field>
+    </record>
+    <record id="view_setup_bank_journal_form" model="ir.ui.view">
+        <field name="name">b2b.setup.native.bank.journal.form</field>
+        <field name="model">account.journal</field>
+        <field name="inherit_id" ref="account.view_account_journal_form"/>
+        <field name="mode">primary</field>
+        <field name="priority">90</field>
+        <field name="arch" type="xml">
+            <xpath expr="//form/field[@name='company_id']" position="attributes">
+                <attribute name="force_save">1</attribute>
+            </xpath>
+            <xpath expr="//sheet/group/group/field[@name='company_id']" position="attributes">
+                <attribute name="force_save">1</attribute>
+            </xpath>
+            <xpath expr="//sheet/group" position="before">
+                <div class="alert alert-info" role="status">This journal belongs to the Company shown below. Accounts created here use that company, independently of the top-right current company.</div>
+            </xpath>
+            <xpath expr="//field[@name='default_account_id']" position="attributes">
+                <attribute name="context">{'allowed_company_ids': [company_id], 'default_company_ids': [(6, 0, [company_id])], 'default_account_type': 'asset_cash'}</attribute>
+            </xpath>
+            <xpath expr="//field[@name='suspense_account_id']" position="attributes">
+                <attribute name="context">{'allowed_company_ids': [company_id], 'default_company_ids': [(6, 0, [company_id])], 'default_account_type': 'asset_current'}</attribute>
+            </xpath>
+            <xpath expr="//field[@name='profit_account_id']" position="attributes">
+                <attribute name="context">{'allowed_company_ids': [company_id], 'default_company_ids': [(6, 0, [company_id])], 'default_account_type': 'income_other'}</attribute>
+            </xpath>
+            <xpath expr="//field[@name='loss_account_id']" position="attributes">
+                <attribute name="context">{'allowed_company_ids': [company_id], 'default_company_ids': [(6, 0, [company_id])], 'default_account_type': 'expense'}</attribute>
+            </xpath>
+            <xpath expr="//field[@name='bank_account_id']" position="attributes">
+                <attribute name="context">{'allowed_company_ids': [company_id], 'default_partner_id': company_partner_id}</attribute>
+            </xpath>
+            <xpath expr="//field[@name='inbound_payment_method_line_ids']//field[@name='payment_account_id']" position="attributes">
+                <attribute name="context">{'allowed_company_ids': [parent.company_id], 'default_company_ids': [(6, 0, [parent.company_id])], 'default_account_type': 'asset_current', 'default_reconcile': True}</attribute>
+            </xpath>
+            <xpath expr="//field[@name='outbound_payment_method_line_ids']//field[@name='payment_account_id']" position="attributes">
+                <attribute name="context">{'allowed_company_ids': [parent.company_id], 'default_company_ids': [(6, 0, [parent.company_id])], 'default_account_type': 'asset_current', 'default_reconcile': True}</attribute>
+            </xpath>
+        </field>
+    </record>
+    <record id="sale_fulfilment_provider" model="ir.ui.view">
+        <field name="name">sale.order.fulfilment.provider</field><field name="model">sale.order</field><field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml"><xpath expr="//sheet" position="inside">
+            <group string="Fulfilment" invisible="not b2b_fulfilment_mode">
+                <field name="b2b_fulfilment_mode"/><field name="b2b_fulfilment_factory_id" invisible="b2b_fulfilment_mode != 'odoo'"/>
+                <field name="b2b_external_change_pending" invisible="b2b_fulfilment_mode != 'external'"/>
+                <div class="alert alert-info" role="status" invisible="b2b_fulfilment_mode != 'external'">Production, inventory and shipment belong to External ERP. API integration is pending; payment clearance is not a production or shipment acknowledgement. Do not create local factory or delivery documents.</div>
+            </group>
+        </xpath></field>
+    </record>
+    <template id="external_order_notice" inherit_id="sale.sale_order_portal_template" priority="110">
+        <xpath expr="//div[@id='sale_order_sidebar_button']" position="before">
+            <div t-if="sale_order.state != 'cancel' and sale_order.b2b_fulfilment_mode == 'external' and sale_order.b2b_external_change_pending" class="text-muted my-3" role="status">Your order changes are recorded. We’re confirming the updated fulfilment arrangements.
+            </div>
+        </xpath>
+    </template>
+    <template id="external_collection_notice" inherit_id="b2b_website.portal_collection" active="True">
+        <xpath expr="//header[hasclass('lt-portal-heading')]" position="after">
+            <p t-if="order.state != 'cancel' and order.b2b_fulfilment_mode == 'external' and order.b2b_external_change_pending" class="text-muted">Your order changes are recorded. We’re confirming the updated fulfilment arrangements.</p>
+        </xpath>
+    </template>
+    <record id="view_business_setup" model="ir.ui.view">
+        <field name="name">b2b.business.setup.form</field><field name="model">b2b.business.setup</field>
+        <field name="arch" type="xml">
+            <form string="Business Setup">
+                <header><button name="action_save_setup" type="object" string="Save Website Setup" class="btn-primary"/></header>
+                <sheet>
+                    <div class="alert alert-info" role="status">Reuse existing companies and bank records. External ERP is the default: no factory, warehouse or internal supply price is required. Save changes explicitly before leaving this workspace.</div>
+                    <group><field name="website_id" options="{'no_create': True}"/><field name="fulfilment_mode"/></group>
+                    <notebook>
+                        <page string="1. Companies and Access">
+                            <button name="action_companies" type="object" string="Create / Review Native Companies"/>
+                            <button name="action_users" type="object" string="Review Staff Company Access"/>
+                            <p>Staff access: open the user, then Access Rights. Companies allows multiple companies; Default Company selects one starting company. Only a native user-access administrator can change these permissions.</p>
+                            <p>These buttons open native management pages, not selection dialogs. Open a company or user by clicking its name; save changes, then use the Business Setup breadcrumb to return. Select your sellers in Selling Companies below. Native administrator permissions still apply.</p>
+                            <group><field name="selling_company_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                            <field name="factory_id" invisible="fulfilment_mode != 'odoo'" options="{'no_create': True}"/></group>
+                        </page>
+                        <page string="2. Brands and Banks">
+                            <button name="action_brands" type="object" string="Configure Brand / Legal Seller / Bank Links"/>
+                            <group><field name="bank_company_id" domain="[('id', 'in', selling_company_ids)]" options="{'no_create': True}"/></group>
+                            <button name="action_banks" type="object" string="Create / Review Native Bank Journals"/>
+                            <p>Choose Bank Configuration Company first. Open and edit records on the native management page, then return using the Business Setup breadcrumb. The journal page uses the selected bank company without changing your global company selection. Verify account, currency and outstanding accounts before linking the journal to a brand.</p>
+                            <group><field name="default_brand_id" options="{'no_create': True}"/></group>
+                        </page>
+                        <page string="3. Assign Customers">
+                            <p>Save the website setup first. Assign customers to one seller/brand at a time. Existing order companies and payment terms are not changed.</p>
+                            <group><field name="customer_seller_id" domain="[('id', 'in', selling_company_ids)]" options="{'no_create': True}"/><field name="customer_brand_id" domain="[('b2b_selling_company_id', '=', customer_seller_id)]" options="{'no_create': True}"/></group>
+                            <field name="customer_ids" widget="many2many_tags" domain="[('parent_id', '=', False), ('is_company', '=', True)]" options="{'no_create': True}"/>
+                            <button name="action_assign_customers" type="object" string="Assign Selected Customers" confirm="Assign these customers to this seller and brand? Existing orders will retain their original company."/>
+                        </page>
+                        <page string="4. Checklist"><field name="checklist" nolabel="1"/></page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="action_business_setup" model="ir.actions.act_window">
+        <field name="name">Business Setup</field><field name="res_model">b2b.business.setup</field><field name="view_mode">form</field><field name="target">current</field>
+    </record>
+    <record id="external_collection_notice" model="ir.ui.view"><field name="active" eval="True"/></record>
+</odoo>

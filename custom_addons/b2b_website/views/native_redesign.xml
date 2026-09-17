@@ -1,5 +1,63 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <template id="registration_phone" name="Registration phone input">
+        <div class="lt-field">
+            <label t-att-for="phone_field"><t t-out="phone_label"/> <b t-if="phone_field == 'mobile'">*</b></label>
+            <div class="lt-phone-input" data-lt-phone="">
+                <div class="lt-phone-country">
+                    <select class="lt-phone-country-native" t-att-name="phone_field + '_country'" t-att-id="phone_field + '_country'" t-att-aria-label="phone_label + ' country code'" t-att-data-default-country="'1' if phone_country_defaulted else None" autocomplete="tel-country-code" tabindex="-1" aria-hidden="true">
+                        <option value="">+</option>
+                        <option t-foreach="countries.filtered('phone_code')" t-as="pc" t-att-value="pc.id" t-att-data-code="pc.phone_code" t-att-data-flag="pc.image_url" t-att-data-country-name="pc.name" t-att-selected="str(pc.id) == str(phone_country or '')">+<t t-out="pc.phone_code"/></option>
+                    </select>
+                    <button class="lt-phone-country-trigger" type="button" data-lt-phone-trigger="" aria-haspopup="listbox" aria-expanded="false" t-att-aria-controls="phone_field + '_country_list'" t-att-aria-label="phone_label + ' country code'">
+                        <img class="lt-phone-flag" data-lt-phone-flag="" src="/base/static/img/country_flags/us.png" alt=""/>
+                        <span class="lt-phone-code" data-lt-phone-code="">+1</span>
+                        <i class="fa fa-chevron-down" aria-hidden="true"/>
+                    </button>
+                    <div class="lt-phone-country-menu" data-lt-phone-menu="" t-att-id="phone_field + '_country_list'" role="listbox" t-att-aria-label="phone_label + ' country code options'" hidden="hidden">
+                        <button t-foreach="countries.filtered('phone_code')" t-as="pc" type="button" class="lt-phone-country-option" data-lt-phone-option="" t-att-data-country-id="pc.id" t-att-data-code="pc.phone_code" t-att-data-flag="pc.image_url" t-att-data-country-name="pc.name" role="option" t-att-aria-selected="'true' if str(pc.id) == str(phone_country or '') else 'false'">
+                            <img class="lt-phone-country-option__flag" t-att-src="pc.image_url" alt="" loading="lazy" decoding="async"/>
+                            <span class="lt-phone-country-option__name" t-out="pc.name"/>
+                            <span class="lt-phone-country-option__code">+<t t-out="pc.phone_code"/></span>
+                        </button>
+                    </div>
+                </div>
+                <input class="lt-phone-number" type="tel" inputmode="numeric" t-att-name="phone_field" t-att-id="phone_field" t-att-value="phone_value" placeholder="000 000 0000" t-att-required="phone_field == 'mobile'" maxlength="64" autocomplete="tel-national" t-att-aria-describedby="phone_field + '_error'"/>
+            </div>
+            <small class="lt-field-error" t-att-id="phone_field + '_error'" aria-live="polite"/>
+        </div>
+    </template>
+
+    <!-- Keep Odoo's portal search/filter query contract while presenting it
+         with the Partner Hub controls instead of the native portal navbar. -->
+    <template id="portal_list_toolbar" name="Partner Hub Portal List Toolbar">
+        <form class="lt-portal-toolbar" t-att-action="default_url" method="get">
+            <div t-if="searchbar_inputs" class="lt-portal-search">
+                <i class="fa fa-search" aria-hidden="true"/>
+                <label class="visually-hidden" for="lt-portal-list-search">Search tickets</label>
+                <input id="lt-portal-list-search" type="search" name="search" t-att-value="search" placeholder="Search tickets…"/>
+            </div>
+            <label t-if="searchbar_inputs" class="visually-hidden" for="lt-portal-search-in">Search in</label>
+            <select t-if="searchbar_inputs" id="lt-portal-search-in" name="search_in" aria-label="Search in">
+                <option t-foreach="searchbar_inputs.items()" t-as="search_option" t-att-value="search_option[0]" t-att-selected="search_option[0] == search_in" t-out="search_option[1].get('label')"/>
+            </select>
+            <label t-if="searchbar_sortings" class="visually-hidden" for="lt-portal-sort-by">Sort by</label>
+            <select t-if="searchbar_sortings" id="lt-portal-sort-by" name="sortby" aria-label="Sort by">
+                <option t-foreach="searchbar_sortings.items()" t-as="sort_option" t-att-value="sort_option[0]" t-att-selected="sort_option[0] == sortby" t-out="sort_option[1].get('label')"/>
+            </select>
+            <label t-if="searchbar_filters" class="visually-hidden" for="lt-portal-filter-by">Filter by</label>
+            <select t-if="searchbar_filters" id="lt-portal-filter-by" name="filterby" aria-label="Filter by">
+                <option t-foreach="searchbar_filters.items()" t-as="filter_option" t-att-value="filter_option[0]" t-att-selected="filter_option[0] == filterby" t-out="filter_option[1].get('label')"/>
+            </select>
+            <label t-if="searchbar_groupby" class="visually-hidden" for="lt-portal-group-by">Group by</label>
+            <select t-if="searchbar_groupby" id="lt-portal-group-by" name="groupby" aria-label="Group by">
+                <option t-foreach="searchbar_groupby.items()" t-as="group_option" t-att-value="group_option[0]" t-att-selected="group_option[0] == groupby" t-out="group_option[1].get('label')"/>
+            </select>
+            <button class="lt-btn lt-btn--blue lt-btn--small" type="submit">Apply</button>
+            <a class="lt-btn lt-btn--outline lt-btn--small" t-att-href="default_url">Reset</a>
+        </form>
+    </template>
+
     <template id="portal_layout_figma" inherit_id="portal.portal_layout" name="Partner Hub Portal Layout">
         <xpath expr="//t[@t-set='is_portal']" position="before"><t t-set="no_header" t-value="True"/><t t-set="no_footer" t-value="True"/><t t-set="no_breadcrumbs" t-value="True"/></xpath>
         <xpath expr="//div[@id='wrap']" position="before"><t t-call="b2b_website.partner_topbar"/></xpath>
@@ -18,11 +76,35 @@
                     <h1>Welcome back, <t t-out="request.env.user.name"/></h1>
                     <p class="lt-portal-heading__placeholder" aria-hidden="true">Account overview</p>
                 </header>
+                <section t-if="not b2b_has_linked_company" t-att-class="'lt-company-onboarding-card ' + ('is-pending' if b2b_open_company_request or b2b_registration_application.state == 'pending' else 'is-action')">
+                    <span><i t-att-class="'fa ' + ('fa-clock-o' if b2b_open_company_request or b2b_registration_application.state == 'pending' else 'fa-building-o')"/></span>
+                    <div>
+                        <strong t-if="b2b_registration_application.state == 'pending'">Partner registration under review</strong>
+                        <strong t-elif="b2b_registration_application.state == 'rejected'">Partner registration needs attention</strong>
+                        <strong t-else=""><t t-if="b2b_open_company_request">Company request under review</t><t t-else="">Connect your company account</t></strong>
+                        <p t-if="b2b_registration_application.state == 'pending'">Your email is verified. Our team is reviewing your company information before Partner Hub access is activated.</p>
+                        <p t-elif="b2b_registration_application.state == 'rejected'">Your application was not approved. <t t-if="b2b_registration_application.rejection_reason">Reason: <t t-out="b2b_registration_application.rejection_reason"/></t> Contact our team if the information needs to be corrected.</p>
+                        <p t-else=""><t t-if="b2b_open_company_request">Our team is reviewing your company information. Your personal account remains unchanged until the review is complete.</t><t t-else="">Submit your company information so our team can configure the correct pricing and product access.</t></p>
+                    </div>
+                    <a t-if="b2b_open_company_request" class="lt-btn lt-btn--outline" t-att-href="'/my/inquiries/%s' % b2b_open_company_request.id">View Request</a>
+                    <a t-elif="b2b_registration_application.state == 'rejected'" class="lt-btn lt-btn--outline" href="/contact">Contact Support</a>
+                    <a t-elif="not b2b_registration_application" class="lt-btn lt-btn--blue" href="/my/company/change">Request Company Setup</a>
+                </section>
+                <div t-if="b2b_show_company_prompt" class="lt-company-onboarding-dialog" t-att-data-lt-company-onboarding="request.env.user.id" hidden="hidden">
+                    <button type="button" class="lt-company-onboarding-dialog__backdrop" data-lt-company-onboarding-close="" aria-label="Close company setup reminder"/>
+                    <section role="dialog" aria-modal="true" aria-labelledby="lt-company-onboarding-title">
+                        <button type="button" class="lt-company-onboarding-dialog__close" data-lt-company-onboarding-close="" aria-label="Close"><i class="fa fa-times"/></button>
+                        <span class="lt-company-onboarding-dialog__icon"><i class="fa fa-building-o"/></span>
+                        <h2 id="lt-company-onboarding-title">Connect your company account</h2>
+                        <p>Your account is not linked to a company yet. Send your company information for review so Lucky Tone can configure the correct pricing and product access.</p>
+                        <div><a class="lt-btn lt-btn--blue" href="/my/company/change">Request Company Setup</a><button type="button" class="lt-btn lt-btn--outline" data-lt-company-onboarding-close="">Maybe Later</button></div>
+                    </section>
+                </div>
                 <section class="lt-dashboard-metrics" aria-label="Account metrics">
                     <a href="/my/orders"><span class="lt-metric-icon lt-metric-icon--blue"><i class="fa fa-clipboard"/></span><strong t-out="order_count or 0"/><b>Orders</b><small>Orders and payment attempts</small></a>
                     <a href="/my/sample-requests"><span class="lt-metric-icon lt-metric-icon--green"><i class="fa fa-flask"/></span><strong t-out="sample_count or 0"/><b>Samples</b><small>Sample requests submitted</small></a>
                     <a href="/my/tickets"><span class="lt-metric-icon lt-metric-icon--orange"><i class="fa fa-comment-o"/></span><strong t-out="ticket_count or 0"/><b>Service</b><small>Support tickets</small></a>
-                    <a href="/my/company"><span class="lt-metric-icon lt-metric-icon--green"><i class="fa fa-building-o"/></span><strong t-out="'Active' if company.b2b_approved else 'Review'"/><b>Account</b><small t-out="'Partner Hub Approved' if company.b2b_approved else 'Approval pending'"/></a>
+                    <a href="/my/company"><span class="lt-metric-icon lt-metric-icon--green"><i class="fa fa-building-o"/></span><strong><t t-if="b2b_has_linked_company and company.b2b_approved">Active</t><t t-else=""><t t-if="b2b_registration_application.state == &#x27;rejected&#x27;">Attention</t><t t-else=""><t t-if="b2b_open_company_request or b2b_registration_application.state == &#x27;pending&#x27; or b2b_has_linked_company">Review</t><t t-else="">Setup</t></t></t></strong><b>Account</b><small><t t-if="b2b_has_linked_company and company.b2b_approved">Partner Hub Approved</t><t t-else=""><t t-if="b2b_registration_application.state == &#x27;rejected&#x27;">Registration needs attention</t><t t-else=""><t t-if="b2b_registration_application.state == &#x27;pending&#x27;">Partner registration pending</t><t t-else=""><t t-if="b2b_open_company_request">Company request pending</t><t t-else=""><t t-if="b2b_has_linked_company">Approval pending</t><t t-else="">Company not linked</t></t></t></t></t></small></a>
                 </section>
                 <section class="lt-quick-actions" aria-label="Quick actions">
                     <span>Quick Actions</span><div><a href="/products"><i class="fa fa-cube"/>Browse Products</a><a href="/products"><i class="fa fa-flask"/>Request a Sample</a><a href="/service"><i class="fa fa-ticket"/>New Service Request</a><a href="/contact"><i class="fa fa-commenting-o"/>Contact Support</a></div>
@@ -32,24 +114,26 @@
                     <div class="lt-dashboard-activity__side">
                         <section class="lt-portal-card"><header><h2>Recent Samples</h2><a href="/my/sample-requests">View all</a></header><div t-if="recent_samples" class="lt-compact-list lt-compact-list--small"><a t-foreach="recent_samples" t-as="sample" t-att-href="'/my/sample-requests/%s' % sample.id"><div><strong t-out="sample.name"/><small t-out="', '.join(sample.line_ids.product_id.mapped('display_name'))"/></div><span t-att-class="'lt-status-badge lt-status-badge--%s' % sample.state" t-out="dict(sample._fields['state'].selection).get(sample.state)"/></a></div><div t-else="" class="lt-empty lt-empty--compact">No sample requests yet.</div></section>
                         <section class="lt-portal-card"><header><h2>Open Tickets</h2><a href="/my/tickets">View all</a></header><div t-if="recent_tickets" class="lt-compact-list lt-compact-list--small"><a t-foreach="recent_tickets" t-as="ticket" t-att-href="'/helpdesk/ticket/%s' % ticket.id"><div><strong t-out="ticket.ticket_ref"/><small t-out="ticket.name"/></div><span class="lt-status-badge lt-status-badge--under_review" t-out="ticket.stage_id.name"/></a></div><div t-else="" class="lt-empty lt-empty--compact">No service tickets yet.</div></section>
-                        <section class="lt-portal-card"><header><h2>Recent Inquiries</h2><a href="/my/inquiries">View all (<t t-out="inquiry_count or 0"/>)</a></header><div t-if="recent_inquiries" class="lt-compact-list lt-compact-list--small"><a t-foreach="recent_inquiries" t-as="inquiry" t-att-href="'/my/inquiries/%s' % inquiry.id"><div><strong t-out="inquiry.name"/><small t-out="inquiry.subject"/></div><span t-att-class="'lt-status-badge lt-status-badge--%s' % inquiry.state" t-out="dict(inquiry._fields['state'].selection).get(inquiry.state)"/></a></div><div t-else="" class="lt-empty lt-empty--compact">No inquiries yet.</div></section>
+                        <section class="lt-portal-card"><header><h2>Recent Messages</h2><a href="/my/inquiries">View all (<t t-out="inquiry_count or 0"/>)</a></header><div t-if="recent_inquiries" class="lt-compact-list lt-compact-list--small"><a t-foreach="recent_inquiries" t-as="inquiry" t-att-href="'/my/inquiries/%s' % inquiry.id"><div><strong t-out="inquiry.name"/><small t-out="inquiry.subject"/></div><span t-att-class="'lt-status-badge lt-status-badge--%s' % inquiry.state" t-out="dict(inquiry._fields['state'].selection).get(inquiry.state)"/></a></div><div t-else="" class="lt-empty lt-empty--compact">No messages yet.</div></section>
                     </div>
                 </div>
-                <section class="lt-workspace"><h2>My Workspace</h2><div><article><i class="fa fa-shopping-bag"/><h3>Orders</h3><p>Track confirmed orders and complete interrupted payments.</p><a href="/my/orders">View Orders →</a></article><article><i class="fa fa-file-text-o"/><h3>Quotations</h3><p>Review and accept open quotations from Lucky Tone.</p><a href="/my/quotes">View Quotations →</a></article><article><i class="fa fa-comments-o"/><h3>My Inquiries</h3><p>Read replies from sales and continue your conversations.</p><a href="/my/inquiries">View Inquiries →</a></article><article><i class="fa fa-flask"/><h3>Sample Requests</h3><p>Track your product sample requests and statuses.</p><a href="/my/sample-requests">View Samples →</a></article><article><i class="fa fa-life-ring"/><h3>After-Sales Service</h3><p>Submit and track technical support tickets.</p><a href="/my/tickets">View Tickets →</a></article><article><i class="fa fa-building-o"/><h3>Company Profile</h3><p>Your company's registered information and partner approval status.</p><a href="/my/company">View Profile →</a></article><article><i class="fa fa-users"/><h3>Company Users</h3><p>Contacts associated with your company account.</p><a href="/my/company/users">View Users →</a></article><article><i class="fa fa-user-o"/><h3>Personal Profile</h3><p>Update your personal contact details and address.</p><a href="/my/account">Edit Profile →</a></article></div></section>
+                <section class="lt-workspace"><h2>My Workspace</h2><div><article><i class="fa fa-shopping-bag"/><h3>Orders</h3><p>Track confirmed orders and complete interrupted payments.</p><a href="/my/orders">View Orders →</a></article><article><i class="fa fa-file-text-o"/><h3>Quotations</h3><p>Review and accept open quotations from Lucky Tone.</p><a href="/my/quotes">View Quotations →</a></article><article><i class="fa fa-comments-o"/><h3>Messages</h3><p>Read replies from sales and continue your conversations.</p><a href="/my/inquiries">View Messages →</a></article><article><i class="fa fa-flask"/><h3>Sample Requests</h3><p>Track your product sample requests and statuses.</p><a href="/my/sample-requests">View Samples →</a></article><article><i class="fa fa-life-ring"/><h3>After-Sales Service</h3><p>Submit and track technical support tickets.</p><a href="/my/tickets">View Tickets →</a></article><article><i class="fa fa-building-o"/><h3>Company Profile</h3><p>Your company's registered information and partner approval status.</p><a href="/my/company">View Profile →</a></article><article><i class="fa fa-users"/><h3>Company Users</h3><p>Contacts associated with your company account.</p><a href="/my/company/users">View Users →</a></article><article><i class="fa fa-user-o"/><h3>Personal Profile</h3><p>Update your personal contact details and address.</p><a href="/my/account">Edit Profile →</a></article></div></section>
                 <div class="o_portal_docs d-none" aria-hidden="true"><div class="o_portal_doc_spinner spinner-border"/></div>
             </div>
         </xpath>
     </template>
 
     <template id="portal_orders_figma" inherit_id="sale.portal_my_orders" name="Partner Orders Layout">
-        <xpath expr="//t[@t-call='portal.portal_searchbar']" position="replace"><section class="lt-portal-list"><nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span>Orders</nav><header class="lt-portal-heading"><h1>Orders</h1><p>Track confirmed orders, payment attempts and actions still requiring payment.</p></header><div class="lt-portal-tabs"><a class="is-active" href="/my/orders">Orders &amp; Payments</a><a href="/my/quotes">Quotations</a></div><t t-call="portal.portal_searchbar"><t t-set="title" t-value="''"/></t></section></xpath>
+        <xpath expr="//t[@t-call='portal.portal_searchbar']" position="replace"><section class="lt-portal-list"><nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span>Orders</nav><header class="lt-portal-heading"><h1>Orders</h1><p>Track confirmed orders, payment attempts and actions still requiring payment.</p></header><div class="lt-portal-tabs"><a class="is-active" href="/my/orders">Orders &amp; Payments</a><a href="/my/quotes">Quotations</a></div></section></xpath>
+        <xpath expr="//div[@t-if='not orders']" position="replace"><div t-if="not orders" class="lt-empty lt-portal-card"><h2>No orders yet</h2><p>Confirmed orders and payment activity will appear here.</p><a class="lt-btn lt-btn--blue" href="/products">Browse products</a></div></xpath>
         <xpath expr="//t[@t-if='orders'][@t-call='portal.portal_table']" position="replace">
             <div t-if="orders" class="lt-portal-card lt-table-card"><div class="table-responsive"><table class="lt-data-table"><thead><tr><th>Order No.</th><th>Date</th><th>Amount</th><th>Status</th><th/></tr></thead><tbody><tr t-foreach="orders" t-as="order"><t t-set="current_tx" t-value="order.get_portal_last_transaction()"/><td><a t-att-href="order.get_portal_url()"><strong t-out="order.name"/></a></td><td><span t-field="order.date_order" t-options="{'widget':'date'}"/></td><td><strong t-field="order.amount_total"/></td><td><span t-if="order.state == 'sale'" class="lt-status-badge lt-status-badge--sale">Confirmed</span><span t-elif="order.state == 'cancel'" class="lt-status-badge lt-status-badge--payment_cancelled">Order Cancelled</span><span t-elif="current_tx and current_tx.state in ('pending', 'authorized')" class="lt-status-badge lt-status-badge--payment_pending">Payment Pending</span><span t-elif="current_tx and current_tx.state == 'error'" class="lt-status-badge lt-status-badge--payment_failed">Payment Failed</span><span t-elif="current_tx and current_tx.state == 'cancel'" class="lt-status-badge lt-status-badge--payment_cancelled">Payment Cancelled</span><span t-else="" class="lt-status-badge lt-status-badge--awaiting_payment">Awaiting Payment</span></td><td class="text-end"><a class="lt-table-link" t-att-href="order.get_portal_url()"><t t-if="order.state in ('draft', 'sent') and current_tx and current_tx.state in ('error', 'cancel', 'draft')">Complete payment →</t><t t-elif="order.state in ('draft', 'sent') and current_tx and current_tx.state in ('pending', 'authorized')">View status →</t><t t-else="">View →</t></a></td></tr></tbody></table></div></div>
         </xpath>
     </template>
 
     <template id="portal_quotes_figma" inherit_id="sale.portal_my_quotations" name="Partner Quotations Layout">
-        <xpath expr="//t[@t-call='portal.portal_searchbar']" position="replace"><section class="lt-portal-list"><nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span>Orders</nav><header class="lt-portal-heading"><h1>Orders</h1><p>View your sales orders and quotations.</p></header><div class="lt-portal-tabs"><a href="/my/orders">Sales Orders</a><a class="is-active" href="/my/quotes">Quotations</a></div><t t-call="portal.portal_searchbar"><t t-set="title" t-value="''"/></t></section></xpath>
+        <xpath expr="//t[@t-call='portal.portal_searchbar']" position="replace"><section class="lt-portal-list"><nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span>Orders</nav><header class="lt-portal-heading"><h1>Orders</h1><p>View your sales orders and quotations.</p></header><div class="lt-portal-tabs"><a href="/my/orders">Sales Orders</a><a class="is-active" href="/my/quotes">Quotations</a></div></section></xpath>
+        <xpath expr="//div[@t-if='not quotations']" position="replace"><div t-if="not quotations" class="lt-empty lt-portal-card"><h2>No quotations yet</h2><p>Quotations prepared for your account will appear here.</p><a class="lt-btn lt-btn--outline" href="/contact">Contact sales</a></div></xpath>
     </template>
 
     <template id="portal_personal_profile_figma" inherit_id="portal.portal_my_details" name="Partner Personal Profile" priority="90">
@@ -64,16 +148,17 @@
 
     <template id="portal_address_management_figma" inherit_id="portal.address_management" name="Partner Address Management" priority="90">
         <xpath expr="//div[hasclass('o_customer_address_fill')]" position="attributes"><attribute name="class" add="lt-profile-page" separator=" "/></xpath>
-        <xpath expr="//div[hasclass('o_customer_address_fill')]" position="before"><nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span><a href="/my/addresses">Addresses</a><span>/</span><t t-out="'Billing address' if address_type == 'billing' else 'Delivery address'"/></nav><header class="lt-portal-heading"><h1 t-out="'Billing address' if address_type == 'billing' else 'Delivery address'"/><p>Update the address used for orders and shipments.</p></header></xpath>
+        <xpath expr="//div[hasclass('o_customer_address_fill')]" position="before"><nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span><a href="/my/addresses">Addresses</a><span>/</span><t><t t-if="address_type == &#x27;billing&#x27;">Billing address</t><t t-else="">Delivery address</t></t></nav><header class="lt-portal-heading"><h1><t t-if="address_type == &#x27;billing&#x27;">Billing address</t><t t-else="">Delivery address</t></h1><p>Update the address used for orders and shipments.</p></header></xpath>
     </template>
 
     <template id="sale_order_figma" inherit_id="sale.sale_order_portal_template" name="Partner Order Detail Layout" priority="90">
         <xpath expr="//div[hasclass('o_portal_sale_sidebar')]" position="attributes"><attribute name="class" add="lt-order-detail" separator=" "/></xpath>
-        <xpath expr="//div[hasclass('o_portal_sale_sidebar')]" position="before"><nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span><a href="/my/orders">Orders</a><span>/</span><t t-out="sale_order.name"/></nav><header class="lt-portal-heading"><h1><t t-out="sale_order.name"/></h1><p>Native Odoo order data, payment actions and fulfilment tracking.</p></header></xpath>
+        <xpath expr="//div[hasclass('o_portal_sale_sidebar')]" position="before"><nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span><a href="/my/orders">Orders</a><span>/</span><t t-out="sale_order.name"/></nav><header class="lt-portal-heading"><h1><t t-out="sale_order.name"/></h1><p>Order details, payment actions and fulfilment tracking.</p></header></xpath>
     </template>
 
     <template id="helpdesk_list_figma" inherit_id="helpdesk.portal_helpdesk_ticket" name="Partner Service Ticket List">
-        <xpath expr="//t[@t-call='portal.portal_searchbar']" position="replace"><section class="lt-portal-list"><nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span>Service Tickets</nav><header class="lt-portal-heading lt-portal-heading--action"><div><h1>Service Tickets</h1><p>Track your after-sales support and technical helpdesk requests.</p></div><a class="lt-btn lt-btn--blue" href="/service">+ New Request</a></header><t t-call="portal.portal_searchbar"><t t-set="title" t-value="''"/></t></section></xpath>
+        <xpath expr="//t[@t-call='portal.portal_searchbar']" position="replace"><section class="lt-portal-list"><nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my">Overview</a><span>/</span>Service Tickets</nav><header class="lt-portal-heading lt-portal-heading--action"><div><h1>Service Tickets</h1><p>Track your after-sales support and technical helpdesk requests.</p></div><a class="lt-btn lt-btn--blue" href="/service">+ New Request</a></header><t t-call="b2b_website.portal_list_toolbar"/></section></xpath>
+        <xpath expr="//div[@t-if='not grouped_tickets']" position="replace"><div t-if="not grouped_tickets" class="lt-empty lt-portal-card"><h2>No service tickets found</h2><p>Open a new request or adjust the current filters.</p><a class="lt-btn lt-btn--blue" href="/service">New service request</a></div></xpath>
     </template>
 
     <template id="helpdesk_detail_figma" inherit_id="helpdesk.tickets_followup" name="Partner Service Ticket Detail">
@@ -113,10 +198,10 @@
                 <section class="lt-section lt-section--soft"><div class="container lt-contact-layout">
                     <div class="lt-contact-card"><h2>Send a Message</h2><form action="/website/form/" method="post" class="s_website_form o_mark_required lt-contact-form" data-mark="*" data-model_name="mail.mail" data-success-mode="redirect" data-success-page="/contactus-thank-you">
                         <input type="hidden" name="email_to" t-att-value="request.env.company.email"/>
-                        <div class="lt-form-grid"><div class="lt-field"><label for="contact-name">Full Name *</label><input id="contact-name" class="s_website_form_input" name="name" placeholder="Your name" required="required"/></div><div class="lt-field"><label for="contact-email">Business Email *</label><input id="contact-email" class="s_website_form_input" name="email_from" type="email" placeholder="name@company.com" required="required"/></div><div class="lt-field"><label for="contact-company">Company</label><input id="contact-company" class="s_website_form_input" name="company" placeholder="Company name"/></div><div class="lt-field"><label for="contact-subject">Inquiry Type</label><select id="contact-subject" class="s_website_form_input" name="subject"><option value="Sales inquiry">Select inquiry type...</option><option>Sales Inquiry</option><option>Technical Support</option><option>Sample Request</option><option>Partnership</option><option>Other</option></select></div><div class="lt-field lt-field--wide"><label for="contact-message">Message *</label><textarea id="contact-message" class="s_website_form_input" name="description" placeholder="Describe your inquiry, including product names, quantities, application requirements..." required="required"/></div></div>
+                        <div class="lt-form-grid"><div class="lt-field"><label for="contact-name">Full Name *</label><input id="contact-name" class="s_website_form_input" name="name" placeholder="Your name" required="required"/></div><div class="lt-field"><label for="contact-email">Business Email *</label><input id="contact-email" class="s_website_form_input" name="email_from" type="email" placeholder="name@company.com" required="required"/></div><div class="lt-field"><label for="contact-company">Company</label><input id="contact-company" class="s_website_form_input" name="company" placeholder="Company name"/></div><div class="lt-field"><label for="contact-subject">Message Type</label><select id="contact-subject" class="s_website_form_input" name="subject"><option value="Sales inquiry">Select message type...</option><option>Sales Inquiry</option><option>Technical Support</option><option>Sample Request</option><option>Partnership</option><option>Other</option></select></div><div class="lt-field lt-field--wide"><label for="contact-message">Message *</label><textarea id="contact-message" class="s_website_form_input" name="description" placeholder="Describe your request, including product names, quantities and application requirements..." required="required"/></div></div>
                         <a href="#" role="button" class="lt-btn lt-btn--blue s_website_form_send">Send Message <i class="fa fa-arrow-right"/></a><span class="s_website_form_result"/>
                     </form></div>
-                    <aside class="lt-contact-aside"><section><h3>Contact Channels</h3><article><i class="fa fa-envelope-o"/><div><strong>Sales Inquiry</strong><p>Product pricing, bulk orders and partnerships</p><a t-att-href="'mailto:%s' % (request.env.company.email or 'sales@luckytone.com')" t-out="request.env.company.email or 'sales@luckytone.com'"/></div></article><article><i class="fa fa-wrench"/><div><strong>Technical Support</strong><p>Technical specifications, installation and troubleshooting</p><a t-att-href="'/service-center' if not request.env.user._is_public() else '/web/login?redirect=/service-center'">Open Service Center</a></div></article><article><i class="fa fa-flask"/><div><strong>Sample Requests</strong><p>Request product samples for evaluation</p><a t-att-href="'/samples' if not request.env.user._is_public() else '/web/login?redirect=/samples'">Open Sample Center</a></div></article><article><i class="fa fa-handshake-o"/><div><strong>Partner Program</strong><p>Distributor and reseller partnerships</p><a href="/partner-application">Apply for Partnership</a></div></article></section><section><h3>Headquarters</h3><strong t-out="request.env.company.name"/><p t-out="request.env.company.partner_id.contact_address or 'Contact us for our current office address.'"/><p t-if="request.env.company.phone"><i class="fa fa-phone"/> <t t-out="request.env.company.phone"/></p></section></aside>
+                <t t-call="b2b_website.contact_channels"/>
                 </div></section>
                 <t t-call="b2b_website.partner_footer"/>
             </div>
@@ -124,8 +209,23 @@
     </template>
 
     <template id="login_layout_figma" inherit_id="web.login" name="Partner Hub Login">
-        <xpath expr="//form" position="attributes"><attribute name="class" add="lt-login-card" separator=" "/></xpath>
+        <xpath expr="//form" position="attributes">
+            <attribute name="t-attf-class">oe_login_form #{'' if login else 'd-none'} lt-login-card lt-auth-login-form</attribute>
+        </xpath>
         <xpath expr="//form" position="before"><div class="lt-login-heading"><span class="lt-kicker">POWER &amp; GRACE PARTNER HUB</span><h1>Sign in to your account</h1><p>Access pricing, orders, samples and support.</p></div></xpath>
+        <xpath expr="//div[hasclass('o_caps_lock_warning')]" position="after">
+            <label class="lt-remember-me"><input type="checkbox" name="remember" value="1"/><span>Remember me</span></label>
+        </xpath>
+    </template>
+
+    <template id="login_signup_link_figma" inherit_id="auth_signup.login" name="Partner Hub Login Signup Link">
+        <xpath expr="//a[@t-if='signup_enabled']" position="replace">
+            <p t-if="signup_enabled" class="lt-login-create-account">Don't have an account? <a t-attf-href="/web/signup?{{ keep_query() }}">Create an account</a></p>
+        </xpath>
+    </template>
+
+    <template id="login_oauth_divider_figma" inherit_id="web.login_oauth" name="Partner Hub Login Divider">
+        <xpath expr="//em" position="replace"><div class="lt-login-divider"><span>or</span></div></xpath>
     </template>
 
     <template id="website_login_shell_figma" inherit_id="website.login_layout" name="Partner Hub Authentication Shell" priority="90">
@@ -133,12 +233,96 @@
     </template>
 
     <template id="signup_figma" inherit_id="auth_signup.signup" name="Partner Hub Registration">
-        <xpath expr="//form" position="attributes"><attribute name="class" add="lt-login-card" separator=" "/></xpath>
-        <xpath expr="//form" position="before"><div class="lt-login-heading"><span class="lt-kicker">POWER &amp; GRACE PARTNER HUB</span><h1>Create your partner account</h1><p>Register your contact details to begin the partner approval process.</p></div></xpath>
+        <xpath expr="//form" position="replace">
+            <section t-if="message" class="lt-registration-result" role="status">
+                <span class="lt-registration-result__icon"><i class="fa fa-envelope-o"/></span>
+                <span class="lt-kicker">POWER &amp; GRACE PARTNER HUB</span>
+                <h1>Verify your business email</h1>
+                <p t-out="message"/>
+                <p t-if="signup_email"><strong t-out="signup_email"/></p>
+                <form t-if="signup_email" action="/web/signup/resend" method="post" class="lt-resend-form">
+                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                    <input type="hidden" name="email" t-att-value="signup_email"/>
+                    <button type="submit" class="lt-btn lt-btn--outline">Resend verification email</button>
+                </form>
+                <a class="lt-auth-text-link" href="/web/login">Return to sign in</a>
+            </section>
+
+            <form t-elif="token" class="oe_signup_form lt-login-card" role="form" method="post" data-captcha="signup">
+                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                <div class="lt-login-heading"><span class="lt-kicker">POWER &amp; GRACE PARTNER HUB</span><h1>Activate your invited account</h1><p>Set your password to accept the portal invitation.</p></div>
+                <div class="mb-3 field-name"><label for="name" class="form-label">Name</label><input type="text" name="name" t-att-value="name" id="name" class="form-control" required="required"/></div>
+                <div class="mb-3 field-login"><label for="login" class="form-label">Email</label><input type="email" name="login" t-att-value="login" id="login" class="form-control" required="required" readonly="readonly"/></div>
+                <t t-call="auth_signup.fields"><t t-set="autofocus" t-value="1"/></t>
+                <p class="alert alert-danger" t-if="error" role="alert"><t t-esc="error"/></p>
+                <input type="hidden" name="redirect" t-att-value="redirect"/>
+                <input type="hidden" name="token" t-att-value="token"/>
+                <div class="oe_login_buttons d-grid pt-3"><button type="submit" class="lt-btn lt-btn--blue lt-btn--wide">Activate account</button></div>
+            </form>
+
+            <form t-else="" class="oe_signup_form lt-registration-form" role="form" method="post" data-captcha="signup">
+                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                <header class="lt-registration-heading">
+                    <span class="lt-kicker">POWER &amp; GRACE PARTNER HUB</span>
+                    <h1>Create Your Partner Account</h1>
+                    <p>Tell us a little about you and your company.<br/>Your account will be reviewed before partner access is activated.</p>
+                </header>
+                <div class="lt-registration-body">
+                    <section>
+                        <h2>Contact &amp; Company Information</h2>
+                        <div class="lt-registration-grid">
+                            <div class="lt-field"><label for="name">Full Name <b>*</b></label><input type="text" name="name" t-att-value="name" id="name" placeholder="John Doe" maxlength="160" autocomplete="name" required="required"/></div>
+                            <div class="lt-field"><label for="job_title">Job Title <b>*</b></label><input type="text" name="job_title" t-att-value="job_title" id="job_title" placeholder="Sales Manager" maxlength="160" autocomplete="organization-title" required="required"/></div>
+                            <div class="lt-field"><label for="company_name">Company Name <b>*</b></label><input type="text" name="company_name" t-att-value="company_name" id="company_name" placeholder="Company name" maxlength="200" autocomplete="organization" required="required"/></div>
+                            <div class="lt-field"><label for="country_id">Country / Region <b>*</b></label><select name="country_id" id="country_id" autocomplete="country" required="required"><option value="">Select country</option><option t-foreach="countries" t-as="country" t-att-value="country.id" t-att-selected="str(country.id) == str(country_id or '')" t-out="country.name"/></select></div>
+                            <div class="lt-field"><label for="login">Business Email <b>*</b></label><input type="email" name="login" t-att-value="login" id="login" placeholder="name@company.com" maxlength="254" autocomplete="email" autocapitalize="off" required="required" aria-describedby="login_error"/><small class="lt-field-error" id="login_error" aria-live="polite" t-out="login_error or ''"/></div>
+                            <t t-call="b2b_website.registration_phone"><t t-set="phone_field" t-value="'company_phone'"/><t t-set="phone_label" t-valuef.translate="Company Phone"/><t t-set="phone_value" t-value="company_phone"/><t t-set="phone_country" t-value="company_phone_country"/><t t-set="phone_country_defaulted" t-value="company_phone_country_defaulted"/></t>
+                            <t t-call="b2b_website.registration_phone"><t t-set="phone_field" t-value="'mobile'"/><t t-set="phone_label" t-valuef.translate="Mobile / WhatsApp"/><t t-set="phone_value" t-value="mobile"/><t t-set="phone_country" t-value="mobile_country"/><t t-set="phone_country_defaulted" t-value="mobile_country_defaulted"/></t>
+                            <div class="lt-field"><label for="customer_type_id">Business Type <b>*</b></label><select name="customer_type_id" id="customer_type_id" required="required"><option value="">Select business type</option><option t-foreach="customer_types" t-as="customer_type" t-att-value="customer_type.id" t-att-selected="str(customer_type.id) == str(customer_type_id or '')" t-out="customer_type.name"/></select></div>
+                            <div class="lt-field"><label for="company_website">Company Website</label><input type="text" name="company_website" t-att-value="company_website" id="company_website" placeholder="www.company.com" maxlength="500" autocomplete="url" aria-describedby="company_website_error"/><small id="company_website_error" class="lt-field-error" aria-live="polite"/></div>
+                            <div class="lt-field"><label for="product_interest_id">Products of Interest</label><select name="product_interest_id" id="product_interest_id"><option value="">Select products</option><option t-foreach="product_interests" t-as="interest" t-att-value="interest.id" t-att-selected="str(interest.id) == str(product_interest_id or '')" t-out="interest.name"/></select></div>
+                        </div>
+                    </section>
+                    <section class="lt-registration-security">
+                        <h2>Account Security</h2>
+                        <div class="lt-registration-grid">
+                            <div class="lt-field o_caps_lock_warning"><label for="password">Password <b>*</b></label><div class="input-group lt-password-field"><input type="password" name="password" id="password" placeholder="••••••••••••" required="required" autocomplete="new-password" maxlength="4096"/><button type="button" class="o_show_password" aria-label="Show password"><i class="fa fa-eye"/></button></div></div>
+                            <div class="lt-field"><label for="confirm_password">Confirm Password <b>*</b></label><div class="input-group lt-password-field"><input type="password" name="confirm_password" id="confirm_password" placeholder="••••••••••••" required="required" autocomplete="new-password" maxlength="4096"/><button type="button" class="o_show_password" aria-label="Show password"><i class="fa fa-eye"/></button></div></div>
+                        </div>
+                    </section>
+                    <div class="lt-registration-actions">
+                        <label class="lt-registration-terms"><input type="checkbox" name="terms" value="1" t-att-checked="terms == '1'" required="required" data-lt-validation-message.translate="Please accept the Terms of Use and Privacy Policy."/><span>I agree to the <a href="/terms-of-use" target="_blank">Terms of Use</a> and <a href="/privacy" target="_blank">Privacy Policy</a>.</span></label>
+                        <p class="alert alert-danger" t-if="error" role="alert"><t t-esc="error"/></p>
+                        <input type="hidden" name="redirect" t-att-value="redirect"/>
+                        <button type="submit" class="lt-registration-submit">Submit for Approval</button>
+                        <p class="lt-registration-email-note"><i class="fa fa-envelope-o"/><span>We'll send a verification link to your email.<br/>Please confirm your email to complete registration.</span></p>
+                    </div>
+                </div>
+                <footer class="lt-registration-footer">
+                    <p>Already have an account? <a href="/web/login">Sign in</a></p>
+                    <ol class="lt-registration-progress">
+                        <li><b>1</b><span>Submit</span></li><li><b>2</b><span>Verify Email</span></li><li><b>3</b><span>Partner Review</span></li><li><b>4</b><span>Access Activated</span></li>
+                    </ol>
+                </footer>
+            </form>
+        </xpath>
     </template>
 
     <template id="reset_password_figma" inherit_id="auth_signup.reset_password" name="Partner Hub Password Reset">
         <xpath expr="//form" position="attributes"><attribute name="class" add="lt-login-card" separator=" "/></xpath>
         <xpath expr="//form" position="before"><div class="lt-login-heading"><span class="lt-kicker">POWER &amp; GRACE PARTNER HUB</span><h1>Reset your password</h1><p>We will send recovery instructions to your registered email.</p></div></xpath>
+    </template>
+
+    <template id="registration_status" name="Partner Registration Status">
+        <t t-call="b2b_website.partner_auth_layout">
+            <section class="lt-registration-result" role="status">
+                <span t-att-class="'lt-registration-result__icon ' + ('is-success' if status == 'verified' else '')"><i t-att-class="'fa ' + ('fa-check' if status == 'verified' else 'fa-envelope-o')"/></span>
+                <span class="lt-kicker">POWER &amp; GRACE PARTNER HUB</span>
+                <t t-if="status == 'verified'"><h1>Email verified</h1><p>Your account is active and your application is ready for partner review. You can sign in now to follow its status.</p><a class="lt-btn lt-btn--blue" href="/web/login?redirect=/my">Sign in</a></t>
+                <t t-elif="status == 'expired'"><h1>Verification link expired</h1><p>Request a new link to continue your registration.</p><form action="/web/signup/resend" method="post" class="lt-resend-form"><input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/><input type="hidden" name="email" t-att-value="email"/><button type="submit" class="lt-btn lt-btn--blue">Send a new link</button></form></t>
+                <t t-elif="status == 'resent'"><h1>Check your email</h1><p t-out="message"/><a class="lt-auth-text-link" href="/web/login">Return to sign in</a></t>
+                <t t-else=""><h1>Verification link unavailable</h1><p>This link is invalid or has already been used. If your email was already verified, sign in to continue.</p><a class="lt-btn lt-btn--blue" href="/web/login">Sign in</a></t>
+            </section>
+        </t>
     </template>
 </odoo>

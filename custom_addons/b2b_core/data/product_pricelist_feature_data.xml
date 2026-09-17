@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Layered B2B pricing is implemented with native Odoo pricelists. Enable
+        the corresponding native feature for internal users so the standard
+        partner property, website selection and sales flows stay authoritative.
+    -->
+    <function model="res.partner" name="_b2b_enable_native_pricelist_feature"/>
+
+</odoo>

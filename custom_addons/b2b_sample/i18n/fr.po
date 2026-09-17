@@ -1,0 +1,582 @@
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 19.0+e-20260805\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-11 02:04+0000\n"
+"PO-Revision-Date: 2026-09-11 02:04+0000\n"
+"Last-Translator: Partner Hub AI translation\n"
+"Language-Team: \n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__message_needaction
+msgid "Action Needed"
+msgstr "Nécessite une action"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__activity_ids
+msgid "Activities"
+msgstr "Activités"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__activity_exception_decoration
+msgid "Activity Exception Decoration"
+msgstr "Indicateur d’exception d’activité"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__activity_state
+msgid "Activity State"
+msgstr "Statut de l'activité"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__activity_type_icon
+msgid "Activity Type Icon"
+msgstr "Icône de type d'activité"
+
+#. module: b2b_sample
+#: model:ir.model.fields.selection,name:b2b_sample.selection__b2b_sample_request__state__approved
+msgid "Approved"
+msgstr "Approuvé"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__message_attachment_count
+msgid "Attachment Count"
+msgstr "Nombre de pièces jointes"
+
+#. module: b2b_sample
+#: model_terms:ir.ui.view,arch_db:b2b_sample.view_b2b_sample_request_form
+msgid "Cancel"
+msgstr "Annuler"
+
+#. module: b2b_sample
+#: model:ir.model.fields.selection,name:b2b_sample.selection__b2b_sample_request__state__cancelled
+msgid "Cancelled"
+msgstr "Annulé"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__commercial_partner_id
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request_line__commercial_partner_id
+msgid "Commercial Partner"
+msgstr "Partenaire commercial"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__company_name
+msgid "Company Name"
+msgstr "Nom de l’entreprise"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__contact_id
+msgid "Contact"
+msgstr "Contact"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__contact_name
+msgid "Contact Name"
+msgstr "Nom du contact"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__create_uid
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request_line__create_uid
+msgid "Created by"
+msgstr "Créé par"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__create_date
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request_line__create_date
+msgid "Created on"
+msgstr "Créé le"
+
+#. module: b2b_sample
+#: model_terms:ir.ui.view,arch_db:b2b_sample.view_b2b_sample_request_search
+msgid "Customer"
+msgstr "Client"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__display_name
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request_line__display_name
+#: model:ir.model.fields,field_description:b2b_sample.field_sale_order__display_name
+msgid "Display Name"
+msgstr "Nom d'affichage"
+
+#. module: b2b_sample
+#: model:ir.model.fields.selection,name:b2b_sample.selection__b2b_sample_request__state__draft
+msgid "Draft"
+msgstr "Brouillon"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__email
+msgid "Email"
+msgstr "E-mail"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__message_follower_ids
+msgid "Followers"
+msgstr "Abonnés"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__message_partner_ids
+msgid "Followers (Partners)"
+msgstr "Abonnés (Partenaires)"
+
+#. module: b2b_sample
+#: model:ir.model.fields,help:b2b_sample.field_b2b_sample_request__activity_type_icon
+msgid "Font awesome icon e.g. fa-tasks"
+msgstr "Icône Font Awesome par ex. fa-tasks"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__has_message
+msgid "Has Message"
+msgstr "A un message"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__id
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request_line__id
+#: model:ir.model.fields,field_description:b2b_sample.field_sale_order__id
+msgid "ID"
+msgstr "ID"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__activity_exception_icon
+msgid "Icon"
+msgstr "Icône"
+
+#. module: b2b_sample
+#: model:ir.model.fields,help:b2b_sample.field_b2b_sample_request__activity_exception_icon
+msgid "Icon to indicate an exception activity."
+msgstr "Icône pour indiquer une activité d'exception."
+
+#. module: b2b_sample
+#: model:ir.model.fields,help:b2b_sample.field_b2b_sample_request__message_needaction
+msgid "If checked, new messages require your attention."
+msgstr "Si coché, de nouveaux messages demandent votre attention."
+
+#. module: b2b_sample
+#: model:ir.model.fields,help:b2b_sample.field_b2b_sample_request__message_has_error
+#: model:ir.model.fields,help:b2b_sample.field_b2b_sample_request__message_has_sms_error
+msgid "If checked, some messages have a delivery error."
+msgstr "Si coché, certains messages ont une erreur de livraison."
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__message_is_follower
+msgid "Is Follower"
+msgstr "Est un abonné"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__write_uid
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request_line__write_uid
+msgid "Last Updated by"
+msgstr "Mis à jour par"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__write_date
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request_line__write_date
+msgid "Last Updated on"
+msgstr "Mis à jour le"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__message_has_error
+msgid "Message Delivery error"
+msgstr "Erreur d'envoi du message"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__message_ids
+msgid "Messages"
+msgstr "Messages"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__my_activity_date_deadline
+msgid "My Activity Deadline"
+msgstr "Échéance de mon activité"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__name
+msgid "Name"
+msgstr "Nom"
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "New"
+msgstr "Nouveau"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__activity_calendar_event_id
+msgid "Next Activity Calendar Event"
+msgstr "Activité suivante de l'événement du calendrier"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__activity_date_deadline
+msgid "Next Activity Deadline"
+msgstr "Échéance de l'activité à venir"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__activity_summary
+msgid "Next Activity Summary"
+msgstr "Résumé de l'activité suivante"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__activity_type_id
+msgid "Next Activity Type"
+msgstr "Type d'activités à venir"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__notes
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request_line__notes
+msgid "Notes"
+msgstr "Notes"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__message_needaction_counter
+msgid "Number of Actions"
+msgstr "Nombre d'actions"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__message_has_error_counter
+msgid "Number of errors"
+msgstr "Nombre d'erreurs"
+
+#. module: b2b_sample
+#: model:ir.model.fields,help:b2b_sample.field_b2b_sample_request__message_needaction_counter
+msgid "Number of messages requiring action"
+msgstr "Nombre de messages nécessitant une action"
+
+#. module: b2b_sample
+#: model:ir.model.fields,help:b2b_sample.field_b2b_sample_request__message_has_error_counter
+msgid "Number of messages with delivery error"
+msgstr "Nombre de messages avec des erreurs d'envoi"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__partner_id
+msgid "Partner"
+msgstr "Partenaire"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__phone
+msgid "Phone"
+msgstr "Téléphone"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request_line__product_id
+msgid "Product"
+msgstr "Produit"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request_line__quantity
+msgid "Quantity"
+msgstr "Quantité"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__rating_ids
+msgid "Ratings"
+msgstr "Évaluations"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__reason
+msgid "Reason"
+msgstr "Motif"
+
+#. module: b2b_sample
+#: model_terms:ir.ui.view,arch_db:b2b_sample.view_b2b_sample_request_form
+msgid "Reject"
+msgstr "Rejeter"
+
+#. module: b2b_sample
+#: model:ir.model.fields.selection,name:b2b_sample.selection__b2b_sample_request__state__rejected
+msgid "Rejected"
+msgstr "Rejeté"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request_line__request_id
+#: model_terms:ir.ui.view,arch_db:b2b_sample.view_b2b_sample_request_form
+msgid "Request"
+msgstr "Demande"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__activity_user_id
+msgid "Responsible User"
+msgstr "Utilisateur responsable"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__review_date
+msgid "Review Date"
+msgstr "Date de l'avis"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__message_has_sms_error
+msgid "SMS Delivery error"
+msgstr "Erreur d'envoi SMS"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__sale_order_id
+msgid "Sale Order"
+msgstr "Commande client"
+
+#. module: b2b_sample
+#: model:ir.model,name:b2b_sample.model_sale_order
+msgid "Sales Order"
+msgstr "Commande client"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__shipping_address
+msgid "Shipping Address"
+msgstr "Adresse d'expédition"
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__state
+#: model_terms:ir.ui.view,arch_db:b2b_sample.view_b2b_sample_request_search
+msgid "State"
+msgstr "État"
+
+#. module: b2b_sample
+#: model:ir.model.fields.selection,name:b2b_sample.selection__b2b_sample_request__state__submitted
+msgid "Submitted"
+msgstr "Soumis"
+
+#. module: b2b_sample
+#: model_terms:ir.ui.view,arch_db:b2b_sample.view_b2b_sample_request_search
+msgid "To Review"
+msgstr "À vérifier"
+
+#. module: b2b_sample
+#: model:ir.model.fields,help:b2b_sample.field_b2b_sample_request__activity_exception_decoration
+msgid "Type of the exception activity on record."
+msgstr "Type d'activité d'exception enregistrée."
+
+#. module: b2b_sample
+#: model:ir.model.fields,field_description:b2b_sample.field_b2b_sample_request__website_message_ids
+msgid "Website Messages"
+msgstr "Messages du site web"
+
+#. module: b2b_sample
+#: model:ir.model.fields,help:b2b_sample.field_b2b_sample_request__website_message_ids
+msgid "Website communication history"
+msgstr "Historique de communication du site web"
+
+#. module: b2b_sample
+#: model:ir.model.fields.selection,name:b2b_sample.selection__b2b_sample_request__state__quotation
+msgid "Awaiting Payment"
+msgstr "En attente de paiement"
+
+#. module: b2b_sample
+#: model:ir.model.fields.selection,name:b2b_sample.selection__b2b_sample_request__state__erp_failed
+#: model_terms:ir.ui.view,arch_db:b2b_sample.view_b2b_sample_request_search
+msgid "ERP Failed"
+msgstr "Échec ERP"
+
+#. module: b2b_sample
+#: model:ir.model.fields.selection,name:b2b_sample.selection__b2b_sample_request__state__erp_pending
+msgid "ERP Pending"
+msgstr "ERP en attente"
+
+#. module: b2b_sample
+#: model:ir.model.fields.selection,name:b2b_sample.selection__b2b_sample_request__state__erp_synced
+msgid "ERP Synced"
+msgstr "ERP synchronisé"
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "No quotation has been created yet."
+msgstr "Aucun devis n’a encore été créé."
+
+#. module: b2b_sample
+#: model:ir.model.fields.selection,name:b2b_sample.selection__b2b_sample_request__state__order_confirmed
+msgid "Order Confirmed"
+msgstr "Commande confirmée"
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "Paid sample request %s"
+msgstr "Demande d’échantillon payée %s"
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "Please complete all required sample request fields."
+msgstr "Remplissez tous les champs obligatoires de la demande d’échantillon."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "Please enter a valid email address."
+msgstr "Saisissez une adresse e-mail valide."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "Please sign in before requesting a sample."
+msgstr "Connectez-vous avant de demander un échantillon."
+
+#. module: b2b_sample
+#: model:ir.actions.act_window,name:b2b_sample.action_b2b_sample_requests
+msgid "Sample Requests"
+msgstr "Demandes d’échantillons"
+
+#. module: b2b_sample
+#: model_terms:ir.ui.view,arch_db:b2b_sample.view_b2b_sample_request_form
+msgid "Start Review"
+msgstr "Commencer l’examen"
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "The selected shipping address is not available to this company."
+msgstr ""
+"L’adresse de livraison sélectionnée n’est pas disponible pour cette "
+"entreprise."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "The selected shipping address is not available to your company."
+msgstr ""
+"L’adresse de livraison sélectionnée n’est pas disponible pour votre "
+"entreprise."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "This sample request cannot move to the requested state."
+msgstr "Cette demande d’échantillon ne peut pas passer à l’état demandé."
+
+#. module: b2b_sample
+#: model:ir.model.fields.selection,name:b2b_sample.selection__b2b_sample_request__state__under_review
+msgid "Under Review"
+msgstr "En cours d’examen"
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "A quotation already exists for this sample request."
+msgstr "Un devis existe déjà pour cette demande d’échantillon."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "A sample request field exceeds the allowed length."
+msgstr "Un champ de la demande d’échantillon dépasse la longueur autorisée."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "A sample request requires at least one product."
+msgstr "Une demande d’échantillon nécessite au moins un produit."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "A selected product is not available to your account."
+msgstr "Un produit sélectionné n’est pas disponible pour votre compte."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "Each sample line requires a valid product and quantity."
+msgstr ""
+"Chaque ligne d’échantillon nécessite un produit et une quantité valides."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "New internal sample requests must start in Draft."
+msgstr ""
+"Les nouvelles demandes internes d’échantillons doivent commencer en "
+"brouillon."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "No failed ERP job is available."
+msgstr "Aucune tâche ERP en échec n’est disponible."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "Only ERP-failed sample requests can be retried."
+msgstr ""
+"Seules les demandes d’échantillons en échec ERP peuvent être relancées."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "Only a B2B Manager can approve sample requests."
+msgstr "Seul un B2B Manager peut approuver les demandes d’échantillons."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "Only a B2B Manager can reject sample requests."
+msgstr "Seul un B2B Manager peut refuser les demandes d’échantillons."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "Portal users cannot modify a submitted sample request."
+msgstr ""
+"Les utilisateurs du portail ne peuvent pas modifier une demande "
+"d’échantillon soumise."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "Sample order %s was confirmed after payment."
+msgstr "La commande d’échantillon %s a été confirmée après paiement."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "Sample quantities must be between 0 and 10,000."
+msgstr ""
+"Les quantités d’échantillons doivent être comprises entre 0 et 10 000."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "Sample quotation %s was created and is awaiting customer payment."
+msgstr "Le devis d’échantillon %s a été créé et attend le paiement du client."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid ""
+"The sample quotation total must be greater than zero. Configure a product or"
+" pricelist price before approval."
+msgstr ""
+"Le total du devis d’échantillon doit être positif. Configurez un prix "
+"produit ou tarif avant approbation."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "Unsupported sample request line operation."
+msgstr "Opération de ligne d’échantillon non prise en charge."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "Use the sample workflow actions to change state."
+msgstr "Utilisez les actions du processus d’échantillons pour changer l’état."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "You are not allowed to retry ERP synchronization."
+msgstr "Vous n’êtes pas autorisé à relancer la synchronisation ERP."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "You are not allowed to review sample requests."
+msgstr "Vous n’êtes pas autorisé à examiner les demandes d’échantillons."
+
+#. module: b2b_sample
+#. odoo-python
+#: code:addons/b2b_sample/models/sample_request.py:0
+msgid "Your Partner Hub account is not approved for sample requests."
+msgstr "Votre compte partenaire n’est pas approuvé pour les échantillons."

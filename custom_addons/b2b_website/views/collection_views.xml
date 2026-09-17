@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="collection_finance_order_form" model="ir.ui.view">
+        <field name="name">sale.order.collection.finance.readonly</field>
+        <field name="model">sale.order</field>
+        <field name="priority">999</field>
+        <field name="arch" type="xml">
+            <form string="Order Payment Review" create="false" edit="false" delete="false">
+                <sheet>
+                    <h1><field name="name"/></h1>
+                    <group>
+                        <field name="partner_id"/>
+                        <field name="state"/>
+                        <field name="currency_id"/>
+                        <field name="amount_total"/>
+                        <field name="b2b_collection_policy_id"/>
+                        <field name="b2b_net_received"/>
+                        <field name="b2b_balance"/>
+                        <field name="b2b_bank_instructions"/>
+                    </group>
+                    <field name="order_line" readonly="1">
+                        <list create="false" edit="false" delete="false">
+                            <field name="name"/><field name="product_uom_qty"/>
+                            <field name="price_unit"/><field name="price_subtotal"/>
+                        </list>
+                    </field>
+                    <field name="invoice_ids" readonly="1"/>
+                    <field name="b2b_receipt_ids" readonly="1"/>
+                    <field name="b2b_pi_ids" readonly="1"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="view_collection_policy_list" model="ir.ui.view"><field name="name">b2b.collection.policy.list</field><field name="model">b2b.collection.policy</field><field name="arch" type="xml"><list><field name="sequence" widget="handle"/><field name="name"/><field name="category"/><field name="production_percent"/><field name="shipment_percent"/><field name="payment_term_id"/><field name="active"/></list></field></record>
+    <record id="view_collection_policy_form" model="ir.ui.view"><field name="name">b2b.collection.policy.form</field><field name="model">b2b.collection.policy</field><field name="arch" type="xml"><form><sheet><group><field name="name"/><field name="category"/><field name="active"/><field name="production_percent" string="Required % Before Production"/><field name="shipment_percent" string="Required % Before Shipment"/><field name="payment_term_id"/><field name="block_overdue"/><field name="note"/></group><div class="alert alert-info" role="status">Invoice due dates use native payment terms. Production and shipment thresholds are separate. Changes apply to newly submitted orders; existing order snapshots remain unchanged.</div></sheet></form></field></record>
+    <record id="action_collection_policies" model="ir.actions.act_window"><field name="name">Collection Terms</field><field name="res_model">b2b.collection.policy</field><field name="view_mode">list,form</field></record>
+    <record id="partner_collection_configuration" model="ir.ui.view"><field name="name">res.partner.collection</field><field name="model">res.partner</field><field name="inherit_id" ref="b2b_core.view_partner_form_b2b"/><field name="arch" type="xml"><xpath expr="//page[@name='b2b_partner_hub']" position="inside"><group string="Collection and Brand" invisible="not b2b_is_commercial_entity" groups="b2b_core.group_b2b_manager"><field name="b2b_account_brand_id"/><field name="b2b_collection_policy_id" options="{'no_create':True}"/><div class="text-muted">Blank collection terms default to 100% before production. Contacts inherit their commercial company's configuration. Credit terms use the native customer credit limit and invoice payment terms.</div></group></xpath></field></record>
+    <record id="brand_collection_configuration" model="ir.ui.view"><field name="name">brand.collection</field><field name="model">b2b.product.brand</field><field name="inherit_id" ref="b2b_core.view_b2b_product_brand_form"/><field name="arch" type="xml"><xpath expr="//sheet" position="inside"><group string="Receiving Accounts" groups="b2b_website.group_b2b_finance"><field name="b2b_collection_journal_ids" widget="many2many_tags" options="{'no_create':True}"/><div class="text-muted">Use native bank journals with a bank account and explicit currency. Different brands may share the same selling company.</div></group></xpath></field></record>
+    <record id="settings_default_collection_brand" model="ir.ui.view"><field name="name">settings.collection.brand</field><field name="model">res.config.settings</field><field name="inherit_id" ref="b2b_website.res_config_settings_view_form_b2b_website"/><field name="arch" type="xml"><xpath expr="//block[@id='b2b_partner_hub_settings']" position="inside"><setting string="Default Collection Brand" help="Used only when the customer's company has no assigned brand."><field name="b2b_default_account_brand_id"/></setting></xpath></field></record>
+    <record id="order_collection_form" model="ir.ui.view"><field name="name">sale.order.collection</field><field name="model">sale.order</field><field name="inherit_id" ref="sale.view_order_form"/><field name="arch" type="xml">
+        <xpath expr="//sheet/notebook" position="inside"><page string="Collections &amp; PI" name="b2b_collection" invisible="not website_id">
+            <field name="b2b_collection_active" invisible="1"/>
+            <group><group><field name="b2b_configuration_reason" groups="b2b_core.group_b2b_manager"/><field name="b2b_collection_policy_id" groups="b2b_core.group_b2b_manager" readonly="state not in ('draft','sent')"/><field name="b2b_brand_id" readonly="state == 'cancel'" groups="b2b_core.group_b2b_manager"/><field name="b2b_receiving_journal_id" readonly="state == 'cancel'" domain="[('type','=','bank'),('company_id','=',company_id)]" options="{'no_create':True}" groups="b2b_core.group_b2b_manager"/><button name="action_b2b_refresh_collection" string="Apply Collection Configuration" type="object" class="btn-secondary" invisible="state not in ('draft','sent')" groups="b2b_core.group_b2b_manager"/></group>
+            <group><field name="b2b_collection_category"/><field name="b2b_production_percent"/><field name="b2b_shipment_percent"/><field name="b2b_net_received"/><field name="b2b_pending_proof"/><field name="b2b_balance"/><field name="b2b_payable_now"/><field name="b2b_production_allowed"/><field name="b2b_shipment_allowed"/></group></group>
+            <field name="b2b_bank_instructions"/>
+            <button name="action_b2b_download_pi" type="object" string="Download Current PI" class="btn-primary"/>
+            <field name="b2b_receipt_ids" readonly="1"><list><field name="name"/><field name="transfer_date"/><field name="declared_amount"/><field name="order_amount"/><field name="state"/></list></field>
+            <field name="b2b_pi_ids" readonly="1"><list><field name="revision"/><field name="create_date"/></list></field>
+        </page></xpath>
+    </field></record>
+    <record id="bank_receipt_list" model="ir.ui.view"><field name="name">bank.receipt.list</field><field name="model">b2b.bank.receipt</field><field name="arch" type="xml"><list decoration-success="state == 'confirmed'" decoration-warning="state == 'submitted'"><field name="name"/><field name="order_id"/><field name="partner_id"/><field name="transfer_date"/><field name="declared_amount"/><field name="currency_id"/><field name="order_amount"/><field name="state"/></list></field></record>
+    <record id="bank_receipt_form" model="ir.ui.view"><field name="name">bank.receipt.form</field><field name="model">b2b.bank.receipt</field><field name="arch" type="xml"><form>
+        <header><button name="action_open_payment" string="Register / Open Receipt" type="object" groups="b2b_website.group_b2b_finance"/><button name="action_confirm_receipt" string="Confirm Actual Receipt" type="object" class="btn-primary" invisible="state != 'submitted'" groups="b2b_website.group_b2b_finance" confirm="Confirm that you verified actual funds in the bank, not just the customer's evidence?"/><button name="action_return" string="Request More Information" type="object" invisible="state != 'submitted'" groups="b2b_website.group_b2b_finance"/><button name="action_reject" string="Reject" type="object" invisible="state != 'submitted'" groups="b2b_website.group_b2b_finance"/><field name="state" widget="statusbar"/></header>
+        <sheet><h1><field name="name"/></h1><group><group><field name="company_id" invisible="1"/><field name="currency_id" invisible="1"/><field name="order_id" readonly="id"/><field name="declared_amount" readonly="state == 'confirmed'"/><field name="transfer_date" readonly="state == 'confirmed'"/><field name="transfer_reference" readonly="state == 'confirmed'"/><field name="customer_note" readonly="1"/><field name="attachment_ids" widget="many2many_binary" readonly="state == 'confirmed'"/></group><group><field name="payment_id" options="{'no_create':True}" readonly="state == 'confirmed'"/><field name="payment_currency_id"/><field name="allocated_amount" readonly="state == 'confirmed'"/><field name="order_amount"/><field name="review_note" readonly="state == 'confirmed'"/><field name="reviewed_by_id"/><field name="reviewed_at"/></group></group><div class="alert alert-info" role="status">Verify funds in the bank first. Select the posted native inbound payment and allocate its actual amount. Partial receipts are supported; excess funds remain customer credit. This action does not create a second payment or replace bank reconciliation.</div></sheet><chatter/>
+    </form></field></record>
+    <record id="bank_receipt_search" model="ir.ui.view"><field name="name">bank.receipt.search</field><field name="model">b2b.bank.receipt</field><field name="arch" type="xml"><search><field name="name"/><field name="order_id"/><field name="partner_id"/><filter name="pending" string="Awaiting Finance" domain="[('state','=','submitted')]"/></search></field></record>
+    <record id="action_bank_receipts" model="ir.actions.act_window"><field name="name">Bank Transfer Reviews</field><field name="res_model">b2b.bank.receipt</field><field name="view_mode">list,form</field><field name="context">{'search_default_pending':1}</field></record>
+    <menuitem id="menu_bank_receipts_sale" name="Bank Transfer Reviews" parent="sale.sale_order_menu" action="action_bank_receipts" sequence="40" groups="b2b_website.group_b2b_finance"/>
+    <menuitem id="menu_collection_policies" name="Collection Terms" parent="sale.menu_sale_config" action="action_collection_policies" sequence="40" groups="b2b_core.group_b2b_manager"/>
+</odoo>

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_order_form_b2b_review" model="ir.ui.view">
+        <field name="name">sale.order.form.b2b.review</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_b2b_mark_review_ready" type="object" string="Release for Customer Payment" class="btn-primary" invisible="b2b_review_state != 'pending'" groups="b2b_core.group_b2b_manager"/>
+            </xpath>
+            <xpath expr="//field[@name='client_order_ref']" position="after">
+                <field name="b2b_checkout_mode" readonly="1" invisible="not website_id"/>
+                <field name="b2b_review_state" readonly="1" invisible="b2b_checkout_mode != 'review'"/>
+                <field name="b2b_change_revision" readonly="1" invisible="not b2b_change_revision"/>
+                <field name="b2b_change_payment_hold" readonly="1" invisible="not b2b_change_payment_hold"/>
+                <field name="b2b_is_change_revision" invisible="not b2b_is_change_revision" readonly="1"/>
+                <field name="b2b_source_order_id" invisible="not b2b_is_change_revision" readonly="1"/>
+            </xpath>
+        </field>
+    </record>
+    <!-- Reuse the native quotation editor and native dialog save/discard lifecycle. -->
+    <record id="view_order_form_b2b_proposal" model="ir.ui.view">
+        <field name="name">sale.order.form.b2b.proposal</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="mode">primary</field>
+        <field name="priority">90</field>
+        <field name="arch" type="xml">
+            <xpath expr="//form/header" position="attributes">
+                <attribute name="invisible">True</attribute>
+            </xpath>
+            <xpath expr="//form/sheet" position="before">
+                <div class="alert alert-info" role="status">Edit the proposed products, quantities and charges, then click Save &amp; Close. This does not change the paid order. Send the proposal from the change request after saving.</div>
+            </xpath>
+            <xpath expr="//form" position="inside">
+                <footer>
+                    <button string="Save &amp; Close" special="save" class="btn-primary"/>
+                    <button string="Discard" special="cancel" class="btn-secondary"/>
+                </footer>
+            </xpath>
+        </field>
+    </record>
+</odoo>

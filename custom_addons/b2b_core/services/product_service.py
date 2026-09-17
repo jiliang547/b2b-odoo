@@ -130,11 +130,13 @@ class B2BProductService(models.AbstractModel):
     def procurement_info(self, product, pricelist=None, website=None, combination_info=None):
         """Return website purchasing facts backed by native Odoo fields.
 
-        ``product.pricelist.item.min_quantity`` is used as the customer-specific
-        minimum quantity, the product UoM supplies the display unit, and installed
-        stock modules supply website-warehouse availability and sales lead time.
-        The method deliberately degrades to neutral availability when Inventory
-        is not installed so the website module remains portable to Odoo.sh.
+        The product's ``b2b_default_moq`` is the maintain-once fallback and an
+        applicable native ``product.pricelist.item.min_quantity`` overrides it
+        for customer-specific terms. The product UoM supplies the display unit,
+        while installed stock modules supply website-warehouse availability and
+        sales lead time. The method deliberately degrades to neutral availability
+        when Inventory is not installed so the website module remains portable to
+        Odoo.sh.
         """
         variant = product
         if product and product._name == "product.template":
@@ -148,10 +150,16 @@ class B2BProductService(models.AbstractModel):
             and "pricelist_id" in website._fields
             and website.pricelist_id
         )
-        minimum_quantity = max(variant.uom_id.rounding, 1.0)
+        minimum_quantity = max(
+            variant.uom_id.rounding,
+            variant.product_tmpl_id.b2b_default_moq,
+            1.0,
+        )
 
         if pricelist:
-            rules = pricelist.sudo()._get_applicable_rules(variant, fields.Datetime.now())
+            rules = pricelist.sudo().b2b_procurement_rules(
+                variant, fields.Datetime.now()
+            )
             quantity_rules = rules.filtered(lambda rule: rule.min_quantity > 0)
             if quantity_rules:
                 specificity = {
@@ -265,6 +273,15 @@ class B2BProductService(models.AbstractModel):
         product = self.product_from_document(document)
         if not document.active or not self.is_visible(product, partner=partner, website=website):
             return False
+        if (
+            not self.env.user._is_internal()
+            and not document.shown_on_product_page
+            and not (
+                document.res_model == "product.product"
+                and document.b2b_publish_in_partner_hub
+            )
+        ):
+            return False
         if self.env.user._is_internal():
             return True
         partner = self.commercial_partner(partner)
@@ -280,7 +297,7 @@ class B2BProductService(models.AbstractModel):
         return bool(document.b2b_visible_segment_ids & partner.b2b_segment_ids)
 
     @api.model
-    def allowed_documents(self, product, partner=None, website=None):
+    def allowed_documents(self, product, partner=None, website=None, variant=None):
         if not self.is_visible(product, partner=partner, website=website):
             return self.env["product.document"]
         # Portal users do not have generic attachment read access. Elevation is
@@ -294,6 +311,17 @@ class B2BProductService(models.AbstractModel):
             document_domain,
             order="sequence, name, id",
         )
+        template = product if product._name == "product.template" else product.product_tmpl_id
+        variants = variant or (
+            product if product._name == "product.product" else template.product_variant_ids
+        )
+        variant_documents = self.env["product.document"].sudo().search([
+            ("active", "=", True),
+            ("res_model", "=", "product.product"),
+            ("res_id", "in", variants.ids),
+            ("b2b_publish_in_partner_hub", "=", True),
+        ], order="sequence, name, id")
+        documents |= variant_documents
         return documents.filtered(
             lambda document: self.document_is_allowed(
                 document, partner=partner, website=website

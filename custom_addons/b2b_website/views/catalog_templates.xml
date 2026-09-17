@@ -2,11 +2,15 @@
 <odoo>
     <template id="product_catalog" name="Partner Product Catalog">
         <t t-call="b2b_website.partner_layout">
-            <section class="lt-catalog-page"><div class="container">
+            <section class="oe_website_sale lt-catalog-page"><div class="container">
                 <nav class="lt-breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><span>Products</span></nav>
                 <div class="lt-catalog-intro"><h1>Product Catalog</h1><p><t t-out="total"/> industrial products with certified specifications and account-specific pricing.</p></div>
                 <form class="lt-catalog-toolbar" action="/products" method="get">
                     <div class="lt-search"><label class="visually-hidden" for="lt-toolbar-search">Search products</label><input id="lt-toolbar-search" name="search" type="search" t-att-value="query.get('search', '')" placeholder="Search SKU, model or keyword"/><button type="submit" aria-label="Search"><i class="fa fa-search"/></button></div>
+                    <input t-if="query.get('category')" type="hidden" name="category" t-att-value="query.get('category')"/>
+                    <input t-if="query.get('brand')" type="hidden" name="brand" t-att-value="query.get('brand')"/>
+                    <input t-if="query.get('application')" type="hidden" name="application" t-att-value="query.get('application')"/>
+                    <input t-if="query.get('tag')" type="hidden" name="tag" t-att-value="query.get('tag')"/>
                     <button class="lt-btn lt-btn--outline lt-mobile-filter" type="button" data-lt-filter-toggle="">Filters <span t-if="active_filter_count" t-out="active_filter_count"/></button>
                     <div class="lt-catalog-toolbar__right"><span class="lt-results-summary"><strong t-out="total"/> products</span><label class="visually-hidden" for="lt-sort">Sort products</label><select id="lt-sort" name="sort" data-lt-auto-submit=""><option value="featured" t-att-selected="sort == 'featured'">Featured</option><option value="newest" t-att-selected="sort == 'newest'">Newest</option><option value="name" t-att-selected="sort == 'name'">Name A–Z</option><option value="name_desc" t-att-selected="sort == 'name_desc'">Name Z–A</option></select><div class="lt-view-switch" role="group" aria-label="Product view"><button type="button" class="is-active" data-lt-view="grid" aria-label="Grid view"><i class="fa fa-th-large"/></button><button type="button" data-lt-view="list" aria-label="List view"><i class="fa fa-list"/></button></div></div>
                 </form>
@@ -24,7 +28,7 @@
                         </form>
                     </aside>
                     <div class="lt-catalog-results">
-                        <p class="lt-results-bar"><strong><t t-out="total"/> products</strong><span t-if="price_state == 'visible'">Partner pricing active</span><span t-elif="price_state == 'login'">Sign in for partner pricing</span><span t-elif="price_state == 'quote'">Request a quote for pricing</span><span t-else="">Contact sales for pricing</span></p>
+                        <p class="lt-results-bar"><strong><t t-out="total"/> products</strong><span t-if="price_state == 'visible'">Partner pricing active</span><span t-elif="price_state == 'pending_approval'">Your account is awaiting approval.</span><span t-elif="price_state == 'pricing_pending'">Your pricing is being configured.</span><span t-elif="price_state == 'login'">Sign in for partner pricing</span><span t-elif="price_state == 'quote'">Request a quote for pricing</span><span t-else="">Contact sales for pricing</span></p>
                         <div t-if="products" class="lt-product-grid" data-lt-product-grid=""><t t-foreach="products" t-as="product"><t t-call="b2b_website.product_card"/></t></div>
                         <div t-else="" class="lt-empty"><div class="lt-empty__icon"><i class="fa fa-search"/></div><h2>No matching products</h2><p>Adjust your filters, or contact us if you expect access to a product family.</p><a class="lt-btn lt-btn--outline" href="/products">Reset filters</a></div>
                         <div t-if="pager" class="lt-product-pagination" aria-label="Product pages"><t t-call="portal.pager"><t t-set="classname" t-value="'lt-product-pagination__list'"/></t></div>
@@ -37,11 +41,11 @@
     <template id="product_detail" name="Partner Product Detail">
         <t t-call="b2b_website.partner_layout">
             <t t-set="additional_title" t-value="product.name"/>
-            <section class="lt-detail-page"><div class="container">
+            <section class="oe_website_sale lt-detail-page"><div class="container">
                 <nav class="lt-breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><a href="/products">Products</a><span>/</span><span t-if="product.public_categ_ids" t-out="product.public_categ_ids[:1].name"/><span t-if="product.public_categ_ids">/</span><span t-out="product.b2b_model_number or product.name"/></nav>
                 <div class="lt-product-detail">
                     <div class="lt-gallery" data-lt-gallery="">
-                        <div class="lt-gallery__stage"><span class="lt-gallery__sku" data-lt-variant-sku="" t-out="variant.default_code or product.b2b_model_number or 'LUCKY TONE'"/><img data-lt-gallery-image="" t-att-src="'/web/image/product.template/%s/image_1024' % product.id" t-att-alt="product.name"/><div t-foreach="media.filtered('video_url')" t-as="video" t-att-id="'lt-video-%s' % video.id" class="lt-gallery__video d-none" t-field="video.embed_code"/></div>
+                        <div class="lt-gallery__stage"><img data-lt-gallery-image="" t-att-src="'/web/image/product.template/%s/image_1024' % product.id" t-att-alt="product.name"/><div t-foreach="media.filtered('video_url')" t-as="video" t-att-id="'lt-video-%s' % video.id" class="lt-gallery__video d-none" t-field="video.embed_code"/></div>
                         <div class="lt-gallery__thumbs">
                             <button type="button" class="is-active" t-att-data-image-src="'/web/image/product.template/%s/image_1024' % product.id"><img t-att-src="'/web/image/product.template/%s/image_128' % product.id" t-att-alt="'%s main image' % product.name"/></button>
                             <button t-foreach="media" t-as="item" type="button" t-att-class="'is-video' if item.video_url else ''" t-att-data-image-src="'/web/image/product.image/%s/image_1024' % item.id" t-att-data-video-target="'lt-video-%s' % item.id if item.video_url else ''"><img t-att-src="'/web/image/product.image/%s/image_128' % item.id" t-att-alt="item.name"/><span t-if="item.video_url">VIDEO</span></button>
@@ -50,8 +54,8 @@
                     </div>
                     <aside class="lt-purchase-panel">
                         <h1 t-out="product.name"/>
-                        <div class="lt-purchase-panel__meta"><p class="lt-purchase-panel__model">SKU: <span data-lt-variant-sku="" t-out="variant.default_code or product.b2b_model_number or 'Model on request'"/></p></div>
-                        <p class="lt-purchase-panel__description" t-out="product.description_sale or 'Contact our sales team for application guidance and technical support.'"/>
+                        <div class="lt-purchase-panel__meta"><p class="lt-purchase-panel__model">SKU: <span data-lt-variant-sku=""><t t-if="variant.default_code"><t t-out="variant.default_code"/></t><t t-else=""><t t-if="product.b2b_model_number"><t t-out="product.b2b_model_number"/></t><t t-else="">Model on request</t></t></span></p></div>
+                        <p class="lt-purchase-panel__description"><t t-if="product.description_sale"><t t-out="product.description_sale"/></t><t t-else="">Contact our sales team for application guidance and technical support.</t></p>
                         <t t-call="b2b_website.price_display"/>
                         <dl class="lt-procurement-facts"><div><dt>MOQ</dt><dd><strong data-lt-minimum-quantity="" t-out="'%g' % procurement['minimum_quantity']"/> <span data-lt-procurement-uom="" t-out="procurement['uom_name']"/></dd></div><div><dt>Lead time</dt><dd data-lt-lead-time=""><t t-if="procurement['lead_time_days'] is None">Contact sales</t><t t-elif="procurement['lead_time_days']"><strong t-out="procurement['lead_time_days']"/> days</t><t t-else="">Ready to ship</t></dd></div></dl>
                         <div t-if="product.valid_product_template_attribute_line_ids" class="lt-variant-picker" data-lt-variant-picker="" t-att-data-template-id="product.id" t-att-data-product-id="variant.id">
@@ -73,8 +77,8 @@
                         <section id="lt-panel-overview" class="lt-detail-panel is-active" role="tabpanel" aria-labelledby="lt-tab-overview" data-lt-detail-panel="overview"><span class="lt-kicker">OVERVIEW</span><h2>Product overview</h2><div t-if="product.description_ecommerce" class="lt-richtext" t-field="product.description_ecommerce"/><p t-else="" class="lt-muted">Contact our sales team for application guidance and solution design support.</p></section>
                         <section t-if="product.b2b_specifications" id="lt-panel-specifications" class="lt-detail-panel" role="tabpanel" aria-labelledby="lt-tab-specifications" data-lt-detail-panel="specifications" hidden="hidden"><span class="lt-kicker">SPECIFICATIONS</span><h2>Technical information</h2><div class="lt-richtext lt-specs" t-field="product.b2b_specifications"/></section>
                         <section id="lt-panel-resources" class="lt-detail-panel" role="tabpanel" aria-labelledby="lt-tab-resources" data-lt-detail-panel="resources" hidden="hidden"><span class="lt-kicker">RESOURCES</span><h2>Technical documents</h2>
-                        <div t-if="resources" class="lt-resource-list"><article t-foreach="resources" t-as="resource" class="lt-resource-card"><div class="lt-resource-card__icon">PDF</div><div><h3 t-out="resource.name"/><p><span t-if="resource.b2b_version">v<t t-out="resource.b2b_version"/> · </span><span t-if="resource.b2b_language"><t t-out="resource.b2b_language"/> · </span><span t-out="(resource.mimetype or 'File').split('/')[-1].upper()"/><span t-if="resource.file_size"> · <t t-out="'%.1f MB' % (resource.file_size / 1048576.0)"/></span></p></div><a class="lt-btn lt-btn--outline lt-btn--small" t-att-href="'/products/resource/%s' % resource.id">Download</a></article></div>
-                        <div t-else="" class="lt-empty lt-empty--compact"><p>No resources are available for your access level.</p></div>
+                        <div class="lt-resource-list" data-lt-resource-list=""><article t-foreach="resources" t-as="resource" class="lt-resource-card"><div class="lt-resource-card__icon">PDF</div><div><h3 t-out="resource.name"/><p><span t-if="resource.b2b_version">v<t t-out="resource.b2b_version"/> · </span><span t-if="resource.b2b_language"><t t-out="resource.b2b_language"/> · </span><span t-out="(resource.mimetype or 'File').split('/')[-1].upper()"/><span t-if="resource.file_size"> · <t t-out="'%.1f MB' % (resource.file_size / 1048576.0)"/></span></p></div><a class="lt-btn lt-btn--outline lt-btn--small" t-att-href="'/products/resource/%s' % resource.id">Download</a></article></div>
+                        <div class="lt-empty lt-empty--compact" data-lt-resource-empty="" t-att-hidden="None if not resources else 'hidden'"><p>No resources are available for this variant and access level.</p></div>
                         </section>
                     </div>
                 </div>

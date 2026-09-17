@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_b2b_registration_application_list" model="ir.ui.view">
+        <field name="name">b2b.registration.application.list</field>
+        <field name="model">b2b.registration.application</field>
+        <field name="arch" type="xml">
+            <list decoration-warning="state == 'pending'" decoration-success="state == 'approved'" decoration-danger="state == 'rejected'">
+                <field name="name"/>
+                <field name="full_name"/>
+                <field name="company_name"/>
+                <field name="business_email" widget="email"/>
+                <field name="customer_type_id"/>
+                <field name="state" widget="badge"/>
+                <field name="email_verified_at"/>
+                <field name="create_date"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_b2b_registration_application_form" model="ir.ui.view">
+        <field name="name">b2b.registration.application.form</field>
+        <field name="model">b2b.registration.application</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_approve" type="object" string="Approve &amp; Activate" class="btn-primary" invisible="state not in ('pending', 'rejected')"/>
+                    <button name="action_reject" type="object" string="Reject" class="btn-secondary" invisible="state != 'pending'"/>
+                    <button name="action_return_to_review" type="object" string="Return to Review" invisible="state != 'rejected'"/>
+                    <button name="action_send_verification_email" type="object" string="Resend Verification" invisible="state not in ('awaiting_email', 'expired')"/>
+                    <field name="state" widget="statusbar" statusbar_visible="awaiting_email,pending,approved,rejected"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box"/>
+                    <h1><field name="name" readonly="1"/></h1>
+                    <group>
+                        <group string="Account">
+                            <field name="user_id" readonly="1" context="{'active_test': False}"/>
+                            <field name="partner_id" readonly="1"/>
+                            <field name="website_id" readonly="state == 'approved'"/>
+                            <field name="business_email" readonly="state not in ('pending', 'rejected')"/>
+                            <field name="email_verified_at" readonly="1"/>
+                        </group>
+                        <group string="Audit">
+                            <field name="terms_accepted_at" readonly="1"/>
+                            <field name="terms_version" readonly="1"/>
+                            <field name="verification_sent_at" readonly="1"/>
+                            <field name="verification_expires_at" readonly="1"/>
+                            <field name="approved_at" readonly="1"/>
+                            <field name="approved_by_id" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="Submitted Contact &amp; Company Information">
+                        <group>
+                            <field name="full_name" readonly="state not in ('pending', 'rejected')"/>
+                            <field name="job_title" readonly="state not in ('pending', 'rejected')"/>
+                            <field name="company_name" readonly="state not in ('pending', 'rejected')"/>
+                            <field name="country_id" readonly="state not in ('pending', 'rejected')"/>
+                            <field name="mobile" widget="phone" readonly="state not in ('pending', 'rejected')"/>
+                        </group>
+                        <group>
+                            <field name="company_phone" widget="phone" readonly="state not in ('pending', 'rejected')"/>
+                            <field name="customer_type_id" readonly="state not in ('pending', 'rejected')"/>
+                            <field name="company_website" widget="url" readonly="state not in ('pending', 'rejected')"/>
+                            <field name="product_interest_id" readonly="state not in ('pending', 'rejected')"/>
+                        </group>
+                    </group>
+                    <group string="Company Resolution">
+                        <group>
+                            <field name="company_resolution" required="state in ('pending', 'rejected')" readonly="state not in ('pending', 'rejected')"/>
+                            <field name="company_id" context="{'default_is_company': True}" invisible="company_resolution != 'existing'" required="company_resolution == 'existing'" readonly="state not in ('pending', 'rejected')"/>
+                        </group>
+                        <group>
+                            <div class="alert alert-info" role="alert" invisible="company_resolution != 'create'">A new company will be created from the reviewed company name, country, phone, website and business type.</div>
+                            <div class="alert alert-info" role="alert" invisible="company_resolution != 'existing'">Existing company data is preserved. Registration data only fills fields that are currently empty.</div>
+                        </group>
+                    </group>
+                    <group string="Decision">
+                        <field name="rejection_reason" placeholder="Required before rejection" readonly="state not in ('pending', 'rejected')"/>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_b2b_registration_application_search" model="ir.ui.view">
+        <field name="name">b2b.registration.application.search</field>
+        <field name="model">b2b.registration.application</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/><field name="full_name"/><field name="company_name"/><field name="business_email"/>
+                <filter name="pending" string="Partner Review" domain="[('state', '=', 'pending')]"/>
+                <filter name="awaiting_email" string="Verify Email" domain="[('state', '=', 'awaiting_email')]"/>
+                <group><filter name="group_state" string="State" context="{'group_by': 'state'}"/><filter name="group_type" string="Business Type" context="{'group_by': 'customer_type_id'}"/></group>
+            </search>
+        </field>
+    </record>
+
+</odoo>

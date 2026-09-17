@@ -1,6 +1,7 @@
 import uuid
 
 from odoo import _, api, fields, models
+from odoo.exceptions import ValidationError
 
 
 class B2BContactRequest(models.Model):
@@ -46,7 +47,13 @@ class B2BContactRequest(models.Model):
     company_name = fields.Char()
     message = fields.Text(required=True)
     partner_id = fields.Many2one("res.partner", index=True, ondelete="set null")
-    commercial_partner_id = fields.Many2one("res.partner", index=True, ondelete="set null")
+    commercial_partner_id = fields.Many2one(
+        "res.partner",
+        related="partner_id.commercial_partner_id",
+        store=True,
+        index=True,
+        readonly=True,
+    )
     website_id = fields.Many2one("website", required=True, ondelete="restrict")
     source_url = fields.Char()
     assigned_user_id = fields.Many2one("res.users", tracking=True)
@@ -89,14 +96,27 @@ class B2BContactRequest(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        pending_partners = set()
         for vals in vals_list:
             if vals.get("name", _("New")) == _("New"):
                 vals["name"] = self.env["ir.sequence"].sudo().next_by_code(
                     "b2b.contact.request"
                 ) or _("New")
             partner = self.env["res.partner"].browse(vals.get("partner_id")).exists()
-            if partner:
-                vals["commercial_partner_id"] = partner.commercial_partner_id.id
+            if (
+                partner
+                and vals.get("request_type") == "company_change"
+                and vals.get("state", "new") in ("new", "in_progress")
+            ):
+                if partner.id in pending_partners or self.search_count([
+                    ("partner_id", "=", partner.id),
+                    ("request_type", "=", "company_change"),
+                    ("state", "in", ("new", "in_progress")),
+                ], limit=1):
+                    raise ValidationError(_(
+                        "A company setup or change request is already under review."
+                    ))
+                pending_partners.add(partner.id)
             if not vals.get("assigned_user_id"):
                 website = self.env["website"].browse(vals.get("website_id")).exists()
                 assigned_user = self._default_assigned_user(website)
@@ -178,6 +198,34 @@ class B2BContactRequest(models.Model):
         )
 
     def write(self, vals):
+        if any(
+            field_name in vals
+            for field_name in ("partner_id", "request_type", "state")
+        ):
+            for record in self:
+                partner_id = vals.get("partner_id", record.partner_id.id)
+                request_type = vals.get("request_type", record.request_type)
+                state = vals.get("state", record.state)
+                was_same_open_request = (
+                    record.partner_id.id == partner_id
+                    and record.request_type == "company_change"
+                    and record.state in ("new", "in_progress")
+                )
+                if (
+                    partner_id
+                    and request_type == "company_change"
+                    and state in ("new", "in_progress")
+                    and not was_same_open_request
+                    and self.search_count([
+                        ("id", "!=", record.id),
+                        ("partner_id", "=", partner_id),
+                        ("request_type", "=", "company_change"),
+                        ("state", "in", ("new", "in_progress")),
+                    ], limit=1)
+                ):
+                    raise ValidationError(_(
+                        "A company setup or change request is already under review."
+                    ))
         result = super().write(vals)
         if "assigned_user_id" in vals:
             for record in self.filtered("assigned_user_id"):

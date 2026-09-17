@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="sequence_bank_receipt" model="ir.sequence"><field name="name">Bank Transfer Evidence</field><field name="code">b2b.bank.receipt</field><field name="prefix">BTR/%(year)s/</field><field name="padding">5</field></record>
+    <record id="collection_net30" model="account.payment.term"><field name="name">Partner Hub Net 30</field><field name="line_ids" eval="[Command.clear(), Command.create({'value':'percent','value_amount':100,'nb_days':30})]"/></record>
+    <record id="collection_policy_a" model="b2b.collection.policy"><field name="name">A — 100% Before Production</field><field name="category">A</field></record>
+    <record id="collection_policy_b30" model="b2b.collection.policy"><field name="name">B — 30% Deposit / 70% Before Shipment</field><field name="category">B</field><field name="production_percent">30</field></record>
+    <record id="collection_policy_b20" model="b2b.collection.policy"><field name="name">B — 20% Deposit / 80% Before Shipment</field><field name="category">B</field><field name="production_percent">20</field></record>
+    <record id="collection_policy_c" model="b2b.collection.policy"><field name="name">C — 100% Before Shipment</field><field name="category">C</field><field name="production_percent">0</field></record>
+    <record id="collection_policy_d" model="b2b.collection.policy"><field name="name">D — Credit / Net 30 from Invoice Date</field><field name="category">D</field><field name="production_percent">0</field><field name="shipment_percent">0</field><field name="payment_term_id" ref="collection_net30"/></record>
+    <record id="collection_policy_e" model="b2b.collection.policy"><field name="name">E — Special Terms (Configure Before Assignment)</field><field name="category">E</field><field name="note">Manager-approved production/shipment percentages and native invoice terms. Defaults remain fully prepaid until configured.</field></record>
+</odoo>

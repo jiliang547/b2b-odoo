@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <function model="website" name="_b2b_apply_export_language"/>
+</odoo>

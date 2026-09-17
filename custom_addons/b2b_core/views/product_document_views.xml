@@ -9,6 +9,7 @@
                 <group string="Partner Hub">
                     <group>
                         <field name="shown_on_product_page"/>
+                        <field name="b2b_publish_in_partner_hub" invisible="res_model != 'product.product'"/>
                         <field name="b2b_resource_type"/>
                         <field name="b2b_version"/>
                         <field name="b2b_language"/>

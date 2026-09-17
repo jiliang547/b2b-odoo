@@ -1,6 +1,10 @@
 from odoo.addons.mail.tests.common import mail_new_test_user
 from odoo.exceptions import AccessError
 from odoo.tests import TransactionCase, tagged
+from odoo.tools import mute_logger
+from unittest.mock import patch
+
+from odoo.addons.b2b_erp_connector.services.erp_service import B2BERPError
 
 
 @tagged("post_install", "-at_install")
@@ -21,6 +25,13 @@ class TestIntegrationJob(TransactionCase):
         first = Job.enqueue("sales_order", self.order, "test-order-key")
         second = Job.enqueue("sales_order", self.order, "test-order-key")
         self.assertEqual(first, second)
+
+    def test_integration_role_does_not_receive_business_manager_permissions(self):
+        self.assertTrue(self.manager.has_group("b2b_core.group_b2b_operator"))
+        self.assertFalse(self.manager.has_group("b2b_core.group_b2b_manager"))
+        self.assertFalse(
+            self.manager.has_group("b2b_core.group_b2b_special_price_manager")
+        )
 
     def test_mock_job_processes_successfully(self):
         job = self.env["b2b.integration.job"].enqueue(
@@ -52,3 +63,23 @@ class TestIntegrationJob(TransactionCase):
             job.with_user(self.manager).with_context(b2b_job_write=True).write({
                 "state": "success"
             })
+
+    @mute_logger("odoo.addons.b2b_erp_connector.models.integration_job")
+    def test_partial_success_without_reference_is_retried(self):
+        job = self.env["b2b.integration.job"].enqueue(
+            "sales_order", self.order, "test-partial-response"
+        )
+        with patch.object(type(self.env["b2b.erp.service"]), "dispatch_job", return_value={"success": True}):
+            self.assertFalse(job._process_locked())
+        self.assertEqual(job.state, "failed")
+
+    @mute_logger("odoo.addons.b2b_erp_connector.models.integration_job")
+    def test_non_retryable_adapter_error_goes_directly_to_dead_letter(self):
+        job = self.env["b2b.integration.job"].enqueue(
+            "sales_order", self.order, "test-non-retryable"
+        )
+        error = B2BERPError("http_401", "ERP rejected the credentials.", retryable=False)
+        with patch.object(type(self.env["b2b.erp.service"]), "dispatch_job", side_effect=error):
+            self.assertFalse(job._process_locked())
+        self.assertEqual(job.state, "dead")
+        self.assertFalse(job.next_retry_at)

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="catalog_cart_ready_guard" inherit_id="b2b_website.product_card">
+        <xpath expr="//form[@data-lt-cart-form]//button[@type='submit']" position="attributes"><attribute name="disabled">disabled</attribute></xpath>
+    </template>
+    <template id="detail_cart_ready_guard" inherit_id="b2b_website.product_detail">
+        <xpath expr="//form[@data-lt-cart-form]//button[@type='submit']" position="attributes"><attribute name="disabled">disabled</attribute></xpath>
+    </template>
+    <template id="portal_not_found" name="Partner Hub page not found">
+        <t t-call="b2b_website.partner_layout">
+            <t t-set="no_index" t-value="True"/>
+            <section class="container py-5 text-center">
+                <p class="text-muted">404</p>
+                <h1>Page not available</h1>
+                <p>The page may have moved, or it may not be available to your account.</p>
+                <div class="d-flex gap-3 justify-content-center flex-wrap mt-4">
+                    <a class="lt-btn lt-btn--blue" href="/my">My Account</a>
+                    <a class="lt-btn lt-btn--outline" href="/contact">Contact us</a>
+                </div>
+            </section>
+        </t>
+    </template>
+    <template id="invoice_preview_clarity" inherit_id="account.report_invoice_document" priority="100">
+        <!-- Preserve the native distinction between an issued legal PDF and a preview. -->
+        <xpath expr="//t[@name='proforma_invoice_title']" position="replace"><t name="proforma_invoice_title">Invoice Preview</t></xpath>
+        <xpath expr="//div[@name='comment']" position="attributes">
+            <attribute name="t-if">not is_html_empty(o.narration) and not o._b2b_is_placeholder_terms_note()</attribute>
+        </xpath>
+    </template>
+</odoo>

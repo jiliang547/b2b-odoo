@@ -2,6 +2,16 @@ from odoo import _, api, models
 from odoo.exceptions import UserError
 
 
+class B2BERPError(Exception):
+    """Safe, typed adapter error consumed by the asynchronous job boundary."""
+
+    def __init__(self, code, safe_message, retryable=True):
+        super().__init__(safe_message)
+        self.code = str(code or "erp_error")[:80]
+        self.safe_message = str(safe_message or "ERP request failed")[:2000]
+        self.retryable = bool(retryable)
+
+
 class MockERPAdapter:
     """Deterministic non-production adapter used until the real contract exists."""
 
@@ -57,10 +67,22 @@ class B2BERPService(models.AbstractModel):
     def dispatch_job(self, job, reference):
         adapter = self.adapter()
         if job.job_type == "sales_order":
-            return adapter.push_sales_order(reference, job.idempotency_key)
+            result = adapter.push_sales_order(reference, job.idempotency_key)
+            return self.validate_push_response(result)
         if job.job_type == "sample_request":
-            return adapter.push_sample_request(reference, job.idempotency_key)
+            result = adapter.push_sample_request(reference, job.idempotency_key)
+            return self.validate_push_response(result)
         raise UserError(_("Unsupported ERP job type."))
+
+    @api.model
+    def validate_push_response(self, result):
+        """Validate the stable adapter contract before business callbacks run."""
+        if not isinstance(result, dict) or result.get("success") is not True:
+            raise B2BERPError("invalid_response", _("ERP returned an unsuccessful response."))
+        reference = result.get("reference")
+        if not isinstance(reference, str) or not reference.strip():
+            raise B2BERPError("missing_reference", _("ERP response is missing its reference."))
+        return result
 
     @api.model
     def get_order_status(self, order, customer_context):

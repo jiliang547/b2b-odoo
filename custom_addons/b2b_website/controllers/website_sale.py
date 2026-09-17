@@ -1,10 +1,13 @@
 from werkzeug.exceptions import NotFound
 from werkzeug.urls import urlencode
 
+from odoo import _
+from odoo.exceptions import UserError
 from odoo.http import request, route
 from odoo.addons.payment.controllers.post_processing import PaymentPostProcessing
 from odoo.addons.website_sale.controllers.main import WebsiteSale
 from odoo.addons.website_sale.controllers.cart import Cart
+from odoo.addons.website_sale.controllers.payment import PaymentPortal
 from odoo.addons.website_sale.controllers.variant import WebsiteSaleVariantController
 
 
@@ -25,6 +28,16 @@ def _can_checkout():
 
 
 class PartnerHubWebsiteSale(WebsiteSale):
+    def _get_shop_payment_values(self, order, **kwargs):
+        values = super()._get_shop_payment_values(order, **kwargs)
+        if order.b2b_collection_active:
+            from .collection_payment import CollectionSalePortal
+            values.update(CollectionSalePortal()._get_payment_values(order, website_id=request.website.id))
+            values.update({'display_submit_button': False, 'sale_order_id': order.id,
+                           'landing_route': order.get_portal_url(),
+                           'transaction_route': order.get_portal_url(suffix='/transaction')})
+        return values
+
     def _b2b_checkout_order(self, sale_order_id=None):
         if sale_order_id:
             order = request.env["sale.order"].sudo().browse(int(sale_order_id)).exists()
@@ -81,7 +94,67 @@ class PartnerHubWebsiteSale(WebsiteSale):
     def shop_payment(self, **post):
         if not _can_checkout():
             return request.render("b2b_website.ordering_unavailable", {"page_name": "ordering_unavailable"})
+        if request.cart:
+            request.cart.sudo()._b2b_start_collection()
         return super().shop_payment(**post)
+
+    @route(
+        "/shop/submit-for-review",
+        type="http",
+        auth="user",
+        website=True,
+        methods=["POST"],
+        csrf=True,
+    )
+    def shop_submit_for_review(self, **post):
+        if not _can_checkout():
+            return request.render(
+                "b2b_website.ordering_unavailable",
+                {"page_name": "ordering_unavailable"},
+            )
+        order = request.cart
+        if not order or order.state != "draft" or not order.website_order_line:
+            return request.redirect("/shop/cart")
+        if not order._is_cart_ready():
+            return request.redirect("/shop/checkout")
+
+        order = order.sudo()
+        for line in order.order_line.filtered(
+            lambda item: not item.display_type and not item.is_delivery
+        ):
+            order._b2b_check_product_allowed(line.product_id.id)
+            order._b2b_validate_sale_quantity(line.product_id.id, line.product_uom_qty)
+        order.write({
+            "b2b_checkout_mode": "review",
+            "b2b_review_state": "pending",
+            "require_payment": True,
+            "prepayment_percent": 1.0,
+        })
+        order.action_quotation_sent()
+        order._b2b_start_collection()
+        assigned_user = order.user_id.filtered(
+            lambda user: user.has_group("b2b_core.group_b2b_manager")
+        )
+        if not assigned_user:
+            manager_group = request.env.ref("b2b_core.group_b2b_manager")
+            assigned_user = request.env["res.users"].sudo().search([
+                ("active", "=", True),
+                ("share", "=", False),
+                ("all_group_ids", "in", manager_group.ids),
+            ], limit=1)
+        if assigned_user:
+            order.activity_schedule(
+                "mail.mail_activity_data_todo",
+                user_id=assigned_user.id,
+                summary=_("Review customer order before payment"),
+                note=_("The customer chose Submit for Review at checkout."),
+            )
+        order.message_post(body=_(
+            "The customer submitted this order for review before payment."
+        ))
+        request.session["sale_last_order_id"] = order.id
+        request.website.sale_reset()
+        return request.redirect("/my/orders/%s?review_submitted=1" % order.id)
 
     @route()
     def shop_payment_validate(self, sale_order_id=None, **post):
@@ -101,6 +174,24 @@ class PartnerHubWebsiteSale(WebsiteSale):
 
 
 class PartnerHubCart(Cart):
+    def _check_ordering_access(self):
+        if not _can_checkout():
+            message = (_('Your pricing is being configured. Please contact us for assistance.')
+                       if request.website.b2b_pricing_pending()
+                       and request.env.user.partner_id.commercial_partner_id.b2b_approved
+                       else _('Your account needs approval before ordering.'))
+            raise UserError(message)
+
+    @route()
+    def add_to_cart(self, *args, **kwargs):
+        self._check_ordering_access()
+        return super().add_to_cart(*args, **kwargs)
+
+    @route()
+    def update_cart(self, *args, **kwargs):
+        self._check_ordering_access()
+        return super().update_cart(*args, **kwargs)
+
     @route()
     def cart(self, id=None, access_token=None, revive_method="", **post):
         if not _can_view_cart_prices():
@@ -108,6 +199,15 @@ class PartnerHubCart(Cart):
         return super().cart(
             id=id, access_token=access_token, revive_method=revive_method, **post
         )
+
+
+class PartnerHubCartPayment(PaymentPortal):
+    @route()
+    def shop_payment_transaction(self, order_id, access_token, **kwargs):
+        # Express checkout uses this route without opening /shop/payment.
+        # Leave existing-order portal payment routes and callbacks unchanged.
+        PartnerHubCart()._check_ordering_access()
+        return super().shop_payment_transaction(order_id, access_token, **kwargs)
 
 
 class PartnerHubVariantController(WebsiteSaleVariantController):
@@ -121,6 +221,8 @@ class PartnerHubVariantController(WebsiteSaleVariantController):
             raise NotFound()
         if product_id and int(product_id) not in product.product_variant_ids.ids:
             raise NotFound()
+        if request.website.b2b_pricing_pending():
+            raise UserError(_('Your pricing is being configured. Please contact us for assistance.'))
         info = super().get_combination_info_website(
             product_template_id,
             product_id,
@@ -136,6 +238,9 @@ class PartnerHubVariantController(WebsiteSaleVariantController):
             website=request.website,
             combination_info=info,
         ) if variant else {}
+        resources = service.allowed_documents(
+            product, website=request.website, variant=variant
+        ) if variant else request.env["product.document"]
         info.update({
             "b2b_can_view_price": service.can_view_price(website=request.website),
             "b2b_price_state": service.price_state(website=request.website),
@@ -151,6 +256,15 @@ class PartnerHubVariantController(WebsiteSaleVariantController):
             "b2b_stock_quantity": procurement.get("stock_quantity"),
             "b2b_show_stock_quantity": procurement.get("show_stock_quantity"),
             "b2b_lead_time_days": procurement.get("lead_time_days"),
+            "b2b_resources": [{
+                "id": document.id,
+                "name": document.name,
+                "version": document.b2b_version or "",
+                "language": document.b2b_language or "",
+                "format": (document.mimetype or "File").split("/")[-1].upper(),
+                "size_mb": round(document.file_size / 1048576.0, 1) if document.file_size else False,
+                "url": "/products/resource/%s" % document.id,
+            } for document in resources],
         })
         if not info["b2b_can_view_price"]:
             for key in (
