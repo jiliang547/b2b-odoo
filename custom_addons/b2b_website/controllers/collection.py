@@ -11,14 +11,21 @@ from werkzeug.utils import secure_filename
 from odoo import _, fields, http
 from odoo.http import request
 from odoo.exceptions import UserError, ValidationError
+from odoo.tools import LazyTranslate
 from odoo.tools.pdf import PdfReader
 from .website_sale import _can_checkout
 
 
+_lt = LazyTranslate(__name__, default_lang='en_US')
+_PROOF_VALIDATION_ERROR = _lt(
+    'Upload a PDF, PNG or JPG file no larger than 8 MB. '
+    'The file must be readable and not password protected.'
+)
+
+
 def validate_payment_proof(data):
-    message = _('Upload a PDF, PNG or JPG file no larger than 8 MB. The file must be readable and not password protected.')
     if not data or len(data) > 8 * 1024 * 1024:
-        raise ValidationError(message)
+        raise ValidationError(_PROOF_VALIDATION_ERROR)
     try:
         if data.startswith(b'%PDF-'):
             pdf = PdfReader(BytesIO(data), strict=False)
@@ -37,7 +44,7 @@ def validate_payment_proof(data):
             picture.load()
         return kind
     except Exception as exc:
-        raise ValidationError(message) from exc
+        raise ValidationError(_PROOF_VALIDATION_ERROR) from exc
 
 
 class CollectionPortal(http.Controller):
