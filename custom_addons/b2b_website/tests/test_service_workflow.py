@@ -21,6 +21,43 @@ class TestPartnerServiceWorkflow(TransactionCase):
             'b2b_request_type': 'repair',
         })
 
+    def test_native_demo_delivery_without_reserved_stock(self):
+        product = self.env['product.product'].create({
+            'name': 'Isolated demo stock product', 'type': 'consu',
+            'is_storable': True, 'tracking': 'none',
+        })
+        line = self.env['sale.order.line'].create({
+            'order_id': self.order.id, 'product_id': product.id, 'product_uom_qty': 1,
+        })
+        xmlid = self.env['ir.model.data'].sudo().search([
+            ('module', '=', 'helpdesk_sale'), ('name', '=', 'sale_order_line_helpdesk_3'),
+        ])
+        if xmlid:
+            xmlid.write({'res_id': line.id})
+        else:
+            self.env['ir.model.data'].sudo().create({
+                'module': 'helpdesk_sale', 'name': 'sale_order_line_helpdesk_3',
+                'model': 'sale.order.line', 'res_id': line.id,
+            })
+        self.env.flush_all()
+        self.env.registry.clear_cache()
+        self.order.sudo().with_context(install_demo=True).action_confirm()
+        self.assertTrue(line.move_ids)
+        self.assertEqual(sum(line.move_ids.mapped('quantity')), 1)
+        line.move_ids.picking_id.sudo().with_context(install_demo=True).button_validate()
+        self.assertTrue(all(p.state == 'done' for p in line.move_ids.picking_id))
+
+    def test_ordinary_delivery_is_not_given_demo_quantities(self):
+        product = self.env['product.product'].create({
+            'name': 'Isolated real stock product', 'type': 'consu', 'is_storable': True,
+        })
+        line = self.env['sale.order.line'].create({
+            'order_id': self.order.id, 'product_id': product.id, 'product_uom_qty': 1,
+        })
+        self.order.sudo().with_context(install_demo=True).action_confirm()
+        self.assertTrue(line.move_ids)
+        self.assertFalse(any(line.move_ids.mapped('quantity')))
+
     def test_external_round_trip_and_duplicate_shipment(self):
         ticket = self.new_ticket()
         self.assertEqual(ticket.company_id, self.order.company_id)

@@ -61,6 +61,7 @@ class B2BCollectionCommon(AccountTestInvoicingCommon):
         if provider_code == 'demo':
             method = self.env.ref('payment.payment_method_card')
             provider = self.env.ref('payment.payment_provider_demo').sudo().copy({
+                'name': 'Collection Demo %s' % uuid4().hex,
                 'company_id': self.env.company.id,
                 'journal_id': self.journal.id,
                 'payment_method_ids': [Command.set(method.ids)],
@@ -77,13 +78,22 @@ class B2BCollectionCommon(AccountTestInvoicingCommon):
             manual_method = self.env['account.payment.method'].search([
                 ('code', '=', 'manual'), ('payment_type', '=', 'inbound'),
             ], limit=1)
-            self.env['account.payment.method.line'].create({
-                'name': 'Demo Test Receipt',
-                'payment_method_id': manual_method.id,
-                'journal_id': self.journal.id,
-                'payment_provider_id': provider.id,
-                'payment_account_id': self.company_data['default_account_assets'].id,
-            })
+            # With payment_demo installed Odoo already creates this line.
+            # Reuse it; the optional-provider fallback must not duplicate it.
+            method_line = self.env['account.payment.method.line'].search([
+                ('payment_provider_id', '=', provider.id),
+                ('journal_id', '=', self.journal.id),
+            ], limit=1)
+            if method_line:
+                method_line.payment_account_id = self.company_data['default_account_assets']
+            else:
+                self.env['account.payment.method.line'].create({
+                    'name': provider.name,
+                    'payment_method_id': manual_method.id,
+                    'journal_id': self.journal.id,
+                    'payment_provider_id': provider.id,
+                    'payment_account_id': self.company_data['default_account_assets'].id,
+                })
         else:
             provider = self.env.ref('payment.payment_provider_transfer').sudo().copy({'company_id': self.env.company.id})
             method = self.env.ref('payment_custom.payment_method_wire_transfer')
