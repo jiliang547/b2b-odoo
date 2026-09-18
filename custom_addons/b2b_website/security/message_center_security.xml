@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="rule_b2b_message_thread_portal" model="ir.rule">
+        <field name="name">Portal customers: own company message threads</field>
+        <field name="model_id" ref="model_b2b_message_thread"/>
+        <field name="groups" eval="[Command.link(ref('base.group_portal'))]"/>
+        <field name="domain_force">[('commercial_partner_id', '=', user.partner_id.commercial_partner_id.id)]</field>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="rule_b2b_message_thread_internal_company" model="ir.rule">
+        <field name="name">B2B staff: selected companies' message threads</field>
+        <field name="model_id" ref="model_b2b_message_thread"/>
+        <field name="groups" eval="[Command.link(ref('b2b_core.group_b2b_operator')), Command.link(ref('b2b_core.group_b2b_manager'))]"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+</odoo>

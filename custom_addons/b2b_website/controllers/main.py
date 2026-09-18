@@ -591,13 +591,16 @@ class PartnerHubWebsite(WebsiteController):
         company = request.env.user.partner_id.commercial_partner_id
         Ticket = request.env["helpdesk.ticket"]
         domain = [("partner_id", "child_of", company.id)]
-        tickets = Ticket.search(domain, limit=8, order="create_date desc")
+        pager = portal_pager(url='/service-center', total=Ticket.search_count(domain),
+                             page=max(1, self._safe_int(kwargs.get('page'))), step=20)
+        tickets = Ticket.search(domain, limit=20, offset=pager['offset'], order="create_date desc")
         open_domain = Domain.AND([domain, [("stage_id.fold", "=", False)]])
         closed_domain = Domain.AND([domain, [("stage_id.fold", "=", True)]])
         return request.render(
             "b2b_website.service_center",
             {
                 "tickets": tickets,
+                "pager": pager,
                 "ticket_total": Ticket.search_count(domain),
                 "ticket_open": Ticket.search_count(open_domain),
                 "ticket_in_progress": Ticket.search_count(Domain.AND([open_domain, [("user_id", "!=", False)]])),
@@ -1170,12 +1173,7 @@ class PartnerHubWebsite(WebsiteController):
                 if not tools.single_email_re.match((post.get("email") or "").strip()):
                     raise ValidationError(_("Please enter a valid email address."))
                 uploads = self._validated_uploads()
-                team_id = self._safe_int(request.env["ir.config_parameter"].sudo().get_param(
-                    "b2b_website.helpdesk_team_id"
-                ))
-                team = request.env["helpdesk.team"].sudo().browse(team_id).exists()
-                if not team:
-                    raise UserError(_("Partner service is not configured yet. Please contact us."))
+                team = request.env['helpdesk.team']._b2b_team_for_company(order.sudo().company_id)
                 submission, is_new = self._claim_submission(post, "service_request")
                 if not is_new:
                     return self._completed_submission_redirect(submission)
@@ -1184,7 +1182,7 @@ class PartnerHubWebsite(WebsiteController):
                     escape(description).replace("\n", Markup("<br/>")),
                 )
                 contact = request.env.user.partner_id
-                ticket = request.env["helpdesk.ticket"].sudo().create({
+                ticket = request.env["helpdesk.ticket"].sudo().with_company(order.sudo().company_id).create({
                     "name": _("%s request for %s", request_type.title(), product.display_name),
                     "team_id": team.id,
                     "partner_id": contact.id,

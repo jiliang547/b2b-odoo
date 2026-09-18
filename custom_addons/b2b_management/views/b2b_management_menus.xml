@@ -52,6 +52,7 @@
     <menuitem id="menu_b2b_bank_receipts" name="Bank Transfer Reviews" parent="menu_b2b_operations" action="b2b_website.action_bank_receipts" sequence="9" groups="b2b_website.group_b2b_finance"/>
     <menuitem id="menu_b2b_collection_policies" name="Collection Terms" parent="menu_b2b_operations" action="b2b_website.action_collection_policies" sequence="8" groups="b2b_core.group_b2b_manager"/>
     <menuitem id="menu_b2b_samples" name="Sample Requests" parent="menu_b2b_operations" action="b2b_sample.action_b2b_sample_requests" sequence="10"/>
+    <menuitem id="menu_b2b_message_center" name="Message Center" parent="menu_b2b_operations" action="b2b_website.action_b2b_message_threads" sequence="12"/>
     <menuitem id="menu_b2b_contact_requests" name="Contact Requests" parent="menu_b2b_operations" action="b2b_website.action_b2b_contact_requests" sequence="15"/>
     <menuitem id="menu_b2b_order_changes" name="Order Changes" parent="menu_b2b_operations" action="b2b_website.action_b2b_order_changes" sequence="16"/>
     <menuitem id="menu_b2b_pending_order_reviews" name="Orders Pending Review" parent="menu_b2b_operations" action="action_b2b_pending_order_reviews" sequence="17" groups="b2b_core.group_b2b_manager"/>

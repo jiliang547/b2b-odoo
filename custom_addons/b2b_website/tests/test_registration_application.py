@@ -275,6 +275,7 @@ class TestB2BAuthTemplateHttp(HttpCase):
         self.assertIn('data-country-name="United States"', signup.text)
         self.assertIn('class="lt-phone-number"', signup.text)
         self.assertIn('id="login_error"', signup.text)
+        self.assertIn(r'pattern="[^@\s]+@[^@\s]+\.[^@\s]+"', signup.text)
 
         login = self.url_open("/web/login")
         self.assertEqual(login.status_code, 200)
@@ -464,7 +465,7 @@ class TestB2BRegistrationHttpFlow(HttpCase):
 
     def test_invalid_contact_details_are_rejected_and_inputs_preserved(self):
         self.authenticate(None, None)
-        for field, value in (("login", "not-an-email"),
+        for field, value in (("login", "not-an-email"), ("login", "jiliang@ccc"),
                              ("company_website", "abcdef"), ("company_website", "name@company.com"),
                              ("mobile", "123abc"), ("company_phone", "123")):
             with self.subTest(field=field, value=value):
@@ -479,7 +480,10 @@ class TestB2BRegistrationHttpFlow(HttpCase):
                         "Please complete all required registration fields",
                         response.text,
                     )
-                self.assertFalse(self.env["b2b.registration.application"].search([("business_email", "=", email)]))
+                submitted_email = value if field == "login" else email
+                self.assertFalse(self.env["b2b.registration.application"].search([
+                    ("business_email", "=", submitted_email),
+                ]))
 
     def test_selected_phone_country_overrides_company_country(self):
         self.authenticate(None, None)

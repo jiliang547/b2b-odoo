@@ -45,6 +45,109 @@ class TestContactRequestSecurity(TransactionCase):
         self.assertEqual(values[0]["name"], self.contact_request.name)
         self.assertIn(self.contact, self.contact_request.message_partner_ids)
 
+    def test_message_center_indexes_native_conversation_without_copying_messages(self):
+        thread = self.env["b2b.message.thread"].search([
+            ("source_model", "=", "b2b.contact.request"),
+            ("res_id", "=", self.contact_request.id),
+        ])
+        self.assertEqual(len(thread), 1)
+        self.assertEqual(thread.partner_id, self.contact)
+        self.assertEqual(thread.commercial_partner_id, self.company)
+        self.assertEqual(thread.company_id, self.website.company_id)
+        self.assertEqual(thread.last_message_id.model, "b2b.contact.request")
+        self.assertEqual(thread.last_message_id.res_id, self.contact_request.id)
+
+    def test_portal_reply_is_email_and_on_site_unread_for_staff(self):
+        self.salesperson.notification_type = "inbox"
+        reply = self.contact_request.with_user(self.portal_user).message_post(
+            body="Please also confirm the delivery schedule.",
+            message_type="comment",
+            subtype_xmlid="mail.mt_comment",
+        )
+        notification = self.env["mail.notification"].sudo().search([
+            ("mail_message_id", "=", reply.id),
+            ("res_partner_id", "=", self.salesperson.partner_id.id),
+        ])
+        self.assertTrue(notification)
+        self.assertEqual(notification.notification_type, "email")
+        self.assertFalse(notification.is_read)
+        self.assertEqual(
+            self.env["b2b.message.thread"]
+            .with_user(self.salesperson)
+            .get_backend_unread_message_count(),
+            1,
+        )
+
+    def test_internal_note_does_not_enter_message_center(self):
+        thread = self.env["b2b.message.thread"].search([
+            ("source_model", "=", "b2b.contact.request"),
+            ("res_id", "=", self.contact_request.id),
+        ])
+        previous_message = thread.last_message_id
+        self.contact_request.with_user(self.salesperson).message_post(
+            body="Internal qualification note.",
+            message_type="comment",
+            subtype_xmlid="mail.mt_note",
+        )
+        self.assertEqual(thread.last_message_id, previous_message)
+
+    def test_all_business_conversation_sources_share_one_message_center(self):
+        order = self.env["sale.order"].create({
+            "partner_id": self.contact.id,
+            "website_id": self.website.id,
+            "user_id": self.salesperson.id,
+            "state": "sale",
+        })
+        product = self.env["product.product"].create({
+            "name": "Message Center Sample Product",
+        })
+        sample = self.env["b2b.sample.request"].create({
+            "partner_id": self.company.id,
+            "contact_id": self.contact.id,
+            "website_id": self.website.id,
+            "contact_name": self.contact.name,
+            "company_name": self.company.name,
+            "email": self.contact.email,
+            "phone": "+1 555 0100",
+            "shipping_address": "100 Test Avenue",
+            "reason": "Message Center coverage",
+            "line_ids": [(0, 0, {
+                "product_id": product.id,
+                "quantity": 1,
+                "uom_id": product.uom_id.id,
+            })],
+        })
+        ticket = self.env["helpdesk.ticket"].create({
+            "name": "Message Center support ticket",
+            "partner_id": self.contact.id,
+            "user_id": self.salesperson.id,
+        })
+        change = self.env["b2b.order.change.request"].create({
+            "order_id": order.id,
+            "requested_changes": "Change one item before fulfilment.",
+        })
+        for record in (order, sample, ticket, change):
+            record.sudo().message_post(
+                body="Customer-visible conversation",
+                author_id=self.contact.id,
+                message_type="comment",
+                subtype_xmlid="mail.mt_comment",
+            )
+        sources = self.env["b2b.message.thread"].search([
+            ("source_model", "in", [
+                "sale.order",
+                "b2b.sample.request",
+                "helpdesk.ticket",
+                "b2b.order.change.request",
+            ]),
+        ]).mapped("source_model")
+        self.assertEqual(set(sources), {
+            "sale.order",
+            "b2b.sample.request",
+            "helpdesk.ticket",
+            "b2b.order.change.request",
+        })
+
     def test_new_request_is_assigned_and_schedules_sales_activity(self):
         self.assertEqual(self.contact_request.assigned_user_id, self.salesperson)
         self.assertIn(
@@ -155,10 +258,34 @@ class TestContactRequestSecurity(TransactionCase):
         )
         with self.assertRaises(AccessError):
             self.contact_request.with_user(other_user).read(["name"])
+        thread = self.env["b2b.message.thread"].search([
+            ("source_model", "=", "b2b.contact.request"),
+            ("res_id", "=", self.contact_request.id),
+        ])
+        with self.assertRaises(AccessError):
+            thread.with_user(other_user).read(["name"])
 
     def test_public_user_has_no_model_access(self):
         with self.assertRaises(AccessError):
             self.contact_request.with_user(self.env.ref("base.public_user")).read(["name"])
+
+    def test_portal_author_label_does_not_require_internal_contact_access(self):
+        self.contact_request.with_user(self.salesperson).message_post(
+            body="Staff reply", message_type="comment", subtype_xmlid="mail.mt_comment",
+        )
+        thread = self.env["b2b.message.thread"].search([
+            ("source_model", "=", "b2b.contact.request"),
+            ("res_id", "=", self.contact_request.id),
+        ])
+        expected_name = self.salesperson.partner_id.name
+        self.env.invalidate_all()
+        with self.assertRaises(AccessError):
+            self.salesperson.partner_id.with_user(self.portal_user).check_access("read")
+        self.assertEqual(thread.with_user(self.portal_user).last_author_name, expected_name)
+        with self.assertRaises(AccessError):
+            self.salesperson.partner_id.with_user(self.portal_user).check_access("read")
+        thread.last_author_id = False
+        self.assertEqual(thread.with_user(self.portal_user).last_author_name, "System")
 
     def test_duplicate_open_company_request_is_rejected(self):
         with self.assertRaises(ValidationError):

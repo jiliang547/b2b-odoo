@@ -14,6 +14,7 @@ export class B2BManagementDashboard extends Component {
         this.state = useState({
             loading: true,
             newContactRequests: 0,
+            unreadMessages: 0,
             pendingRegistrations: 0,
             pendingApplications: 0,
             pendingOrderReviews: 0,
@@ -45,7 +46,7 @@ export class B2BManagementDashboard extends Component {
                 user.hasGroup("stock.group_stock_user"),
                 user.hasGroup("b2b_website.group_b2b_finance"),
             ]);
-            const [newContactRequests, pendingRegistrations, pendingApplications, pendingOrderReviews, orderChanges, samples, openService, failedJobs] = await Promise.all([
+            const [newContactRequests, pendingRegistrations, pendingApplications, pendingOrderReviews, orderChanges, samples, openService, failedJobs, unreadMessages] = await Promise.all([
                 safeCount("b2b.contact.request", [["state", "=", "new"]]),
                 safeCount("b2b.registration.application", [["state", "=", "pending"]]),
                 safeCount("b2b.contact.request", [["request_type", "=", "partnership"], ["state", "in", ["new", "in_progress"]]]),
@@ -54,12 +55,14 @@ export class B2BManagementDashboard extends Component {
                 safeCount("b2b.sample.request", [["state", "in", ["submitted", "under_review"]]]),
                 safeCount("helpdesk.ticket", [["stage_id.fold", "=", false]]),
                 safeCount("b2b.integration.job", [["state", "in", ["failed", "dead"]]]),
+                this.orm.call("b2b.message.thread", "get_backend_unread_message_count", []).catch(() => 0),
             ]);
             Object.assign(this.state, {
                 loading: false,
                 canReviewFinance,
                 pendingBankReceipts: canReviewFinance ? await safeCount("b2b.bank.receipt", [["state", "=", "submitted"]]) : 0,
                 newContactRequests,
+                unreadMessages,
                 pendingRegistrations,
                 pendingApplications,
                 pendingOrderReviews,

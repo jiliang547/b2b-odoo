@@ -103,6 +103,12 @@ class BankReceipt(models.Model):
                 continue
             if receipt.state != 'submitted':
                 raise UserError(_('Only awaiting-finance receipts can be confirmed.'))
+            # A simulated Demo transaction can be safely closed when Finance
+            # verifies that the customer used the bank route instead. Real
+            # providers remain fail-closed to prevent a later callback from
+            # collecting the same balance a second time.
+            receipt.order_id._b2b_resolve_safe_demo_payment_conflicts()
+            receipt.order_id._b2b_check_unresolved_online_payments()
             payment = receipt.payment_id
             if not payment:
                 raise UserError(_('Select the actual native bank receipt first. Create it with Register / Open Receipt if needed.'))

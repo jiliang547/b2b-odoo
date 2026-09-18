@@ -194,6 +194,13 @@ class SaleOrder(models.Model):
                 continue
             partner = self.env['res.partner'].browse(vals.get('partner_id')).sudo()
             seller = website._b2b_configured_seller(partner)
+            # website_sale normally assigns portal addresses to the website's
+            # base company. A routed order can have another legal seller, so
+            # normalize only this customer's ordering addresses before native
+            # company checks run. The legal-seller assignment is untouched.
+            partner._b2b_share_order_addresses((
+                vals.get('partner_invoice_id'), vals.get('partner_shipping_id'),
+            ))
             if vals.get('company_id') and vals['company_id'] != seller.id:
                 raise ValidationError(_('The order company must match the customer legal seller.'))
             # website_sale.create explicitly refuses any different legal

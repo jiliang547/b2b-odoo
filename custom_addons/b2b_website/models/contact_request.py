@@ -152,50 +152,10 @@ class B2BContactRequest(models.Model):
                 )
         return records
 
-    def message_post(self, **kwargs):
-        message = super().message_post(**kwargs)
-        if self.env.context.get("b2b_skip_portal_unread"):
-            return message
-
-        # Odoo forces portal users to receive chatter notifications by email.
-        # Email notifications are normally created as already read because the
-        # backend has no portal reading surface. Partner Hub does have one, so
-        # keep the native mail.notification record unread until that customer
-        # opens the inquiry. Email delivery itself remains unchanged.
-        for record in self:
-            customer = record.partner_id
-            if (
-                customer
-                and not message.is_internal
-                and message.message_type != "user_notification"
-                and message.author_id != customer
-            ):
-                notification = self.env["mail.notification"].sudo().search([
-                    ("mail_message_id", "=", message.id),
-                    ("res_partner_id", "=", customer.id),
-                ])
-                notification.write({"is_read": False, "read_date": False})
-        return message
-
     @api.model
     def get_portal_unread_message_count(self):
-        """Count native unread notifications on inquiries visible to the user."""
-        if self.env.user._is_public():
-            return 0
-        notifications = self.env["mail.notification"].sudo().search([
-            ("res_partner_id", "=", self.env.user.partner_id.id),
-            ("is_read", "=", False),
-            ("mail_message_id.model", "=", self._name),
-            ("mail_message_id.message_type", "!=", "user_notification"),
-        ])
-        if not notifications:
-            return 0
-        candidate_ids = notifications.mail_message_id.mapped("res_id")
-        visible_request_ids = set(self.search([("id", "in", candidate_ids)]).ids)
-        return sum(
-            notification.mail_message_id.res_id in visible_request_ids
-            for notification in notifications
-        )
+        """Compatibility shim for the former inquiry-only header counter."""
+        return self.env["b2b.message.thread"].get_portal_unread_message_count()
 
     def write(self, vals):
         if any(

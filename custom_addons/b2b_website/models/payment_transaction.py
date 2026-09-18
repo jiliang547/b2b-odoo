@@ -10,12 +10,17 @@ class PaymentTransaction(models.Model):
         transactions = super().create(vals_list)
         transactions.sale_order_ids._b2b_start_collection()
         for tx in transactions.filtered(lambda t: t.operation not in ('refund', 'validation') and t.state not in ('done', 'authorized')):
-            for order in tx.sale_order_ids.filtered('b2b_collection_active'):
-                order._b2b_lock_collection()
-                if tx.currency_id != order.currency_id or tx.amount <= 0 or order.currency_id.compare_amounts(tx.amount, order.b2b_balance) > 0:
-                    raise ValidationError(_('The payment exceeds the current outstanding balance. Please refresh the order.'))
+            for order in tx.sale_order_ids.filtered(
+                lambda item: item.b2b_collection_active
+                or item.website_id
+                or item.b2b_sample_request_id
+            ):
                 if (order.transaction_ids - tx).filtered(lambda t: t.state in ('pending', 'authorized')):
                     raise ValidationError(_('Another payment is being processed. Please wait for its result.'))
+                if order.b2b_collection_active:
+                    order._b2b_lock_collection()
+                    if tx.currency_id != order.currency_id or tx.amount <= 0 or order.currency_id.compare_amounts(tx.amount, order.b2b_balance) > 0:
+                        raise ValidationError(_('The payment exceeds the current outstanding balance. Please refresh the order.'))
         # Check resolved native M2M links before any provider request is sent.
         # This also covers stale payment dialogs and direct transaction URLs.
         if transactions.sale_order_ids.filtered(
@@ -41,7 +46,9 @@ class PaymentTransaction(models.Model):
         # Apply business consequences before native processing can commit while
         # rendering reports. A persisted native completion flag must not hide a
         # still-pending order change from subsequent polling/cron retries.
-        self.filtered(lambda tx: tx.state == 'done').sale_order_ids.b2b_change_request_ids._on_order_payment_updated()
+        done_orders = self.filtered(lambda tx: tx.state == 'done').sale_order_ids
+        done_orders.filtered('b2b_sample_request_id')._b2b_resolve_safe_demo_payment_conflicts()
+        done_orders.b2b_change_request_ids._on_order_payment_updated()
         result = super()._post_process()
         completed_transactions = self.filtered(
             lambda transaction: transaction.state in ("authorized", "done")
@@ -57,6 +64,7 @@ class PaymentTransaction(models.Model):
             and order.b2b_review_state in ("pending", "ready")
         ).write({"b2b_review_state": "confirmed"})
         completed_orders.mapped("b2b_change_request_ids")._on_order_payment_updated()
+        completed_orders._b2b_sync_sample_state()
         return result
 
     def _cron_post_process(self):
@@ -67,6 +75,11 @@ class PaymentTransaction(models.Model):
             ('state', '=', 'balance_due'), ('order_id.state', '=', 'sale'),
         ])
         changes._on_order_payment_updated()
+        self.env['sale.order'].sudo().search([
+            ('b2b_sample_request_id', '!=', False),
+            ('b2b_sample_request_id.state', '=', 'quotation'),
+            ('state', 'in', ['sale', 'done']),
+        ])._b2b_sync_sample_state()
         return result
 
 
