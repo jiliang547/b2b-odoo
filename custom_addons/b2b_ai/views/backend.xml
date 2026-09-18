@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="website_ai_form" model="ir.ui.view">
+        <field name="name">website.partner.ai.configuration</field><field name="model">website</field>
+        <field name="arch" type="xml"><form string="Customer AI Configuration" create="false" delete="false">
+            <header><button name="action_b2b_ai_preview" type="object" string="Preview Customer Assistant" class="oe_highlight" groups="base.group_system"/><button name="action_b2b_ai_authorize_environment" type="object" string="Authorize AI Calls in This Test Database" groups="base.group_system" invisible="b2b_ai_environment_authorized" confirm="Allow this test database to use the configured OpenAI key? Calls may incur charges."/></header>
+            <sheet><group><field name="name" readonly="1"/><field name="b2b_ai_enabled"/><field name="b2b_ai_environment_authorized"/><field name="b2b_ai_agent_id" options="{'no_create': True}"/></group>
+                <group string="Request limits (UTC day)"><field name="b2b_ai_user_daily_limit"/><field name="b2b_ai_daily_limit"/><field name="b2b_ai_session_limit"/></group>
+                <div class="alert alert-info" role="status">The customer assistant, default agent and existing published FAQs are initialized automatically. To get started, save your OpenAI API key in Native AI Settings. Saving a new key also authorizes this test environment. If this database was copied with an existing key, explicitly authorize it above before making calls. Product document indexing remains an explicit approval step. Keep generic Topics empty. Request limits are not a monetary spending cap.</div>
+            </sheet></form></field>
+    </record>
+    <record id="website_ai_list" model="ir.ui.view"><field name="name">website.partner.ai.list</field><field name="model">website</field><field name="arch" type="xml"><list create="false" delete="false"><field name="name"/><field name="b2b_ai_enabled"/><field name="b2b_ai_agent_id"/></list></field></record>
+    <record id="website_ai_action" model="ir.actions.act_window"><field name="name">Website AI Configuration</field><field name="res_model">website</field><field name="view_mode">list,form</field><field name="view_id" ref="website_ai_list"/></record>
+    <record id="website_ai_action_list" model="ir.actions.act_window.view"><field name="act_window_id" ref="website_ai_action"/><field name="view_mode">list</field><field name="view_id" ref="website_ai_list"/><field name="sequence">1</field></record>
+    <record id="website_ai_action_form" model="ir.actions.act_window.view"><field name="act_window_id" ref="website_ai_action"/><field name="view_mode">form</field><field name="view_id" ref="website_ai_form"/><field name="sequence">2</field></record>
+    <record id="source_list" model="ir.ui.view"><field name="name">b2b.ai.source.list</field><field name="model">b2b.ai.source</field><field name="arch" type="xml"><list><field name="name"/><field name="website_id"/><field name="published"/><field name="index_state"/></list></field></record>
+    <record id="source_form" model="ir.ui.view"><field name="name">b2b.ai.source.form</field><field name="model">b2b.ai.source</field><field name="arch" type="xml"><form>
+        <header><button name="action_index" type="object" string="Index / Reindex Document" invisible="not product_document_id" class="oe_highlight"/></header>
+        <sheet><group><field name="name"/><field name="website_id"/><field name="product_document_id" options="{'no_create': True}"/><field name="faq_id" options="{'no_create': True}"/><field name="published"/><field name="active"/><field name="index_state"/><field name="native_source_id"/><field name="indexed_checksum"/></group>
+            <div class="alert alert-info" role="status">Choose exactly one existing product document or FAQ. Product and document access rules still apply. PDFs must contain selectable text; scanned files require preparation. Indexing sends document content to the configured provider. Updated files require reindexing. FAQ changes are read live.</div>
+        </sheet></form></field></record>
+    <record id="source_action" model="ir.actions.act_window"><field name="name">Approved Knowledge Sources</field><field name="res_model">b2b.ai.source</field><field name="view_mode">list,form</field></record>
+    <record id="session_form" model="ir.ui.view"><field name="name">b2b.ai.session.form</field><field name="model">b2b.ai.session</field><field name="arch" type="xml"><form create="false" edit="false"><sheet><group><field name="name"/><field name="owner_id"/><field name="commercial_partner_id"/><field name="website_id"/><field name="mode"/><field name="revision"/><field name="facts"/></group><field name="turn_ids"><list create="false" edit="false"><field name="create_date"/><field name="state"/><field name="error_code"/><field name="user_text"/></list></field></sheet><chatter/></form></field></record>
+    <record id="session_action" model="ir.actions.act_window"><field name="name">AI Project Diagnostics</field><field name="res_model">b2b.ai.session</field><field name="view_mode">list,form</field></record>
+    <menuitem id="menu_root" name="Partner Hub AI" sequence="60" groups="base.group_system"/>
+    <menuitem id="menu_websites" name="Website AI Configuration" parent="menu_root" action="website_ai_action" sequence="10"/>
+    <menuitem id="menu_sources" name="Approved Knowledge Sources" parent="menu_root" action="source_action" sequence="20"/>
+    <menuitem id="menu_native_settings" name="Native AI Settings" parent="menu_root" action="ai_app.ai_settings_action" sequence="30"/>
+    <menuitem id="menu_projects" name="Project Diagnostics" parent="menu_root" action="session_action" sequence="40"/>
+</odoo>

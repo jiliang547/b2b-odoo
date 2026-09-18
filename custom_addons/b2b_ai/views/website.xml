@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Retain XML IDs on upgrade, but remove the old page and navigation entry. -->
+    <template id="assistant" name="Partner AI Assistant"><a href="/?ai=open">Open AI Assistant</a></template>
+    <template id="header_ai_link" inherit_id="b2b_website.partner_topbar">
+        <xpath expr="//div[hasclass('lt-nav-actions')]" position="inside"><t/></xpath>
+    </template>
+    <template id="floating_assistant" inherit_id="website.layout" name="Partner Floating Assistant">
+        <xpath expr="//div[@id='wrapwrap']" position="inside">
+            <owl-component t-if="website and website.sudo().b2b_ai_enabled" name="b2b_ai.FloatingAssistant"/>
+        </xpath>
+    </template>
+</odoo>

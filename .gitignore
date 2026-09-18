@@ -10,3 +10,7 @@ __pycache__/
 .env*
 !.env.example
 /tmp/pdfs/
+# Private filestore and browser sessions of the disposable AI development DB.
+/output/ai-data/
+/output/ai-install-baseline/
+/output/ai-install-baseline.zip

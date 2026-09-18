@@ -19,3 +19,14 @@ class ResConfigSettings(models.TransientModel):
         config_parameter="b2b_erp.api_token",
         groups="b2b_erp_connector.group_b2b_integration_manager",
     )
+
+    def _get_classified_fields(self, fnames=None):
+        classified = super()._get_classified_fields(fnames)
+        # Native Settings saves every config_parameter, including hidden fields.
+        # A Settings admin without Integration Manager must be able to save
+        # unrelated settings without reading, clearing or exposing the ERP key.
+        if not (self.env.su or self.env.user.has_group("b2b_erp_connector.group_b2b_integration_manager")):
+            classified["config"] = [
+                item for item in classified["config"] if item[0] != "b2b_erp_api_token"
+            ]
+        return classified
