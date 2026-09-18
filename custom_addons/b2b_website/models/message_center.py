@@ -143,6 +143,7 @@ class B2BMessageThread(models.Model):
     )
     last_message_at = fields.Datetime(required=True, index=True, readonly=True)
     last_author_id = fields.Many2one("res.partner", readonly=True)
+    last_author_name = fields.Char(compute="_compute_last_author_name", compute_sudo=False)
     last_message_preview = fields.Char(readonly=True)
     is_unread = fields.Boolean(compute="_compute_is_unread", string="Unread")
 
@@ -150,6 +151,15 @@ class B2BMessageThread(models.Model):
         "UNIQUE(source_model, res_id)",
         "Only one Message Center thread may represent a business record.",
     )
+
+    @api.depends("last_author_id", "last_author_id.name")
+    def _compute_last_author_name(self):
+        # Author labels are public conversation metadata, not permission to
+        # browse the internal address book. Check the thread before elevating
+        # only the name lookup; never sudo the portal's thread search.
+        self.check_access("read")
+        for thread in self:
+            thread.last_author_name = thread.last_author_id.sudo().name or _("System")
 
     @api.model
     def _source_values(self, source):

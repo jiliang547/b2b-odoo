@@ -269,6 +269,24 @@ class TestContactRequestSecurity(TransactionCase):
         with self.assertRaises(AccessError):
             self.contact_request.with_user(self.env.ref("base.public_user")).read(["name"])
 
+    def test_portal_author_label_does_not_require_internal_contact_access(self):
+        self.contact_request.with_user(self.salesperson).message_post(
+            body="Staff reply", message_type="comment", subtype_xmlid="mail.mt_comment",
+        )
+        thread = self.env["b2b.message.thread"].search([
+            ("source_model", "=", "b2b.contact.request"),
+            ("res_id", "=", self.contact_request.id),
+        ])
+        expected_name = self.salesperson.partner_id.name
+        self.env.invalidate_all()
+        with self.assertRaises(AccessError):
+            self.salesperson.partner_id.with_user(self.portal_user).check_access("read")
+        self.assertEqual(thread.with_user(self.portal_user).last_author_name, expected_name)
+        with self.assertRaises(AccessError):
+            self.salesperson.partner_id.with_user(self.portal_user).check_access("read")
+        thread.last_author_id = False
+        self.assertEqual(thread.with_user(self.portal_user).last_author_name, "System")
+
     def test_duplicate_open_company_request_is_rejected(self):
         with self.assertRaises(ValidationError):
             self.env["b2b.contact.request"].create({
