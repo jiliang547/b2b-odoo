@@ -59,8 +59,31 @@ class B2BCollectionCommon(AccountTestInvoicingCommon):
 
     def _online_transaction(self, order, amount, state='pending', provider_code='demo', reference=None):
         if provider_code == 'demo':
-            provider = self.env.ref('payment.payment_provider_demo').sudo().copy({'company_id': self.env.company.id})
-            method = self.env.ref('payment_demo.payment_method_demo')
+            method = self.env.ref('payment.payment_method_card')
+            provider = self.env.ref('payment.payment_provider_demo').sudo().copy({
+                'company_id': self.env.company.id,
+                'journal_id': self.journal.id,
+                'payment_method_ids': [Command.set(method.ids)],
+            })
+            # The base module ships the disabled Demo provider placeholder,
+            # while its provider module is deliberately optional. Build the
+            # minimum accounting fixture here without making production depend
+            # on payment_demo merely to run this regression test.
+            self.env.cr.execute(
+                "UPDATE payment_provider SET code = 'demo', state = 'test' WHERE id = %s",
+                [provider.id],
+            )
+            provider.invalidate_recordset(['code', 'state'])
+            manual_method = self.env['account.payment.method'].search([
+                ('code', '=', 'manual'), ('payment_type', '=', 'inbound'),
+            ], limit=1)
+            self.env['account.payment.method.line'].create({
+                'name': 'Demo Test Receipt',
+                'payment_method_id': manual_method.id,
+                'journal_id': self.journal.id,
+                'payment_provider_id': provider.id,
+                'payment_account_id': self.company_data['default_account_assets'].id,
+            })
         else:
             provider = self.env.ref('payment.payment_provider_transfer').sudo().copy({'company_id': self.env.company.id})
             method = self.env.ref('payment_custom.payment_method_wire_transfer')
@@ -70,7 +93,7 @@ class B2BCollectionCommon(AccountTestInvoicingCommon):
             'reference': reference or 'COLLECTION-%s-%s' % (provider_code.upper(), order.id),
             'amount': amount,
             'currency_id': order.currency_id.id,
-            'partner_id': self.customer.id,
+            'partner_id': order.partner_id.id,
             'operation': 'online_direct',
             'state': state,
             'sale_order_ids': [Command.set(order.ids)],
@@ -79,6 +102,56 @@ class B2BCollectionCommon(AccountTestInvoicingCommon):
 
 @tagged('post_install', '-at_install')
 class TestB2BCollection(B2BCollectionCommon):
+    def _sample_order(self):
+        sample = self.env['b2b.sample.request'].create({
+            'website_id': self.website.id,
+            'partner_id': self.customer.id,
+            'contact_id': self.portal_user.partner_id.id,
+            'contact_name': self.portal_user.name,
+            'company_name': self.customer.name,
+            'email': 'sample-payment@example.test',
+            'phone': '+1 555 0101',
+            'shipping_address': '1 Sample Payment Street',
+            'reason': 'Payment workflow regression',
+            'line_ids': [Command.create({
+                'product_id': self.product.id,
+                'quantity': 1,
+                'uom_id': self.product.uom_id.id,
+            })],
+        })
+        sample.action_submit()
+        sample.action_approve()
+        return sample, sample.sale_order_id
+
+    def test_sample_pending_payment_blocks_duplicate_transaction(self):
+        _sample, order = self._sample_order()
+        pending = self._online_transaction(
+            order, order.amount_total, reference='SAMPLE-PENDING-%s' % order.id,
+        )
+        with self.assertRaisesRegex(ValidationError, 'Another payment is being processed'):
+            self._online_transaction(
+                order, order.amount_total, reference='SAMPLE-DUPLICATE-%s' % order.id,
+            )
+        self.assertEqual(pending.state, 'pending')
+
+    def test_completed_sample_payment_recovers_and_closes_legacy_demo_pending(self):
+        sample, order = self._sample_order()
+        pending = self._online_transaction(
+            order, order.amount_total, reference='SAMPLE-LEGACY-PENDING-%s' % order.id,
+        )
+        completed = self._online_transaction(
+            order, order.amount_total, state='done',
+            reference='SAMPLE-RECOVERY-%s' % order.id,
+        )
+
+        completed.with_user(self.portal_user).sudo()._post_process()
+
+        self.assertEqual(completed.state, 'done')
+        self.assertTrue(completed.is_post_processed)
+        self.assertEqual(pending.state, 'cancel')
+        self.assertEqual(order.state, 'sale')
+        self.assertEqual(sample.state, 'order_confirmed')
+
     def test_bank_receipt_closes_pending_demo_transaction(self):
         order = self._order()
         pending = self._online_transaction(order, 100, reference='DEMO-BEFORE-BANK-%s' % order.id)
@@ -148,15 +221,9 @@ class TestB2BCollection(B2BCollectionCommon):
         first = order._b2b_quote_token()
         order.order_line.price_unit = 120
         self.assertNotEqual(first, order._b2b_quote_token())
-        provider = self.env.ref('payment.payment_provider_demo').sudo().copy({'company_id': self.env.company.id})
-        self.env['payment.transaction'].create({
-            'provider_id': provider.id,
-            'payment_method_id': self.env.ref('payment_demo.payment_method_demo').id,
-            'reference': 'UAT-PENDING-%s' % order.id, 'amount': 24,
-            'currency_id': order.currency_id.id, 'partner_id': self.customer.id,
-            'operation': 'online_direct', 'state': 'pending',
-            'sale_order_ids': [Command.set(order.ids)],
-        })
+        self._online_transaction(
+            order, 24, reference='UAT-PENDING-%s' % order.id,
+        )
         with self.assertRaises(UserError), self.env.cr.savepoint():
             order.order_line.price_unit = 130
         self.assertEqual(order.amount_total, 120)
@@ -338,13 +405,9 @@ class TestB2BCollection(B2BCollectionCommon):
 
     def test_online_deposit_refund_requires_actual_evidence(self):
         order = self._order('b30')
-        provider = self.env.ref('payment.payment_provider_demo').sudo().copy({'company_id': self.env.company.id})
-        payment = self.env['payment.transaction'].create({
-            'provider_id': provider.id, 'payment_method_id': self.env.ref('payment_demo.payment_method_demo').id,
-            'reference': 'COLLECTION-ONLINE-%s' % order.id, 'amount': 30,
-            'currency_id': order.currency_id.id, 'partner_id': self.customer.id,
-            'operation': 'online_direct', 'state': 'done', 'sale_order_ids': [Command.set(order.ids)],
-        })
+        payment = self._online_transaction(
+            order, 30, state='done', reference='COLLECTION-ONLINE-%s' % order.id,
+        )
         order.action_confirm()
         change = self.env['b2b.order.change.request'].create({'order_id': order.id, 'requested_changes': 'Reduce to 20.'})
         change.action_start_review()
@@ -358,7 +421,7 @@ class TestB2BCollection(B2BCollectionCommon):
         self.assertEqual(order._b2b_received_amount(), 30)
         self.assertFalse(order._b2b_can_ship())
         refund = self.env['payment.transaction'].create({
-            'provider_id': provider.id, 'payment_method_id': payment.payment_method_id.id,
+            'provider_id': payment.provider_id.id, 'payment_method_id': payment.payment_method_id.id,
             'reference': 'COLLECTION-REFUND-%s' % order.id, 'amount': -10,
             'currency_id': order.currency_id.id, 'partner_id': self.customer.id,
             'operation': 'refund', 'state': 'done', 'source_transaction_id': payment.id,
@@ -636,8 +699,18 @@ class TestB2BCollection(B2BCollectionCommon):
 
     def test_authorized_online_payment_not_received(self):
         order = self._order()
-        provider = self.env.ref('payment.payment_provider_demo').sudo().copy({'company_id': self.env.company.id})
-        self.env['payment.transaction'].create({'provider_id': provider.id, 'payment_method_id': self.env.ref('payment_demo.payment_method_demo').id, 'reference': 'COLLECTION-AUTH-%s' % order.id, 'amount': 100, 'currency_id': order.currency_id.id, 'partner_id': self.customer.id, 'operation': 'online_direct', 'state': 'authorized', 'sale_order_ids': [Command.set(order.ids)]})
+        transaction = self._online_transaction(
+            order, 100, reference='COLLECTION-AUTH-%s' % order.id,
+        )
+        # Authorization support belongs to each optional provider module. This
+        # accounting test only needs the native state semantics, so create the
+        # fixture as pending and move it to authorized without pretending the
+        # optional Demo provider supports capture in a minimal test database.
+        self.env.cr.execute(
+            "UPDATE payment_transaction SET state = 'authorized' WHERE id = %s",
+            [transaction.id],
+        )
+        transaction.invalidate_recordset(['state'])
         self.assertEqual(order.b2b_net_received, 0)
         self.assertFalse(order._is_confirmation_amount_reached())
 

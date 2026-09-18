@@ -312,7 +312,9 @@ class SaleOrder(models.Model):
     def _b2b_start_collection(self):
         if self._b2b_loading_native_demo():
             return
-        for order in self.filtered(lambda o: o.website_id and o.state in ('draft', 'sent') and not o.b2b_is_change_revision and not o.b2b_collection_active):
+        for order in self.filtered(lambda o: o.website_id and o.state in ('draft', 'sent')
+                                   and not o.b2b_is_change_revision and not o.b2b_sample_request_id
+                                   and not o.b2b_collection_active):
             order._b2b_lock_collection()
             if not order.b2b_collection_active:
                 super(SaleOrder, order).write(order._b2b_collection_defaults())

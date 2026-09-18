@@ -1,4 +1,4 @@
-from odoo import SUPERUSER_ID, _, api, fields, models
+from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, UserError
 
 
@@ -62,11 +62,13 @@ class SaleOrder(models.Model):
         product = self.env["product.product"].browse(product_id).exists()
         service = self.env["b2b.product.service"]
         if self._b2b_is_trusted_payment_confirmation():
-            # The transaction/order/customer relationship was verified above.
-            # Change the policy evaluator's user rather than globally bypassing
-            # the catalog rules for normal portal requests.
-            service = service.with_user(SUPERUSER_ID)
-            product = product.with_user(SUPERUSER_ID)
+            # The transaction/order/customer relationship was verified above
+            # and the customer is paying an already-issued quotation. Do not
+            # re-apply today's catalog publication policy to that frozen order:
+            # a product may have been unpublished after the quotation was
+            # approved. Normal cart edits and direct confirmations still pass
+            # through the policy checks below.
+            return
         if not product or not service.is_visible(
             product.product_tmpl_id,
             partner=self.partner_id,

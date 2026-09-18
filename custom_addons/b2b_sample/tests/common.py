@@ -10,6 +10,10 @@ class SampleCase(TransactionCase):
         cls.company = cls.env["res.partner"].create({
             "name": "Sample Customer", "is_company": True, "b2b_approved": True
         })
+        cls.pricelist = cls.env["product.pricelist"].create({
+            "name": "Sample Shared Pricelist", "company_id": False,
+        })
+        cls.company.property_product_pricelist = cls.pricelist
         cls.contact = cls.env["res.partner"].create({
             "name": "Sample Contact", "parent_id": cls.company.id, "email": "sample@example.com"
         })

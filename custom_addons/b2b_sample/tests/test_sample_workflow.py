@@ -27,6 +27,7 @@ class TestSampleWorkflow(SampleCase):
         self.assertEqual(managed_sample.sale_order_id.state, "sent")
         self.assertTrue(managed_sample.sale_order_id.require_payment)
         self.assertEqual(managed_sample.sale_order_id.prepayment_percent, 1.0)
+        self.assertEqual(managed_sample.sale_order_id.website_id, managed_sample.website_id)
         self.assertEqual(managed_sample.sale_order_id.b2b_sample_request_id, managed_sample)
         self.assertEqual(managed_sample.erp_job_count, 0)
         with self.assertRaises(UserError):
@@ -57,3 +58,17 @@ class TestSampleWorkflow(SampleCase):
             managed_sample.erp_job_ids.idempotency_key,
             "sales_order:%s" % managed_sample.sale_order_id.b2b_integration_key,
         )
+
+    def test_portal_payment_context_can_complete_sample_workflow(self):
+        self.env["ir.config_parameter"].sudo().set_param("b2b_erp.enabled", "False")
+        sample = self.env["b2b.sample.request"].with_user(self.portal_user).create(
+            self.sample_values()
+        )
+        managed_sample = sample.with_user(self.manager)
+        managed_sample.action_approve()
+
+        # Payment status polling keeps the portal uid on a sudoed transaction.
+        managed_sample.sale_order_id.with_user(self.portal_user).sudo().action_confirm()
+
+        self.assertEqual(managed_sample.sale_order_id.state, "sale")
+        self.assertEqual(managed_sample.state, "order_confirmed")
