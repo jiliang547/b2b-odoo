@@ -16,8 +16,8 @@
                         <div class="row mt8"><label class="col-lg-3" for="b2b_social_linkedin"/><field name="b2b_social_linkedin" placeholder="https://www.linkedin.com/company/yourcompany"/></div>
                     </div>
                 </setting>
-                <setting string="Partner Hub Helpdesk team" help="New repair and replacement requests are assigned to this team.">
-                    <field name="b2b_helpdesk_team_id" options="{'no_create': True}"/>
+                <setting string="Partner Hub service routing" help="Repair and replacement requests follow the original order's selling company. A Partner Support team is created automatically for each seller when needed.">
+                    <div class="text-muted">Manage requests in Helpdesk or B2B Management. Select the companies you are responsible for in the company selector.</div>
                 </setting>
             </block>
         </field>

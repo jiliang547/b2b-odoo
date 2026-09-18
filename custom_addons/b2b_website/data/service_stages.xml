@@ -1,0 +1,11 @@
+<odoo noupdate="1">
+    <record id="service_submitted" model="helpdesk.stage"><field name="name">Submitted</field><field name="sequence">10</field><field name="b2b_service_step">submitted</field></record>
+    <record id="service_review" model="helpdesk.stage"><field name="name">Under Review</field><field name="sequence">20</field><field name="b2b_service_step">review</field></record>
+    <record id="service_approved" model="helpdesk.stage"><field name="name">Awaiting Customer Shipment</field><field name="sequence">30</field><field name="b2b_service_step">approved</field></record>
+    <record id="service_transit" model="helpdesk.stage"><field name="name">Return in Transit</field><field name="sequence">40</field><field name="b2b_service_step">transit</field></record>
+    <record id="service_received" model="helpdesk.stage"><field name="name">Received</field><field name="sequence">50</field><field name="b2b_service_step">received</field></record>
+    <record id="service_processing" model="helpdesk.stage"><field name="name">Inspection / Repair / Replacement</field><field name="sequence">60</field><field name="b2b_service_step">processing</field></record>
+    <record id="service_shipped" model="helpdesk.stage"><field name="name">Shipped Back</field><field name="sequence">70</field><field name="b2b_service_step">shipped</field></record>
+    <record id="service_completed" model="helpdesk.stage"><field name="name">Completed</field><field name="sequence">80</field><field name="fold" eval="True"/><field name="b2b_service_step">completed</field></record>
+    <record id="service_rejected" model="helpdesk.stage"><field name="name">Rejected</field><field name="sequence">90</field><field name="fold" eval="True"/><field name="b2b_service_step">rejected</field></record>
+</odoo>

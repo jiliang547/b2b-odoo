@@ -1,4 +1,5 @@
 from . import helpdesk_ticket
+from . import service_native
 from . import contact_request
 from . import payment_transaction
 from . import res_config_settings
@@ -12,6 +13,7 @@ from . import registration_application
 from . import order_change
 from . import portal_terms
 from . import portal_errors
+from . import message_center
 from . import collection_policy
 from . import order_collection
 from . import bank_receipt

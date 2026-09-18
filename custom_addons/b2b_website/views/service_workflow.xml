@@ -1,0 +1,77 @@
+<odoo>
+    <record id="service_workflow_form" model="ir.ui.view">
+        <field name="name">Partner service workflow</field><field name="model">helpdesk.ticket</field>
+        <field name="inherit_id" ref="helpdesk.helpdesk_ticket_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <field name="b2b_service_step" invisible="1"/>
+                <button name="action_b2b_review" type="object" string="Review Request" invisible="b2b_service_step != 'submitted'"/>
+                <button name="action_b2b_approve" type="object" string="Approve Return" invisible="b2b_service_step != 'review'"/>
+                <button name="action_b2b_reject" type="object" string="Reject Request" invisible="b2b_service_step not in ['submitted', 'review']"/>
+                <button name="action_b2b_received" type="object" string="Confirm Return Received" invisible="b2b_service_step != 'transit'"/>
+                <button name="action_b2b_process" type="object" string="Start Inspection / Resolution" invisible="b2b_service_step != 'received'"/>
+                <button name="action_b2b_ship" type="object" string="Confirm Shipped Back" invisible="b2b_service_step != 'processing'"/>
+                <button name="action_b2b_complete" type="object" string="Complete Service" invisible="b2b_service_step != 'shipped'" confirm="Confirm that the customer has received the shipment and the service request is resolved?"/>
+            </xpath>
+            <xpath expr="//sheet" position="inside">
+                <group string="Return and Resolution" invisible="not b2b_service_step">
+                    <group string="Approval"><field name="b2b_fulfilment_mode"/><field name="b2b_return_instructions" placeholder="Customer-facing return address, recipient, telephone and packing instructions"/><field name="b2b_return_deadline"/></group>
+                    <group string="Customer Shipment"><field name="b2b_return_carrier" readonly="1"/><field name="b2b_return_tracking" readonly="1"/><field name="b2b_return_date" readonly="1"/></group>
+                    <group string="Receipt and Resolution"><field name="b2b_receipt_note" placeholder="Received quantity, serial number and condition"/><field name="b2b_resolution_note" placeholder="Customer-facing resolution or reason for rejection"/></group>
+                    <group string="Ship Back"><field name="b2b_outbound_carrier"/><field name="b2b_outbound_tracking"/><field name="b2b_outbound_date"/></group>
+                </group>
+                <div class="alert alert-info" role="status" invisible="not b2b_service_step or b2b_fulfilment_mode != 'external'">Record confirmed receipt and dispatch information from your warehouse or ERP here. Customer progress changes only when you confirm the corresponding action.</div>
+            </xpath>
+        </field>
+    </record>
+    <template id="service_portal_workflow" inherit_id="helpdesk.tickets_followup">
+        <xpath expr="//div[@id='card_body']" position="inside">
+            <section t-if="ticket.b2b_service_step" class="lt-form-card my-4 p-4">
+                <h3>Return &amp; Service Progress</h3>
+                <p>Service reference: <strong t-out="ticket.ticket_ref"/></p>
+                <p><span class="lt-status-badge" t-out="ticket.stage_id.name"/></p>
+                <p t-if="ticket.b2b_service_step in ('submitted', 'review')">Our team is reviewing your request. Please wait for return approval before shipping any goods.</p>
+                <div t-if="request.params.get('service_error')" class="alert alert-warning" role="alert" t-out="request.params.get('service_error')"/>
+                <div t-if="request.params.get('return_submitted')" class="alert alert-success" role="status">Your return shipment details have been recorded.</div>
+                <t t-if="ticket.b2b_return_instructions and ticket.b2b_service_step not in ('submitted', 'review', 'rejected')">
+                    <h4>Return instructions</h4><p style="white-space: pre-line" t-out="ticket.b2b_return_instructions"/>
+                    <p t-if="ticket.b2b_return_deadline">Please ship by <span t-field="ticket.b2b_return_deadline"/>. If you need more time, message our team.</p>
+                </t>
+                <form t-if="ticket.b2b_service_step == 'approved' and not request.env.user._is_public() and ticket.partner_id.commercial_partner_id == request.env.user.partner_id.commercial_partner_id" t-att-action="'/my/service/%s/tracking' % ticket.id" method="post" data-lt-submit-once="">
+                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                    <div class="lt-form-grid">
+                        <div class="lt-field"><label for="return-carrier">Carrier</label><input id="return-carrier" name="carrier" maxlength="120" required="required"/></div>
+                        <div class="lt-field"><label for="return-tracking">Tracking number</label><input id="return-tracking" name="tracking" maxlength="160" required="required"/></div>
+                        <div class="lt-field"><label for="return-date">Shipment date</label><input id="return-date" name="shipped_on" type="date" required="required"/></div>
+                    </div>
+                    <div class="lt-form-submit mt-3"><button class="lt-btn lt-btn--blue" type="submit">Submit Return Shipment</button></div>
+                </form>
+                <t t-if="ticket.b2b_return_tracking"><h4>Your return shipment</h4><p><span t-out="ticket.b2b_return_carrier"/> · <strong t-out="ticket.b2b_return_tracking"/> · <span t-field="ticket.b2b_return_date"/></p></t>
+                <t t-if="ticket.b2b_resolution_note and ticket.b2b_service_step in ('rejected', 'shipped', 'completed')"><h4>Resolution</h4><p style="white-space: pre-line" t-out="ticket.b2b_resolution_note"/></t>
+                <t t-if="ticket.b2b_service_step in ('shipped', 'completed')"><h4>Shipment back to you</h4><p><span t-out="ticket.b2b_outbound_carrier"/> · <strong t-out="ticket.b2b_outbound_tracking"/> · <span t-field="ticket.b2b_outbound_date"/></p></t>
+                <p class="mt-3"><a href="/service-center">Back to Service Center</a></p>
+            </section>
+        </xpath>
+    </template>
+    <template id="service_center_labels" inherit_id="b2b_website.service_center">
+        <xpath expr="//span[.='In Progress']" position="replace"><span>Assigned</span></xpath>
+        <xpath expr="//span[.='Resolved']" position="replace"><span>Closed</span></xpath>
+        <xpath expr="//span[.='Unassigned']" position="replace"><span>Awaiting Assignment</span></xpath>
+        <xpath expr="//div[hasclass('lt-request-list')]" position="after"><div t-if="pager" class="my-3"><t t-call="portal.pager"/></div></xpath>
+    </template>
+    <record id="service_external_stock_buttons" model="ir.ui.view">
+        <field name="name">Partner external service stock actions</field><field name="model">helpdesk.ticket</field>
+        <field name="inherit_id" ref="helpdesk_stock.helpdesk_ticket_view_form_inherit_stock_user"/>
+        <field name="arch" type="xml">
+            <xpath expr="//button[@name='%(stock.act_stock_return_picking)d']" position="attributes"><attribute name="invisible">not use_product_returns or (b2b_service_step and b2b_fulfilment_mode == 'external')</attribute></xpath>
+            <xpath expr="//button[@name='action_create_replacement']" position="attributes"><attribute name="invisible">not use_product_replacements or not partner_id or (b2b_service_step and b2b_fulfilment_mode == 'external')</attribute></xpath>
+        </field>
+    </record>
+    <record id="service_external_repair_button" model="ir.ui.view">
+        <field name="name">Partner external service repair action</field><field name="model">helpdesk.ticket</field>
+        <field name="inherit_id" ref="helpdesk_repair.helpdesk_ticket_view_form_inherit_stock_user"/>
+        <field name="arch" type="xml">
+            <xpath expr="//button[@name='action_repair_order_form']" position="attributes"><attribute name="invisible">not use_product_repairs or (b2b_service_step and b2b_fulfilment_mode == 'external')</attribute></xpath>
+        </field>
+    </record>
+</odoo>

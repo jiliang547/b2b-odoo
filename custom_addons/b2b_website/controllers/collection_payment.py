@@ -11,6 +11,10 @@ class CollectionSalePortal(CustomerPortal):
             order = self._document_check_access('sale.order', order_id, access_token=access_token)
         except (AccessError, MissingError):
             return super().portal_order_page(order_id, payment_amount=payment_amount, access_token=access_token, **kw)
+        order.env["b2b.message.thread"].sudo().search([
+            ("source_model", "=", "sale.order"),
+            ("res_id", "=", order.id),
+        ]).action_mark_read(order.env.user.partner_id)
         if order.b2b_collection_active:
             # Native route validates a requested amount against the original
             # entire deposit. Resolve remaining dues through our shared payment

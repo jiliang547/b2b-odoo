@@ -99,6 +99,10 @@ class PartnerHubPortal(CustomerPortal):
         company = request.env.user.partner_id.commercial_partner_id
         return [("commercial_partner_id", "=", company.id)]
 
+    def _message_thread_domain(self):
+        company = request.env.user.partner_id.commercial_partner_id
+        return [("commercial_partner_id", "=", company.id)]
+
     def _prepare_home_portal_values(self, counters):
         values = super()._prepare_home_portal_values(counters)
         contact = request.env.user.partner_id
@@ -135,7 +139,9 @@ class PartnerHubPortal(CustomerPortal):
         # current portal user; no demo counters or sudoed records are exposed.
         dashboard_values = {
             "sample_count": Sample.search_count(self._sample_domain()),
-            "inquiry_count": Inquiry.search_count(self._inquiry_domain()),
+            "inquiry_count": request.env["b2b.message.thread"].search_count(
+                self._message_thread_domain()
+            ),
             "order_count": Order.search_count(sale_domain) if can_read_orders else 0,
             "quotation_count": (
                 Order.search_count(quotation_domain) if can_read_orders else 0
@@ -255,6 +261,10 @@ class PartnerHubPortal(CustomerPortal):
     )
     def portal_order_change(self, change_id, **kwargs):
         change = self._portal_change_sudo(change_id)
+        request.env["b2b.message.thread"].sudo().search([
+            ("source_model", "=", "b2b.order.change.request"),
+            ("res_id", "=", change.id),
+        ]).action_mark_read(request.env.user.partner_id)
         values = self._prepare_portal_layout_values()
         values.update({
             "change": change,
@@ -301,48 +311,69 @@ class PartnerHubPortal(CustomerPortal):
         return request.redirect("/my/order-changes/%s" % change.id)
 
     @route(
-        ["/my/inquiries", "/my/inquiries/page/<int:page>"],
+        [
+            "/my/inquiries",
+            "/my/inquiries/page/<int:page>",
+            "/my/messages",
+            "/my/messages/page/<int:page>",
+        ],
         type="http", auth="user", website=True,
     )
     def portal_inquiries(self, page=1, **kwargs):
-        Inquiry = request.env["b2b.contact.request"]
-        domain = self._inquiry_domain()
+        Thread = request.env["b2b.message.thread"]
+        domain = self._message_thread_domain()
         search = (kwargs.get("search") or "").strip()[:120]
-        state = (kwargs.get("state") or "").strip()
+        source_model = (kwargs.get("source_model") or "").strip()
         if search:
             domain += [
-                "|", "|",
+                "|", "|", "|",
                 ("name", "ilike", search),
                 ("subject", "ilike", search),
-                ("message", "ilike", search),
+                ("last_message_preview", "ilike", search),
+                ("partner_id", "ilike", search),
             ]
-        allowed_states = dict(Inquiry._fields["state"].selection)
-        if state in allowed_states:
-            domain.append(("state", "=", state))
-        total = Inquiry.search_count(domain)
+        allowed_models = dict(Thread._fields["source_model"].selection)
+        if source_model in allowed_models:
+            domain.append(("source_model", "=", source_model))
+        total = Thread.search_count(domain)
         pager = portal_pager(
             url="/my/inquiries",
-            url_args={"search": search, "state": state},
+            url_args={"search": search, "source_model": source_model},
             total=total,
             page=max(page, 1),
             step=20,
         )
-        inquiries = Inquiry.search(
-            domain, order="create_date desc", limit=20, offset=pager["offset"]
+        threads = Thread.search(
+            domain, order="last_message_at desc", limit=20, offset=pager["offset"]
         )
-        request.session["my_inquiries_history"] = inquiries.ids[:100]
         values = self._prepare_portal_layout_values()
         values.update({
-            "inquiries": inquiries,
+            "threads": threads,
             "pager": pager,
             "page_name": "inquiries",
             "default_url": "/my/inquiries",
             "search": search,
-            "selected_state": state,
-            "inquiry_states": allowed_states,
+            "selected_source_model": source_model,
+            "message_source_models": allowed_models,
             "inquiry_total": total,
         })
         return request.render("b2b_website.portal_my_inquiries", values)
+
+    @route("/my/messages/<int:thread_id>/open", type="http", auth="user", website=True)
+    def portal_message_thread_open(self, thread_id, **kwargs):
+        company = request.env.user.partner_id.commercial_partner_id
+        thread = request.env["b2b.message.thread"].sudo().browse(thread_id).exists()
+        if not thread or thread.commercial_partner_id != company:
+            raise NotFound()
+        thread.action_mark_read(request.env.user.partner_id)
+        routes = {
+            "b2b.contact.request": "/my/inquiries/%s",
+            "sale.order": "/my/orders/%s",
+            "b2b.sample.request": "/my/sample-requests/%s",
+            "helpdesk.ticket": "/my/ticket/%s",
+            "b2b.order.change.request": "/my/order-changes/%s",
+        }
+        return request.redirect(routes[thread.source_model] % thread.res_id)
 
     @route("/my/inquiries/<int:inquiry_id>", type="http", auth="user", website=True)
     def portal_inquiry(self, inquiry_id, **kwargs):
@@ -356,6 +387,10 @@ class PartnerHubPortal(CustomerPortal):
         # Mark this conversation read before rendering so the shared header
         # badge immediately reflects the Odoo notification state.
         inquiry.message_ids.set_message_done()
+        request.env["b2b.message.thread"].sudo().search([
+            ("source_model", "=", "b2b.contact.request"),
+            ("res_id", "=", inquiry.id),
+        ]).action_mark_read(request.env.user.partner_id)
         values = self._prepare_portal_layout_values()
         values.update({
             "inquiry": inquiry,
@@ -420,6 +455,10 @@ class PartnerHubPortal(CustomerPortal):
         sample = request.env["b2b.sample.request"].browse(sample_id).exists()
         if not sample or sample.commercial_partner_id != company:
             raise NotFound()
+        request.env["b2b.message.thread"].sudo().search([
+            ("source_model", "=", "b2b.sample.request"),
+            ("res_id", "=", sample.id),
+        ]).action_mark_read(request.env.user.partner_id)
         values = self._prepare_portal_layout_values()
         values.update({
             "sample": sample,
