@@ -91,7 +91,10 @@ class TestPartnerAI(TransactionCase):
             turn = session.turn_ids
             turn.state = "running"
             session.active = False
-            self.env["b2b.ai.turn"]._run_claimed(turn)
+            with self.assertLogs("odoo.addons.b2b_ai.models.service", level="WARNING") as logs:
+                self.env["b2b.ai.turn"]._run_claimed(turn)
+            self.assertEqual([record.getMessage() for record in logs.records],
+                             [f"Partner Hub AI request {turn.id} failed (AccessError)"])
             self.assertEqual(turn.state, "failed")
             call.assert_not_called()
 
@@ -103,7 +106,10 @@ class TestPartnerAI(TransactionCase):
         turn.state = "running"
         with patch.object(type(self.website), "_b2b_ai_ready", return_value="key_required"), \
                 patch.object(type(self.service), "_json_call") as call:
-            self.env["b2b.ai.turn"]._run_claimed(turn)
+            with self.assertLogs("odoo.addons.b2b_ai.models.service", level="WARNING") as logs:
+                self.env["b2b.ai.turn"]._run_claimed(turn)
+            self.assertEqual([record.getMessage() for record in logs.records],
+                             [f"Partner Hub AI request {turn.id} failed (AccessError)"])
             self.assertEqual(turn.state, "failed")
             call.assert_not_called()
 
@@ -217,7 +223,11 @@ class TestPartnerAI(TransactionCase):
         with patch.object(type(self.website), "_b2b_ai_ready", return_value="ready"), \
                 patch.object(type(self.service), "_json_call", side_effect=UserError("secret provider error")), \
                 patch.object(type(self.service), "_cards", return_value=[]):
-            result = self._ask(session, self.website, "Need speaker", "test-request-00003", 0)
+            # Capture expected failure logs without hiding real runtime warnings.
+            with self.assertLogs("odoo.addons.b2b_ai.models.service", level="WARNING") as logs:
+                result = self._ask(session, self.website, "Need speaker", "test-request-00003", 0)
+        self.assertEqual([record.getMessage() for record in logs.records],
+                         [f"Partner Hub AI request {session.turn_ids.id} failed (UserError)"])
         self.assertEqual(session.turn_ids.state, "failed")
         self.assertNotIn("secret provider", json.dumps(result))
 
@@ -241,7 +251,10 @@ class TestPartnerAI(TransactionCase):
         with patch.object(type(self.website), "_b2b_ai_ready", return_value="ready"), \
                 patch.object(type(self.service), "_json_call", side_effect=ValueError("test")), \
                 patch.object(type(self.service), "_cards", return_value=[]):
-            self._ask(session, self.website, "Need speaker", "test-request-00004", 0)
+            with self.assertLogs("odoo.addons.b2b_ai.models.service", level="WARNING") as logs:
+                self._ask(session, self.website, "Need speaker", "test-request-00004", 0)
+            self.assertEqual([record.getMessage() for record in logs.records],
+                             [f"Partner Hub AI request {session.turn_ids.id} failed (ValueError)"])
             session.active = False
             second = self._project()
             with self.assertRaisesRegex(UserError, "daily assistant limit"):
