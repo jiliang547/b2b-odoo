@@ -1,6 +1,7 @@
 /** @odoo-module **/
 import { Component, onMounted, onWillUnmount, useEffect, useRef, useState } from "@odoo/owl";
 import { registry } from "@web/core/registry";
+import { WebsiteNavigator } from "@b2b_ai/navigation";
 
 const STORAGE = "partner-hub-ai-window-v2";
 const FACTS = ["application", "location", "zones", "mounting", "environment", "network", "model", "requirements"];
@@ -24,12 +25,15 @@ export class FloatingAssistant extends Component {
             if (event.target.closest?.('a[href^="/web/session/logout"]')) this.clearPrivateState();
         };
         onMounted(() => {
+            this.navigator = new WebsiteNavigator(this);
+            this.navigator.start();
             window.addEventListener("focus", this.focus);
             document.addEventListener("click", this.logout, true);
             this.run(async () => { await this.bootstrap(true); if (this.state.open && this.state.signedIn) await this.restore(); });
             this.timer = setInterval(() => this.poll(), 4000);
         });
         onWillUnmount(() => {
+            this.navigator?.stop();
             this.destroyed = true; clearInterval(this.timer);
             window.removeEventListener("focus", this.focus); document.removeEventListener("click", this.logout, true);
         });

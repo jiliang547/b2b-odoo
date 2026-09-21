@@ -53,7 +53,7 @@ class TestContactRequestSecurity(TransactionCase):
         self.assertEqual(len(thread), 1)
         self.assertEqual(thread.partner_id, self.contact)
         self.assertEqual(thread.commercial_partner_id, self.company)
-        self.assertEqual(thread.company_id, self.website.company_id)
+        self.assertFalse(thread.company_id)
         self.assertEqual(thread.last_message_id.model, "b2b.contact.request")
         self.assertEqual(thread.last_message_id.res_id, self.contact_request.id)
 
@@ -77,6 +77,40 @@ class TestContactRequestSecurity(TransactionCase):
             .get_backend_unread_message_count(),
             1,
         )
+
+    def test_company_review_shared_across_selected_companies(self):
+        other = self.env["res.company"].create({"name": "Review Queue Other Seller"})
+        self.salesperson.company_ids |= other
+        staff = self.salesperson.with_context(allowed_company_ids=[other.id])
+        threads = self.env["b2b.message.thread"].with_user(staff).with_context(allowed_company_ids=[other.id])
+        thread = threads.search([("source_model", "=", "b2b.contact.request"), ("res_id", "=", self.contact_request.id)])
+        self.assertEqual(len(thread), 1)
+        self.assertEqual(threads.get_backend_unread_message_count(), 1)
+        thread.action_mark_read()
+        self.assertEqual(threads.get_backend_unread_message_count(), 0)
+        # Reading is not processing: the shared queue still contains the request.
+        self.assertEqual(self.env["b2b.contact.request"].with_user(staff).search_count([
+            ("id", "=", self.contact_request.id), ("request_type", "=", "company_change"),
+            ("state", "in", ["new", "in_progress"]),
+        ]), 1)
+
+    def test_non_manager_cannot_complete_or_reclassify_company_review(self):
+        request = self.contact_request.with_user(self.salesperson)
+        for values in ({"state": "resolved"}, {"state": "closed"}, {"request_type": "sales", "state": "resolved"}):
+            with self.assertRaises(AccessError):
+                request.write(values)
+        with self.assertRaises(AccessError):
+            request.action_resolve()
+
+    def test_non_company_inquiry_remains_company_scoped(self):
+        self.contact_request.write({"request_type": "sales"})
+        thread = self.env["b2b.message.thread"].search([
+            ("source_model", "=", "b2b.contact.request"), ("res_id", "=", self.contact_request.id),
+        ])
+        self.assertEqual(thread.company_id, self.website.company_id)
+        other = self.env["res.company"].create({"name": "Other Inquiry Seller"})
+        self.salesperson.company_ids |= other
+        self.assertFalse(thread.with_user(self.salesperson).with_context(allowed_company_ids=[other.id]).search([("id", "=", thread.id)]))
 
     def test_internal_note_does_not_enter_message_center(self):
         thread = self.env["b2b.message.thread"].search([

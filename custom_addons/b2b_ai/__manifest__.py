@@ -1,7 +1,7 @@
 {
     "name": "Partner Hub AI",
     "summary": "Permission-aware product advice and verified knowledge for Partner Hub customers",
-    "version": "19.0.1.2.0",
+    "version": "19.0.1.3.0",
     "category": "Website",
     "author": "Lucky Tone",
     "license": "LGPL-3",
@@ -17,6 +17,8 @@
     ],
     "assets": {"web.assets_frontend": [
         "b2b_ai/static/src/assistant.css",
+        "b2b_ai/static/src/navigation_policy.js",
+        "b2b_ai/static/src/navigation.js",
         "b2b_ai/static/src/assistant.js",
         "b2b_ai/static/src/assistant.xml",
     ]},

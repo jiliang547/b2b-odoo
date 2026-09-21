@@ -4,6 +4,7 @@
         <div class="o_b2b_dashboard">
             <header><div><span>OPERATIONS</span><h1>B2B Management</h1><p>Partner approvals, samples, service and integration exceptions.</p></div><a class="btn btn-primary" href="/" target="_blank">Open Partner Hub</a></header>
             <section class="o_b2b_metrics" aria-label="Operational metrics">
+                <button type="button" t-on-click="() => this.openAction('b2b_management.action_b2b_pending_company_changes')"><span class="is-amber">Pending company changes</span><strong t-out="state.loading ? '—' : state.pendingCompanyChanges"/><small>Shared queue · New and in progress</small></button>
                 <button t-if="state.canReviewFinance" type="button" t-on-click="() => this.openAction('b2b_website.action_bank_receipts')"><span class="is-amber">Bank transfer reviews</span><strong t-out="state.loading ? '—' : state.pendingBankReceipts"/><small>Verify actual receipts</small></button>
                 <button type="button" t-on-click="() => this.openAction('b2b_website.action_b2b_message_threads')"><span class="is-violet">Unread messages</span><strong t-out="state.loading ? '—' : state.unreadMessages"/><small>Orders, samples, support and inquiries</small></button>
                 <button type="button" t-on-click="() => this.openAction('b2b_management.action_b2b_pending_registrations')"><span class="is-emerald">Pending registrations</span><strong t-out="state.loading ? '—' : state.pendingRegistrations"/><small>Portal accounts awaiting approval</small></button>

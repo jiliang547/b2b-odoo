@@ -1,3 +1,4 @@
+.lt-ai-navigating::after{content:"";position:fixed;top:0;left:0;width:100%;height:2px;background:#3973b5;z-index:1040;pointer-events:none}
 .lt-ai-widget{position:fixed;right:24px;bottom:24px;z-index:1035;font:14px/1.55 Inter,system-ui,sans-serif;color:#23364b;--ai-blue:#163b64}
 .lt-ai-widget *{box-sizing:border-box}.lt-ai-widget button,.lt-ai-widget input,.lt-ai-widget textarea{font:inherit}.lt-ai-widget button{cursor:pointer}.lt-ai-widget button:disabled{opacity:.5;cursor:not-allowed}.lt-ai-widget a{color:#245b94;text-decoration:none}.lt-ai-widget :focus-visible{outline:3px solid #76b7ef;outline-offset:2px}
 .lt-ai-widget .ai-launcher{display:flex;align-items:center;gap:10px;background:var(--ai-blue);color:#fff;border:0;border-radius:28px;height:52px;padding:0 20px;box-shadow:0 5px 20px #163b6433;font-weight:600}.lt-ai-widget .ai-launcher i{font-size:21px}

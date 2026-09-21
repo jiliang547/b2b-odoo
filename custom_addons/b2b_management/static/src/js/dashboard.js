@@ -1,6 +1,6 @@
 /** @odoo-module **/
 
-import {Component, onWillStart, useState} from "@odoo/owl";
+import {Component, onMounted, onWillStart, onWillUnmount, useState} from "@odoo/owl";
 import {registry} from "@web/core/registry";
 import {user} from "@web/core/user";
 import {useService} from "@web/core/utils/hooks";
@@ -15,6 +15,7 @@ export class B2BManagementDashboard extends Component {
             loading: true,
             newContactRequests: 0,
             unreadMessages: 0,
+            pendingCompanyChanges: 0,
             pendingRegistrations: 0,
             pendingApplications: 0,
             pendingOrderReviews: 0,
@@ -30,12 +31,15 @@ export class B2BManagementDashboard extends Component {
             canViewErp: false,
             canUseRepairs: false,
         });
-        onWillStart(async () => {
+        this.refreshMetrics = async () => {
+            if (this.refreshing) return;
+            this.refreshing = true;
+            try {
             const safeCount = async (model, domain) => {
                 try {
                     return await this.orm.searchCount(model, domain);
                 } catch {
-                    return 0;
+                    return "—";
                 }
             };
             const [canUseSales, canManageB2B, canUseService, canViewErp, canUseRepairs, canReviewFinance] = await Promise.all([
@@ -46,7 +50,7 @@ export class B2BManagementDashboard extends Component {
                 user.hasGroup("stock.group_stock_user"),
                 user.hasGroup("b2b_website.group_b2b_finance"),
             ]);
-            const [newContactRequests, pendingRegistrations, pendingApplications, pendingOrderReviews, orderChanges, samples, openService, failedJobs, unreadMessages] = await Promise.all([
+            const [newContactRequests, pendingRegistrations, pendingApplications, pendingOrderReviews, orderChanges, samples, openService, failedJobs, unreadMessages, pendingCompanyChanges] = await Promise.all([
                 safeCount("b2b.contact.request", [["state", "=", "new"]]),
                 safeCount("b2b.registration.application", [["state", "=", "pending"]]),
                 safeCount("b2b.contact.request", [["request_type", "=", "partnership"], ["state", "in", ["new", "in_progress"]]]),
@@ -55,7 +59,8 @@ export class B2BManagementDashboard extends Component {
                 safeCount("b2b.sample.request", [["state", "in", ["submitted", "under_review"]]]),
                 safeCount("helpdesk.ticket", [["stage_id.fold", "=", false]]),
                 safeCount("b2b.integration.job", [["state", "in", ["failed", "dead"]]]),
-                this.orm.call("b2b.message.thread", "get_backend_unread_message_count", []).catch(() => 0),
+                this.orm.call("b2b.message.thread", "get_backend_unread_message_count", []).catch(() => "—"),
+                safeCount("b2b.contact.request", [["request_type", "=", "company_change"], ["state", "in", ["new", "in_progress"]]]),
             ]);
             Object.assign(this.state, {
                 loading: false,
@@ -63,6 +68,7 @@ export class B2BManagementDashboard extends Component {
                 pendingBankReceipts: canReviewFinance ? await safeCount("b2b.bank.receipt", [["state", "=", "submitted"]]) : 0,
                 newContactRequests,
                 unreadMessages,
+                pendingCompanyChanges,
                 pendingRegistrations,
                 pendingApplications,
                 pendingOrderReviews,
@@ -76,6 +82,17 @@ export class B2BManagementDashboard extends Component {
                 canViewErp,
                 canUseRepairs,
             });
+            } finally { this.refreshing = false; }
+        };
+        onWillStart(this.refreshMetrics);
+        const refreshVisible = () => { if (!document.hidden) this.refreshMetrics(); };
+        onMounted(() => {
+            this.refreshTimer = setInterval(refreshVisible, 60000);
+            window.addEventListener("focus", refreshVisible);
+        });
+        onWillUnmount(() => {
+            clearInterval(this.refreshTimer);
+            window.removeEventListener("focus", refreshVisible);
         });
     }
 

@@ -24,8 +24,10 @@
             <form>
                 <header>
                     <button name="action_start" type="object" string="Start" class="btn-primary" invisible="state != 'new'"/>
-                    <button name="action_resolve" type="object" string="Resolve" class="btn-primary" invisible="state not in ('new', 'in_progress')"/>
-                    <button name="action_close" type="object" string="Close" invisible="state == 'closed'"/>
+                    <button name="action_resolve" type="object" string="Resolve" class="btn-primary" invisible="state not in ('new', 'in_progress') or request_type == 'company_change'"/>
+                    <button name="action_resolve" type="object" string="Resolve" class="btn-primary" groups="b2b_core.group_b2b_manager" invisible="state not in ('new', 'in_progress') or request_type != 'company_change'"/>
+                    <button name="action_close" type="object" string="Close" invisible="state == 'closed' or request_type == 'company_change'"/>
+                    <button name="action_close" type="object" string="Close" groups="b2b_core.group_b2b_manager" invisible="state == 'closed' or request_type != 'company_change'"/>
                     <field name="state" widget="statusbar" statusbar_visible="new,in_progress,resolved,closed"/>
                 </header>
                 <sheet>

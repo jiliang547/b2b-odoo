@@ -174,7 +174,10 @@ class B2BMessageThread(models.Model):
             website = source.website_id
             assigned_user = source.assigned_user_id
             subject = source.subject or source.display_name
-            company = source.website_id.company_id
+            # Company-profile reviews are a shared operations queue, not a
+            # sale by the website's legal entity. Portal ownership is unchanged.
+            company = (self.env["res.company"] if source.request_type == "company_change"
+                       else source.website_id.company_id)
         elif source._name == "sale.order":
             partner = source.partner_id
             website = source.website_id
