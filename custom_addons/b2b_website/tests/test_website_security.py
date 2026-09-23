@@ -224,7 +224,7 @@ class TestPartnerHubCartBrowser(HttpCase):
                         const initialQuantity = Number(quantityElement?.textContent || 0);
                         const startedAt = Date.now();
                         let increasedAt = 0;
-                        form.requestSubmit();
+                        form.querySelector("button[type='submit']").click();
                         const timer = setInterval(() => {
                             const failed = [...document.querySelectorAll('.o_notification')].some(
                                 (item) => item.textContent.includes('We could not add this product')
@@ -248,6 +248,7 @@ class TestPartnerHubCartBrowser(HttpCase):
                 }
             """,
             login=self.login,
+            ready="!!document.querySelector('[data-lt-cart-form] button[type=submit]:not(:disabled)')",
             timeout=30,
         )
 

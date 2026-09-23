@@ -1,0 +1,15 @@
+<odoo>
+    <record id="sale_order_yonyou" model="ir.ui.view">
+        <field name="name">sale.order.yonyou</field><field name="model">sale.order</field>
+        <field name="inherit_id" ref="b2b_erp_connector.sale_order_form_b2b_erp"/>
+        <field name="arch" type="xml">
+            <field name="b2b_erp_reference" position="after">
+                <field name="yonyou_sync_status" widget="badge" groups="b2b_core.group_b2b_operator"/>
+                <field name="yonyou_code" groups="b2b_core.group_b2b_operator"/>
+                <field name="yonyou_id" groups="b2b_core.group_b2b_operator"/>
+                <field name="yonyou_manual_review" groups="b2b_core.group_b2b_operator"/>
+                <button name="action_yonyou_check_order" type="object" string="Check ERP Order Setup" groups="b2b_core.group_b2b_manager" invisible="state not in ('draft', 'sent')"/>
+            </field>
+        </field>
+    </record>
+</odoo>

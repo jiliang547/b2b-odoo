@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+config_admin,C4 administrator,model_b2b_yonyou_connection,base.group_system,1,1,1,0
+config_manager,C4 manager,model_b2b_yonyou_connection,b2b_core.group_b2b_manager,1,0,0,0
+config_product,C4 product manager,model_b2b_yonyou_connection,b2b_core.group_b2b_product_manager,1,0,0,0
