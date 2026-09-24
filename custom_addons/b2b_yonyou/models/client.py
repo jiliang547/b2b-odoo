@@ -34,6 +34,10 @@ class NoRedirect(request.HTTPRedirectHandler):
         return None
 
 
+class ERPTemporaryError(UserError):
+    """Retry at the durable job boundary, never inside an HTTP write."""
+
+
 def label(value):
     if isinstance(value, dict):
         return next((value[k] for k in ('englishName', 'en_US', 'simplifiedName', 'zh_CN') if value.get(k)), '')
@@ -72,9 +76,13 @@ class Client(models.AbstractModel):
                 raise ValueError()
             return result
         except error.HTTPError as exc:
+            if exc.code in (408, 429, 500, 502, 503, 504):
+                raise ERPTemporaryError(_('ERP HTTP %(status)s at %(path)s. Retry will check the existing record first.',
+                    status=exc.code, path=parse.urlsplit(url).path)) from None
             raise UserError(_('ERP HTTP %(status)s. Check authorization for this API. No write was retried.', status=exc.code)) from None
         except (error.URLError, TimeoutError, OSError):
-            raise UserError(_('ERP connection failed or timed out. The result may be unknown; retry uses the same customer code and first checks ERP.')) from None
+            raise ERPTemporaryError(_('ERP connection failed or timed out at %(path)s. A write result may be unknown; retry checks the existing record using the same code first.',
+                path=parse.urlsplit(url).path)) from None
         except (ValueError, UnicodeError):
             raise UserError(_('ERP returned an invalid response. No write was retried.')) from None
 

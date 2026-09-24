@@ -12,4 +12,26 @@
             </field>
         </field>
     </record>
+    <record id="integration_job_yonyou_verification" model="ir.ui.view">
+        <field name="name">b2b.integration.job.yonyou.verification</field>
+        <field name="model">b2b.integration.job</field>
+        <field name="inherit_id" ref="b2b_erp_connector.view_b2b_integration_job_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//button[@name='action_retry']" position="attributes">
+                <attribute name="invisible">state not in ('failed', 'dead') or yonyou_verification_only</attribute>
+            </xpath>
+            <xpath expr="//button[@name='action_retry']" position="after">
+                <button name="action_retry" type="object" string="Recheck ERP Result" class="btn-secondary"
+                    invisible="state not in ('failed', 'dead') or not yonyou_verification_only"
+                    groups="b2b_erp_connector.group_b2b_integration_manager"/>
+            </xpath>
+            <xpath expr="//sheet/group" position="before">
+                <field name="yonyou_verification_only" invisible="1"/>
+                <div class="alert alert-info" role="status" invisible="not yonyou_verification_only or state == 'success'">
+                    This order may already exist in ERP. Retrying only checks the result; it will not create another order.
+                    If verification remains unsuccessful, check the original ERP order number manually. Do not create a replacement order.
+                </div>
+            </xpath>
+        </field>
+    </record>
 </odoo>

@@ -12,7 +12,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from odoo import _, api, fields, models, SUPERUSER_ID
 from odoo.exceptions import AccessError, UserError, ValidationError
 from odoo.addons.b2b_erp_connector.services.erp_service import B2BERPError
-from .client import ORDER_CREATE, ORDER_LIST, ORDER_DETAIL
+from .client import ORDER_CREATE, ORDER_LIST, ORDER_DETAIL, ERPTemporaryError
 from .config import WRITE_TOKEN, MANAGER, notification
 
 STAFF = 'b2b_core.group_b2b_operator'
@@ -40,6 +40,7 @@ class SaleOrder(models.Model):
     yonyou_sync_status = fields.Selection([
         ('none', 'Not Queued'), ('pending', 'Pending'), ('processing', 'Processing'),
         ('success', 'Created in ERP'), ('failed', 'Retry / Verification Required'),
+        ('verifying', 'Submitted / Outcome Pending Verification'),
         ('dead', 'Action Required'), ('changed', 'ERP Change Requires Manual Review')],
         compute='_compute_yonyou_sync_status', string='ERP Submission', groups=STAFF)
 
@@ -52,6 +53,9 @@ class SaleOrder(models.Model):
                 ('reference_model', '=', 'sale.order'), ('reference_id', '=', order._origin.id),
                 ('yonyou_order', '=', True)], limit=1)
             order.yonyou_sync_status = ('changed' if order.yonyou_manual_review else job.state if job else 'none')
+            if (job and job.state in ('pending', 'processing', 'failed')
+                    and job.yonyou_verification_only and not order.yonyou_manual_review):
+                order.yonyou_sync_status = 'verifying'
 
     def _yonyou_enabled(self):
         self.ensure_one()
@@ -302,6 +306,15 @@ class IntegrationJob(models.Model):
     yonyou_order = fields.Boolean(copy=False, readonly=True, index=True)
     yonyou_company_id = fields.Many2one('res.company', copy=False, readonly=True, index=True)
     yonyou_payload = fields.Json(copy=False, readonly=True, groups=INTEGRATOR)
+    yonyou_verification_only = fields.Boolean(compute='_compute_yonyou_verification_only',
+        string='Verification Only — Do Not Recreate')
+
+    def _compute_yonyou_verification_only(self):
+        ledger = self.env['b2b.yonyou.order.dispatch']
+        for job in self:
+            order = job._reference() if job.yonyou_order else False
+            job.yonyou_verification_only = bool(order and order.yonyou_key
+                and ledger._lookup(order.yonyou_key)[0])
 
     def init(self):
         # Upgrade existing outbox entries before the company record rule applies.
@@ -345,7 +358,8 @@ class IntegrationJob(models.Model):
                                              'payload_sha256': digest(payload), 'phase': 'prepared'}})
                 self.env.ref('b2b_erp_connector.ir_cron_b2b_process_erp_jobs').sudo()._trigger()
             except UserError as exc:
-                self._mark_failure(exc, retryable=False)
+                self._mark_failure(_('Preparing ERP order: %s', str(exc)),
+                    retryable=isinstance(exc, ERPTemporaryError))
             return False  # Commit the frozen payload before any remote write.
         return super()._process_locked()
 
@@ -361,6 +375,14 @@ class ERPService(models.AbstractModel):
     def dispatch_job(self, job, reference):
         if not job.yonyou_order:
             return super().dispatch_job(job, reference)
+        try:
+            return self._yonyou_dispatch_order(job, reference)
+        except UserError as exc:
+            raise B2BERPError('erp_request_failed', _('Submitting/verifying ERP order: %s', str(exc)),
+                retryable=isinstance(exc, ERPTemporaryError)) from None
+
+    @api.model
+    def _yonyou_dispatch_order(self, job, reference):
         config = self.env.ref('b2b_yonyou.connection').sudo()
         if not config.order_sync:
             raise B2BERPError('disabled', _('ERP submission is disabled.'), retryable=False)
@@ -373,15 +395,29 @@ class ERPService(models.AbstractModel):
         if not payload:
             raise B2BERPError('not_prepared', _('Prepare the ERP payload before sending.'), retryable=False)
         header = payload['data']
+        ledger = self.env['b2b.yonyou.order.dispatch']
+        attempted, remembered_id = ledger._lookup(reference.yonyou_key)
         # Lookup before *every* send, including retries after a lost response.
-        erp_id = client._order_by_code(header['code'])
+        erp_id = remembered_id or client._order_by_code(header['code'])
         if not erp_id:
-            client._call(ORDER_CREATE, payload)
+            if attempted or not ledger._claim(reference.yonyou_key):
+                raise B2BERPError('verification_pending', _('A submission was already attempted. ERP has not returned the order yet. Verification will retry; no second creation is allowed. If this persists, check ERP manually.'))
+            result = client._call(ORDER_CREATE, payload)
+            # Only accept an explicit document ID, never an arbitrary scalar.
+            if isinstance(result, dict) and str(result.get('id', '')).isdigit():
+                erp_id = str(result['id'])
+                ledger._remember(reference.yonyou_key, erp_id)
+        if not erp_id:
             erp_id = client._order_by_code(header['code'])
         if not erp_id:
             raise B2BERPError('result_unknown', _('ERP creation result is not yet verified. The same order number and key will be checked on retry.'))
+        # Once existence is known, even a later detail timeout or mismatch
+        # must never reopen permission to create a second document.
+        ledger._claim(reference.yonyou_key)
         detail = client._call(ORDER_DETAIL, {'id': erp_id})
         self._yonyou_validate_readback(header, detail, reference.currency_id)
+        # Existing orders found before any send must also stay query-only.
+        ledger._remember(reference.yonyou_key, erp_id)
         reference.with_context(_yonyou_write=WRITE_TOKEN).write({'yonyou_id': erp_id})
         return {'success': True, 'reference': header['code']}
 

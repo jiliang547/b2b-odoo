@@ -1,6 +1,6 @@
 {
     'name': 'Partner Hub Yonyou Connector',
-    'version': '19.0.1.2.0',
+    'version': '19.0.1.2.1',
     'author': 'Lucky Tone',
     'license': 'LGPL-3',
     'depends': ['b2b_management', 'b2b_erp_connector'],

@@ -121,6 +121,10 @@ ERP 中国大陆客户必须对应 13% 的不含税销售税；非中国大陆�
 
 在销售订单 **Other Info** 中查看 **ERP Submission、ERP Order Number、ERP Order ID**。已传成功显示 **Created in ERP**；改过订单则出现 **ERP Change / Cancellation Requires Review**。
 
+如果显示 **Submitted / Outcome Pending Verification**，表示已尝试提交、结果仍在核验，不等于 ERP 没有订单。系统按现有退避规则自动回查，达到次数上限后显示 **Action Required**。在对应 **ERP Integration Jobs** 任务中点击 **Recheck ERP Result** 可再次核验；不会再次新增。请不要另建一张替代订单。
+
+网络恢复后，系统找到原 ERP 单号并核对客户、销售组织、负责人、币种、商品及金额，全部一致才更新成功。若长期查不到或信息不一致，请将 ERP Order Number 提供给负责人员核对。由于提交记录在请求前保存，即使极端情况下请求未真正发出，也不会盲目重发，需要人工确认处理。升级前已准备请求的旧任务同样保守地只核验。
+
 有 B2B Integration Manager 权限的员工可以打开该订单的 ERP Jobs，查看任务结果和安全摘要。只显示其允许销售公司的任务，不向客户暴露接口请求或密钥。
 
 ## 7. 常见异常怎么处理

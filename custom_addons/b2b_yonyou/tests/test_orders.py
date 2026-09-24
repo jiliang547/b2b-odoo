@@ -6,11 +6,29 @@ from odoo.exceptions import AccessError, UserError, ValidationError
 from odoo.tests import tagged
 from odoo.tools import mute_logger
 from .test_mapping import TestYonyouMapping
-from ..models.client import CUSTOMER_DETAIL, ORDER_CREATE, ORDER_LIST, ORDER_DETAIL
+from ..models.client import CUSTOMER_DETAIL, ORDER_CREATE, ORDER_LIST, ORDER_DETAIL, ERPTemporaryError
 
 
 @tagged('post_install', '-at_install')
 class TestYonyouOrders(TestYonyouMapping):
+    def setUp(self):
+        super().setUp()
+        # Emulate separately committed send receipts without leaking records
+        # outside TransactionCase's rollback-managed test database transaction.
+        self.dispatch_receipts = {}
+        ledger = type(self.env['b2b.yonyou.order.dispatch'])
+        def claim(key):
+            if key in self.dispatch_receipts:
+                return False
+            self.dispatch_receipts[key] = False
+            return True
+        for method, effect in [('_claim', claim),
+                ('_lookup', lambda key: (key in self.dispatch_receipts, self.dispatch_receipts.get(key))),
+                ('_remember', lambda key, remote_id: self.dispatch_receipts.__setitem__(key, str(remote_id)))]:
+            patcher = patch.object(ledger, method, side_effect=effect)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -69,6 +87,97 @@ class TestYonyouOrders(TestYonyouMapping):
         self.assertEqual(len(order.b2b_erp_job_ids), 1)
         self.assertEqual(len(order.yonyou_key), 32)
         self.assertEqual(order.yonyou_source['org'], '999')
+
+    def test_preparation_temporary_failure_retries_same_order(self):
+        order, job = self._confirm()
+        key, code = order.yonyou_key, order.yonyou_code
+        with self._mock(lambda *a: (_ for _ in ()).throw(ERPTemporaryError('Network timeout'))):
+            job._process_locked()
+        self.assertEqual(job.state, 'failed')
+        self.assertTrue(job.next_retry_at)
+        self.assertFalse(job.yonyou_payload)
+        with self._mock():
+            job._process_locked()
+        self.assertEqual(job.state, 'pending')
+        self.assertTrue(job.yonyou_payload)
+        self.assertEqual((order.yonyou_key, order.yonyou_code), (key, code))
+
+    def test_preparation_business_error_requires_action(self):
+        order, job = self._confirm()
+        with self._mock(lambda *a: (_ for _ in ()).throw(UserError('Invalid customer'))):
+            job._process_locked()
+        self.assertEqual(job.state, 'dead')
+        self.assertFalse(job.next_retry_at)
+
+    @mute_logger('odoo.addons.b2b_erp_connector.models.integration_job')
+    def test_invisible_created_order_is_never_created_twice(self):
+        order, job = self._confirm()
+        with self._mock():
+            job._process_locked()
+        creates = []
+        def fake(path, payload):
+            if path == ORDER_LIST:
+                return {'pageCount': 0, 'recordList': []}
+            if path == ORDER_CREATE:
+                creates.append(deepcopy(payload))
+                raise ERPTemporaryError('Response lost')
+            raise AssertionError(path)
+        with self._mock(fake):
+            job._process_locked()
+            self.assertTrue(job.yonyou_verification_only)
+            self.manager.write({'group_ids': [Command.link(self.env.ref('b2b_erp_connector.group_b2b_integration_manager').id)]})
+            job.with_user(self.manager).action_retry()
+            job._process_locked()
+            job._process_locked()
+        self.assertEqual(len(creates), 1)
+        self.assertIn('Verification will retry', job.last_error)
+
+    def test_remembered_id_uses_detail_without_list_or_create(self):
+        order, job = self._confirm()
+        with self._mock():
+            job._process_locked()
+        remote = self._remote(job.yonyou_payload['data'])
+        self.dispatch_receipts[order.yonyou_key] = remote['id']
+        def fake(path, payload):
+            self.assertEqual(path, ORDER_DETAIL)
+            return remote
+        with self._mock(fake):
+            self.assertTrue(job._process_locked())
+
+    def test_transport_error_is_safe_and_retryable(self):
+        from urllib.error import HTTPError
+        client = self.env['b2b.yonyou.client']
+        url = 'https://example.invalid/customer?access_token=TOPSECRET'
+        for failure in (TimeoutError(), HTTPError(url, 503, 'Unavailable', {}, None)):
+            with patch('odoo.addons.b2b_yonyou.models.client.request.build_opener') as opener:
+                opener.return_value.open.side_effect = failure
+                with self.assertRaises(ERPTemporaryError) as raised:
+                    client._http(url)
+            self.assertIn('/customer', str(raised.exception))
+            self.assertNotIn('TOPSECRET', str(raised.exception))
+
+    @mute_logger('odoo.addons.b2b_erp_connector.models.integration_job')
+    def test_submission_timeout_checks_existing_before_retry(self):
+        order, job = self._confirm()
+        with self._mock():
+            job._process_locked()
+        remote = self._remote(job.yonyou_payload['data'])
+        created = []
+        def fake(path, payload):
+            if path == ORDER_LIST:
+                return {'pageCount': 1, 'recordList': [{'id': remote['id'], 'code': remote['code']}] if created else []}
+            if path == ORDER_CREATE:
+                created.append(deepcopy(payload))
+                raise ERPTemporaryError('Response lost')
+            if path == ORDER_DETAIL:
+                return remote
+            raise AssertionError(path)
+        with self._mock(fake):
+            self.assertFalse(job._process_locked())
+            self.assertEqual(job.state, 'failed')
+            self.assertTrue(job._process_locked())
+        self.assertEqual(job.state, 'success')
+        self.assertEqual(len(created), 1)
 
     def test_payload_defaults_discount_units_dates(self):
         order, job = self._confirm()
@@ -411,7 +520,7 @@ class TestYonyouOrders(TestYonyouMapping):
                     {'id': remote['id'], 'code': remote['code']}] if created else []}
             if path == ORDER_CREATE:
                 created.append(deepcopy(payload))
-                raise UserError('Simulated response lost after ERP commit')
+                raise ERPTemporaryError('Simulated response lost after ERP commit')
             if path == ORDER_DETAIL:
                 return remote
             raise AssertionError(path)
