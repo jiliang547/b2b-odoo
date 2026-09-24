@@ -96,7 +96,14 @@ class Website(models.Model):
         agent = config.b2b_ai_agent_id
         if not agent or not agent.active or agent._get_provider() != "openai" or agent.llm_model not in SUPPORTED_MODELS or agent.topic_ids:
             return "configuration_required"
-        key = self.env["ir.config_parameter"].sudo().get_param("ai.openai_key") or os.getenv("ODOO_AI_CHATGPT_TOKEN")
+        provider = self.env['b2b.ai.provider']
+        if provider._enabled():
+            values = provider._configuration()
+            if not values['url'] or not values['model']:
+                return 'configuration_required'
+            key = values['key']
+        else:
+            key = self.env["ir.config_parameter"].sudo().get_param("ai.openai_key") or os.getenv("ODOO_AI_CHATGPT_TOKEN")
         if not key or key == "False":
             return "key_required"
         # Check directly rather than a cached computed field after cloning.

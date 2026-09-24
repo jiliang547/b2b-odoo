@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import os
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
@@ -56,6 +57,9 @@ class AISource(models.Model):
                 continue
             if source.website_id._b2b_ai_ready() != "ready":
                 raise UserError(_("Save your OpenAI key in Native AI Settings. For a copied test database, authorize AI calls in Website AI Configuration before indexing."))
+            native_key = self.env['ir.config_parameter'].sudo().get_param('ai.openai_key') or os.getenv('ODOO_AI_CHATGPT_TOKEN')
+            if self.env['b2b.ai.provider']._enabled() and (not native_key or native_key == 'False'):
+                raise UserError(_('Document indexing still uses native OpenAI embeddings. Configure the native OpenAI key; a third-party chat key does not replace the embedding key.'))
             document = source.product_document_id
             original = document.ir_attachment_id
             if document.type != "binary" or original.mimetype not in ("application/pdf", "text/plain"):

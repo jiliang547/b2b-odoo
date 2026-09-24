@@ -201,6 +201,10 @@ class AIService(models.AbstractModel):
         return bounded, products[:12], used
 
     def _json_call(self, agent, instruction, payload, schema):
+        provider = self.env['b2b.ai.provider']
+        if provider._enabled():
+            return provider._complete(provider._configuration(),
+                (agent.system_prompt or '') + '\n' + instruction, payload, schema)
         api = BoundedNativeAPI(self.env, "openai")
         responses, actions, _inputs = api._request_llm(
             llm_model=agent.llm_model,
