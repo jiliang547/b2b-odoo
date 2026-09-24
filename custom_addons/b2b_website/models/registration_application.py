@@ -74,7 +74,7 @@ class B2BRegistrationApplication(models.Model):
         string="Company Resolution",
         tracking=True,
     )
-    company_id = fields.Many2one(
+    resolved_partner_id = fields.Many2one(
         "res.partner",
         string="Resolved Company",
         domain="[('is_company', '=', True)]",
@@ -106,10 +106,14 @@ class B2BRegistrationApplication(models.Model):
             if application.user_id.partner_id != application.partner_id:
                 raise ValidationError(_("The registration user and contact must match."))
 
-    @api.constrains("company_id")
+    def _mail_get_companies(self, default=False):
+        # A resolved customer is a partner, never an operating company.
+        return {rec.id: rec.website_id.company_id or default or self.env.company for rec in self}
+
+    @api.constrains("resolved_partner_id")
     def _check_company(self):
-        for application in self.filtered("company_id"):
-            if not application.company_id.is_company:
+        for application in self.filtered("resolved_partner_id"):
+            if not application.resolved_partner_id.is_company:
                 raise ValidationError(_("Select a company record, not an individual contact."))
 
     def _check_manager(self):
@@ -211,7 +215,7 @@ class B2BRegistrationApplication(models.Model):
     def _resolve_company(self):
         self.ensure_one()
         if self.company_resolution == "existing":
-            company = self.company_id.exists()
+            company = self.resolved_partner_id.exists()
             if not company:
                 raise UserError(_("Select the existing company for this applicant."))
             # Registration data may fill blanks but never silently overwrite an
@@ -266,7 +270,7 @@ class B2BRegistrationApplication(models.Model):
         self.activity_ids.action_done()
         self.write({
             "state": "approved",
-            "company_id": company.id,
+            "resolved_partner_id": company.id,
             "approved_at": fields.Datetime.now(),
             "approved_by_id": self.env.user.id,
             "rejection_reason": False,

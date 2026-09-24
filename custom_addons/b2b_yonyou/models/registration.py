@@ -95,7 +95,7 @@ class Registration(models.Model):
         client = self.env['b2b.yonyou.client']
         config = client._connection()
         if self.company_resolution == 'existing':
-            company = self.company_id
+            company = self.resolved_partner_id
             if not company:
                 raise UserError(_('Select the existing customer company first.'))
             check_role(company)

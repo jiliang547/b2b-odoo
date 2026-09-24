@@ -301,10 +301,14 @@ class TestYonyouMapping(TransactionCase):
 
     def test_existing_company_approval_queries_only(self):
         app = self._application().with_user(self.manager).with_context(b2b_skip_registration_email=True)
-        app.write({'company_resolution': 'existing', 'company_id': self.customer.id})
+        app.write({'company_resolution': 'existing', 'resolved_partner_id': self.customer.id})
+        app.activity_schedule('mail.mail_activity_data_todo', user_id=self.manager.id)
+        self.assertTrue(app.activity_ids)
         with self._mock() as mock:
             app.action_approve()
         self.assertEqual(app.state, 'approved')
+        self.assertFalse(app.activity_ids)
+        self.assertTrue(app.message_ids)
         self.assertEqual(app.partner_id.parent_id, self.customer)
         self.assertEqual(self.customer.phone, app.company_phone)
         self.assertNotIn(CUSTOMER_CREATE, [call.args[0] for call in mock.call_args_list])
@@ -333,7 +337,7 @@ class TestYonyouMapping(TransactionCase):
 
     def test_repeat_approval_does_not_create_again(self):
         app = self._application().with_user(self.manager).with_context(b2b_skip_registration_email=True)
-        app.write({'company_resolution': 'existing', 'company_id': self.customer.id})
+        app.write({'company_resolution': 'existing', 'resolved_partner_id': self.customer.id})
         with self._mock():
             app.action_approve()
         with self._mock() as mock, self.assertRaises(UserError):
