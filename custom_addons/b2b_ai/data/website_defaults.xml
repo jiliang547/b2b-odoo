@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Runs on install/upgrade; the method never resets initialized websites. -->
+    <function model="website" name="_b2b_ai_initialize" eval="[[]]"/>
+</odoo>

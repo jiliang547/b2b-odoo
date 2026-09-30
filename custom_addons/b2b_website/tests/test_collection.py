@@ -112,6 +112,41 @@ class B2BCollectionCommon(AccountTestInvoicingCommon):
 
 @tagged('post_install', '-at_install')
 class TestB2BCollection(B2BCollectionCommon):
+    def test_payment_notifications_do_not_render_pdf(self):
+        order = self._order()
+        report = self.env.ref('sale.action_report_saleorder')
+        for xmlid in ('sale.mail_template_sale_confirmation', 'sale.mail_template_sale_payment_executed'):
+            template = self.env.ref(xmlid)
+            self.assertNotIn(report, template.report_template_ids)
+            with patch.object(type(self.env['ir.actions.report']), '_render_qweb_pdf',
+                              side_effect=AssertionError('Payment notification must not render PDF')):
+                values = template._generate_template(order.ids, ['body_html', 'subject', 'report_template_ids'])
+            self.assertTrue(values[order.id]['body_html'])
+            self.assertFalse(values[order.id].get('attachments'))
+        self.assertIn(report, self.env.ref('sale.email_template_edi_sale').report_template_ids)
+        self.assertTrue(self.env.ref('sale.email_template_proforma').report_template_ids)
+        self.assertTrue(self.env.ref('b2b_website.action_report_collection_pi'))
+
+    def test_upgrade_cleanup_skips_inactive_chinese(self):
+        self.assertFalse(self.env.ref('base.lang_zh_CN').active)
+        order = self._order()
+        order.order_line.name = '运费'
+        self.env['website']._b2b_apply_export_language()
+        self.assertEqual(order.order_line.name, '运费')
+
+    def test_bank_then_online_confirms_without_pdf(self):
+        order = self._order('b30')
+        threshold = order.currency_id.round(order.amount_total * order.b2b_production_percent / 100)
+        self._receipt(order, threshold - 5).action_confirm_receipt()
+        self.assertEqual(order.state, 'sent')
+        tx = self._online_transaction(order, 5, state='done')
+        with patch.object(type(self.env['ir.actions.report']), '_render_qweb_pdf',
+                          side_effect=AssertionError('Payment must not require PDF')):
+            tx._post_process()
+        self.assertTrue(tx.is_post_processed)
+        self.assertEqual(order.state, 'sale')
+        self.assertAlmostEqual(order.amount_paid, threshold)
+
     def _sample_order(self):
         sample = self.env['b2b.sample.request'].create({
             'website_id': self.website.id,

@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+session_system,AI projects administrator,model_b2b_ai_session,base.group_system,1,0,0,1
+turn_system,AI requests administrator,model_b2b_ai_turn,base.group_system,1,0,0,1
+source_system,AI sources administrator,model_b2b_ai_source,base.group_system,1,1,1,1

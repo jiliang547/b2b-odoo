@@ -113,7 +113,7 @@ class TestB2BRegistrationApplication(TransactionCase):
         ).action_approve()
 
         application.invalidate_recordset()
-        company = application.company_id
+        company = application.resolved_partner_id
         self.assertEqual(application.state, "approved")
         self.assertTrue(company.is_company)
         self.assertTrue(company.b2b_approved)
@@ -136,7 +136,7 @@ class TestB2BRegistrationApplication(TransactionCase):
             "existing",
             state="pending",
             company_resolution="existing",
-            company_id=existing.id,
+            resolved_partner_id=existing.id,
         )
         application.user_id.active = True
 
@@ -151,7 +151,42 @@ class TestB2BRegistrationApplication(TransactionCase):
         self.assertEqual(application.partner_id.parent_id, existing)
         self.assertTrue(existing.b2b_approved)
 
+    def test_existing_customer_review_activity_and_chatter(self):
+        customer = self.env['res.partner'].create({'name': 'Mail customer', 'is_company': True})
+        application = self._application('mail-existing', state='pending',
+            company_resolution='existing', resolved_partner_id=customer.id)
+        application.activity_schedule('mail.mail_activity_data_todo', user_id=self.manager.id)
+        application.with_user(self.manager).with_context(b2b_skip_registration_email=True).action_approve()
+        self.assertEqual(application.state, 'approved')
+        self.assertEqual(application.partner_id.parent_id, customer)
+        self.assertFalse(application.activity_ids)
+        message = application.message_post(body='Review finished', subtype_xmlid='mail.mt_note')
+        self.assertTrue(message)
+        self.assertEqual(application._mail_get_companies()[application.id], self.website.company_id)
+
+    def test_rejection_with_existing_customer_and_activity(self):
+        customer = self.env['res.partner'].create({'name': 'Rejected customer', 'is_company': True})
+        application = self._application('mail-reject', state='pending',
+            company_resolution='existing', resolved_partner_id=customer.id, rejection_reason='Review required')
+        application.activity_schedule('mail.mail_activity_data_todo', user_id=self.manager.id)
+        application.with_user(self.manager).with_context(b2b_skip_registration_email=True).action_reject()
+        self.assertEqual(application.state, 'rejected')
+        self.assertFalse(application.activity_ids)
+        self.assertFalse(application.partner_id.parent_id)
+
+    def test_registration_mail_company_is_never_customer_partner(self):
+        application = self._application('mail-routing')
+        self.assertEqual(application._mail_get_companies()[application.id], self.website.company_id)
+        customer = self.env['res.partner'].create({'name': 'Routing customer', 'is_company': True})
+        application.resolved_partner_id = customer
+        if 'b2b_selling_company_id' in customer._fields:
+            seller = self.env['res.company'].create({'name': 'Registration seller'})
+            customer.b2b_selling_company_id = seller
+            self.assertEqual(application._mail_get_companies()[application.id], seller)
+        self.assertEqual(application._mail_get_companies()[application.id]._name, 'res.company')
+
     def test_operator_cannot_approve_registration(self):
+        self.assertNotIn("company_id", self.env["b2b.registration.application"]._fields)
         application = self._application(
             "permission", state="pending", company_resolution="create"
         )
@@ -231,7 +266,7 @@ class TestB2BRegistrationApplication(TransactionCase):
             b2b_skip_registration_email=True
         ).action_approve()
 
-        effective = application.company_id._b2b_get_effective_pricelist(
+        effective = application.resolved_partner_id._b2b_get_effective_pricelist(
             self.website, currency
         )
         self.assertTrue(effective)
@@ -459,9 +494,9 @@ class TestB2BRegistrationHttpFlow(HttpCase):
         ).action_approve()
 
         self.assertEqual(application.state, "approved")
-        self.assertEqual(application.partner_id.parent_id, application.company_id)
-        self.assertTrue(application.company_id.b2b_approved)
-        self.assertEqual(application.company_id.b2b_customer_type_id, self.customer_type)
+        self.assertEqual(application.partner_id.parent_id, application.resolved_partner_id)
+        self.assertTrue(application.resolved_partner_id.b2b_approved)
+        self.assertEqual(application.resolved_partner_id.b2b_customer_type_id, self.customer_type)
 
     def test_invalid_contact_details_are_rejected_and_inputs_preserved(self):
         self.authenticate(None, None)

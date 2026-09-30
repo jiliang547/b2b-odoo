@@ -1,7 +1,8 @@
 import uuid
 
 from odoo import _, api, fields, models
-from odoo.exceptions import ValidationError
+from odoo.exceptions import AccessError, ValidationError
+from markupsafe import escape
 
 
 class B2BContactRequest(models.Model):
@@ -96,6 +97,9 @@ class B2BContactRequest(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        if not self.env.su and not self.env.user.has_group("b2b_core.group_b2b_manager"):
+            if any(v.get("request_type") == "company_change" and v.get("state") in ("resolved", "closed") for v in vals_list):
+                raise AccessError(_("Only a B2B Manager can complete a company change review."))
         pending_partners = set()
         for vals in vals_list:
             if vals.get("name", _("New")) == _("New"):
@@ -127,6 +131,13 @@ class B2BContactRequest(models.Model):
             followers = record.partner_id | record.assigned_user_id.partner_id
             if followers:
                 record.message_subscribe(partner_ids=followers.ids)
+            if record.request_type == "company_change" and record.partner_id:
+                # A submitted customer request is a real incoming message.
+                # Native notifications target followers except the author.
+                record.message_post(
+                    body=escape(record.message), author_id=record.partner_id.id,
+                    message_type="comment", subtype_xmlid="mail.mt_comment",
+                )
             # The acknowledgement is part of the submission response, not a
             # new staff reply that should light up the portal notification.
             record.with_context(b2b_skip_portal_unread=True)._post_customer_message(
@@ -158,6 +169,11 @@ class B2BContactRequest(models.Model):
         return self.env["b2b.message.thread"].get_portal_unread_message_count()
 
     def write(self, vals):
+        if not self.env.su and not self.env.user.has_group("b2b_core.group_b2b_manager"):
+            for record in self:
+                if record.request_type == "company_change" or vals.get("request_type") == "company_change":
+                    if ("request_type" in vals and vals["request_type"] != record.request_type) or vals.get("state") in ("resolved", "closed"):
+                        raise AccessError(_("Only a B2B Manager can complete or reclassify a company change review."))
         if any(
             field_name in vals
             for field_name in ("partner_id", "request_type", "state")
@@ -187,6 +203,12 @@ class B2BContactRequest(models.Model):
                         "A company setup or change request is already under review."
                     ))
         result = super().write(vals)
+        if "request_type" in vals or "website_id" in vals:
+            threads = self.env["b2b.message.thread"].sudo().search([
+                ("source_model", "=", self._name), ("res_id", "in", self.ids),
+            ])
+            for thread in threads:
+                thread._sync_from_message(thread.last_message_id)
         if "assigned_user_id" in vals:
             for record in self.filtered("assigned_user_id"):
                 record.message_subscribe(
@@ -228,6 +250,7 @@ class B2BContactRequest(models.Model):
         )
 
     def action_resolve(self):
+        self._check_company_review_manager()
         self.write({"state": "resolved"})
         self._complete_assignment_activities(_("Contact request resolved."))
         self._post_customer_message(
@@ -235,6 +258,11 @@ class B2BContactRequest(models.Model):
         )
 
     def action_close(self):
+        self._check_company_review_manager()
         self.write({"state": "closed"})
         self._complete_assignment_activities(_("Contact request closed."))
         self._post_customer_message(_("Your inquiry has been closed."))
+
+    def _check_company_review_manager(self):
+        if self.filtered(lambda r: r.request_type == "company_change") and not self.env.su and not self.env.user.has_group("b2b_core.group_b2b_manager"):
+            raise AccessError(_("Only a B2B Manager can complete a company change review."))

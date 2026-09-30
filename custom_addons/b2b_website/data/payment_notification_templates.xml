@@ -1,0 +1,10 @@
+<odoo>
+    <!-- Native templates are noupdate records. Explicit native write applies
+         this policy on both installation and upgrade without replacing bodies,
+         recipients, translations, portal links or unrelated attachments.
+         Manual quotations, proforma and the versioned collection PI are unchanged. -->
+    <function model="mail.template" name="write">
+        <value eval="[ref('sale.mail_template_sale_confirmation'), ref('sale.mail_template_sale_payment_executed')]"/>
+        <value eval="{'report_template_ids': [(3, ref('sale.action_report_saleorder'))]}"/>
+    </function>
+</odoo>
