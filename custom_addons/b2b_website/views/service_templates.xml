@@ -3,7 +3,7 @@
     <template id="service_request_form" name="Partner Service Request">
         <t t-call="b2b_website.partner_layout">
             <t t-set="no_index" t-value="True"/>
-            <section class="lt-page-head lt-page-head--compact"><div class="container"><span class="lt-kicker">AFTER-SALES</span><h1>Repair or replacement request</h1><p>Submit an issue against one of your confirmed Lucky Tone orders.</p></div></section>
+            <section class="lt-page-head lt-page-head--compact"><div class="container"><span class="lt-kicker">AFTER-SALES</span><h1>After-sales service request</h1><p>Submit an issue against one of your confirmed Lucky Tone orders. Our team will assess the issue; a product return is not always required.</p></div></section>
             <section class="lt-section"><div class="container lt-form-shell">
                 <div t-if="error" class="lt-alert lt-alert--error" role="alert"><strong>We could not submit your request.</strong><span t-out="error"/></div>
                 <div t-if="not orders" class="lt-empty"><h2>No eligible orders</h2><p>A confirmed or completed order is required before creating an after-sales request.</p><a class="lt-btn lt-btn--ghost-dark" href="/my/orders">View my orders</a></div>
@@ -11,7 +11,7 @@
                     <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                     <input type="hidden" name="submission_token" t-att-value="submission_token"/>
                     <div class="lt-form-section"><div><span>01</span><h2>Issue</h2></div><div class="lt-form-grid">
-                        <fieldset class="lt-field lt-field--wide"><legend>Request type</legend><div class="lt-choice-row"><label><input type="radio" name="request_type" value="repair" required="required"/> Repair</label><label><input type="radio" name="request_type" value="replacement" required="required"/> Replacement</label></div></fieldset>
+                        <fieldset class="lt-field lt-field--wide"><legend>Request type</legend><div class="lt-choice-row"><label><input type="radio" name="request_type" value="support" required="required" checked="checked"/> Technical Support</label></div></fieldset>
                         <div class="lt-field"><label for="service-order">Order number</label><select id="service-order" name="order_id" required="required"><option value="">Select an order</option><option t-foreach="orders" t-as="order" t-att-value="order.id" t-out="order.name"/></select></div>
                         <div class="lt-field"><label for="service-product">Product</label><select id="service-product" name="product_id" required="required" data-lt-service-product=""><option value="">Select an order first</option><option t-foreach="service_order_lines" t-as="line" t-att-value="line.product_id.id" t-att-data-order-id="line.order_id.id" t-out="line.product_id.display_name" hidden="hidden"/></select></div>
                         <div class="lt-field"><label for="service-model">Model number</label><input id="service-model" name="model_number" maxlength="160" required="required" t-att-value="post.get('model_number', '')" placeholder="Model or part number"/></div>

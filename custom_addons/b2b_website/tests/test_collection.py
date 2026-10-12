@@ -42,7 +42,7 @@ class B2BCollectionCommon(AccountTestInvoicingCommon):
         cls.website.b2b_default_account_brand_id = cls.brand
         cls.finance = mail_new_test_user(cls.env, login='collection-finance', groups='b2b_website.group_b2b_finance', company_id=cls.env.company.id, company_ids=[Command.set(cls.env.company.ids)])
         cls.operator = mail_new_test_user(cls.env, login='collection-operator', groups='b2b_core.group_b2b_operator')
-        cls.portal_user = mail_new_test_user(cls.env, login='collection-portal', groups='base.group_portal', partner_id=cls.env['res.partner'].create({'name': 'Collection Contact', 'parent_id': cls.customer.id}).id)
+        cls.portal_user = mail_new_test_user(cls.env, login='collection-portal', password='Portal-Test-2026!', groups='base.group_portal', partner_id=cls.env['res.partner'].create({'name': 'Collection Contact', 'parent_id': cls.customer.id}).id)
 
     def _order(self, policy='a'):
         self.customer.b2b_collection_policy_id = self.env.ref('b2b_website.collection_policy_' + policy)
@@ -765,7 +765,7 @@ class TestB2BCollectionHttp(B2BCollectionCommon, HttpCase):
     def test_authenticated_multipart_upload_and_repeat_submission(self):
         """Exercise the real HTTP/CSRF/file parser, not a mocked request."""
         order = self._order()
-        self.authenticate(self.portal_user.login, self.portal_user.login)
+        self.authenticate(self.portal_user.login, 'Portal-Test-2026!')
         page = self.url_open('/my/orders/%s/collection' % order.id)
         self.assertEqual(page.status_code, 200)
         payload = {name: re.search(r'name="%s" value="([^"]+)"' % name, page.text).group(1)

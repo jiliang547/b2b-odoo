@@ -1423,6 +1423,9 @@ form[aria-busy="true"] button[type="submit"] { cursor: wait; opacity: .72; }
 .lt-registration-form .lt-field small { color: #6b7280; font-size: 12px; line-height: 1.5; }
 .lt-registration-form .lt-field .lt-field-error { color: #b91c1c; }
 .lt-field-error:empty { display: none; }
+.lt-password-hint, .lt-password-error { display: block; margin-top: 5px; font-size: 12px; line-height: 1.5; }
+.lt-password-hint { color: #6b7280; }
+.lt-password-error { color: #b91c1c; }
 .lt-registration-heading { padding: 35px 32px 28px; border-bottom: 1px solid rgba(232,56,12,.22); text-align: center; }
 .lt-registration-heading .lt-kicker, .lt-registration-result .lt-kicker { color: #e8380c; letter-spacing: .17em; }
 .lt-registration-heading h1, .lt-registration-result h1 { margin: 11px 0 8px; color: #111827; font-size: 31px; font-weight: 750; letter-spacing: -.025em; }
@@ -1502,6 +1505,10 @@ form[aria-busy="true"] button[type="submit"] { cursor: wait; opacity: .72; }
 .lt-registration-result__icon.is-success { background: #dcfce7; color: #15803d; }
 .lt-registration-result p { max-width: 480px; margin: 0; color: #6b7280; line-height: 1.6; }
 .lt-resend-form { margin: 2px 0; }
+.lt-resend-timer { display: block; min-height: 20px; margin-top: 10px; color: #6b7280; font-size: 13px; }
+.lt-resend-timer[hidden] { display: none; }
+.lt-resend-form .lt-btn { min-height: 46px; }
+.lt-resend-form .lt-btn:disabled { opacity: .6; cursor: not-allowed; }
 
 @media (max-width: 767.98px) {
     .lt-auth-main { padding: 24px 12px 48px; }

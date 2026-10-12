@@ -416,6 +416,7 @@ class ERPService(models.AbstractModel):
         ledger._claim(reference.yonyou_key)
         detail = client._call(ORDER_DETAIL, {'id': erp_id})
         self._yonyou_validate_readback(header, detail, reference.currency_id)
+        reference._yonyou_store_progress_bindings(detail)
         # Existing orders found before any send must also stay query-only.
         ledger._remember(reference.yonyou_key, erp_id)
         reference.with_context(_yonyou_write=WRITE_TOKEN).write({'yonyou_id': erp_id})

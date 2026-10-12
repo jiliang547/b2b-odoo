@@ -1,7 +1,7 @@
 {
     "name": "Partner Hub AI",
     "summary": "Permission-aware product advice and verified knowledge for Partner Hub customers",
-    "version": "19.0.1.3.2",
+    "version": "19.0.1.3.3",
     "category": "Website",
     "author": "Lucky Tone",
     "license": "LGPL-3",

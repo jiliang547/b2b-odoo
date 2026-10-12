@@ -5,8 +5,8 @@ from odoo.exceptions import AccessError, ValidationError
 SERVICE_STEPS = [
     ('submitted', 'Submitted'), ('review', 'Under Review'),
     ('approved', 'Awaiting Customer Shipment'), ('transit', 'Return in Transit'),
-    ('received', 'Received'), ('processing', 'Inspection / Repair / Replacement'),
-    ('shipped', 'Shipped Back'), ('completed', 'Completed'), ('rejected', 'Rejected'),
+    ('received', 'Received'), ('processing', 'In Progress'),
+    ('shipped', 'Dispatched'), ('completed', 'Completed'), ('rejected', 'Rejected'),
 ]
 
 
@@ -45,7 +45,7 @@ class HelpdeskTicket(models.Model):
     _inherit = "helpdesk.ticket"
 
     b2b_request_type = fields.Selection(
-        [("repair", "Repair"), ("replacement", "Replacement")],
+        [("repair", "Repair"), ("replacement", "Replacement"), ('support', 'Technical Support / Other Issue')],
         string="Partner Request Type",
         index=True,
     )
@@ -64,6 +64,19 @@ class HelpdeskTicket(models.Model):
     b2b_submitted_at = fields.Datetime(string="Partner Submission Time", readonly=True)
     b2b_service_step = fields.Selection(related='stage_id.b2b_service_step', string='Service Progress')
     b2b_return_instructions = fields.Text(string='Return address and instructions', tracking=True)
+    b2b_service_route = fields.Selection([
+        ('assessment', 'Pending Assessment'), ('remote', 'No Logistics Required'),
+        ('dispatch', 'Dispatch Without Return'), ('roundtrip', 'Return and Dispatch'),
+        ('return_only', 'Return Only'),
+    ], default='assessment', required=True, copy=False, tracking=True, string='Service Handling')
+    b2b_needs_return = fields.Boolean(compute='_compute_b2b_logistics')
+    b2b_needs_dispatch = fields.Boolean(compute='_compute_b2b_logistics')
+
+    @api.depends('b2b_service_route')
+    def _compute_b2b_logistics(self):
+        for ticket in self:
+            ticket.b2b_needs_return = ticket.b2b_service_route in ('roundtrip', 'return_only')
+            ticket.b2b_needs_dispatch = ticket.b2b_service_route in ('roundtrip', 'dispatch')
     b2b_return_deadline = fields.Date(string='Return by', tracking=True)
     b2b_return_carrier = fields.Char(string='Customer return carrier', tracking=True)
     b2b_return_tracking = fields.Char(string='Customer return tracking', tracking=True)
@@ -121,19 +134,23 @@ class HelpdeskTicket(models.Model):
     def _b2b_validate_step(self, step):
         self.ensure_one()
         transitions = {
-            'submitted': {'review', 'rejected'}, 'review': {'approved', 'rejected'},
+            'submitted': {'review', 'rejected'}, 'review': {'approved', 'rejected'} if self.b2b_needs_return else {'processing', 'rejected'},
             'approved': {'transit'}, 'transit': {'received'},
-            'received': {'processing'}, 'processing': {'shipped'},
+            'received': {'processing'}, 'processing': {'shipped'} if self.b2b_needs_dispatch else {'completed'},
             'shipped': {'completed'}, 'completed': set(), 'rejected': set(),
         }
         if step == self.b2b_service_step:
             return
+        if step not in ('review', 'rejected') and self.b2b_service_route == 'assessment':
+            raise ValidationError(_('Select the service handling method before approving this request.'))
         if step not in transitions.get(self.b2b_service_step, set()):
             raise ValidationError(_('Complete the current service step before moving to the next stage.'))
         if step == 'approved' and not (self.b2b_return_instructions or '').strip():
             raise ValidationError(_('Enter the return address and instructions before approval.'))
         if step == 'rejected' and not (self.b2b_resolution_note or '').strip():
             raise ValidationError(_('Enter a customer-facing rejection reason first.'))
+        if step == 'completed' and not (self.b2b_resolution_note or '').strip():
+            raise ValidationError(_('Enter the customer-facing resolution before completing service.'))
         if step == 'transit':
             if not all([self.b2b_return_carrier, self.b2b_return_tracking, self.b2b_return_date]):
                 raise ValidationError(_('Enter the return carrier, tracking number and shipment date.'))
@@ -156,7 +173,7 @@ class HelpdeskTicket(models.Model):
                 if not deliveries or any(p.state != 'done' for p in deliveries):
                     raise ValidationError(_('Validate all linked outbound deliveries first.'))
                 repairs = self.repair_ids.filtered(lambda r: r.state != 'cancel')
-                if self.b2b_request_type == 'repair' and (not repairs or any(r.state != 'done' for r in repairs)):
+                if self.b2b_needs_return and self.b2b_request_type == 'repair' and (not repairs or any(r.state != 'done' for r in repairs)):
                     raise ValidationError(_('Complete all linked native repairs first.'))
 
     def write(self, vals):
@@ -164,6 +181,17 @@ class HelpdeskTicket(models.Model):
         protected = {key for key in vals if key.startswith('b2b_')} | ({'stage_id', 'team_id', 'partner_id'} & vals.keys())
         if managed and protected:
             managed._b2b_check_staff()
+        if 'b2b_service_route' in vals:
+            for ticket in managed.filtered(lambda t: t.b2b_service_route != vals['b2b_service_route']):
+                # Only inspect existence after ticket write permission is checked.
+                # Remote-support staff need no inventory/repair read permissions.
+                logistics = ticket.sudo()
+                if (ticket.b2b_service_step not in ('submitted', 'review') or ticket.b2b_return_tracking
+                        or ticket.b2b_outbound_tracking or logistics.picking_ids.filtered(lambda p: p.state != 'cancel')
+                        or logistics.repair_ids.filtered(lambda r: r.state != 'cancel')):
+                    raise ValidationError(_('The handling method is locked after approval or logistics activity. Contact the service manager before changing the agreed workflow.'))
+                if 'stage_id' in vals:
+                    raise ValidationError(_('Save the handling method before changing the service stage.'))
         if managed and {'team_id', 'partner_id', 'b2b_sale_order_id', 'b2b_request_type', 'b2b_product_id'} & vals.keys():
             for ticket in managed:
                 for name in {'team_id', 'partner_id', 'b2b_sale_order_id', 'b2b_request_type', 'b2b_product_id'} & vals.keys():
@@ -194,7 +222,8 @@ class HelpdeskTicket(models.Model):
         return self._b2b_step('review')
 
     def action_b2b_approve(self):
-        return self._b2b_step('approved')
+        self.ensure_one()
+        return self._b2b_step('approved' if self.b2b_needs_return else 'processing')
 
     def action_b2b_reject(self):
         return self._b2b_step('rejected')
@@ -221,7 +250,7 @@ class HelpdeskTicket(models.Model):
 
     def _b2b_submit_tracking(self, carrier, tracking, shipped_on):
         self.ensure_one()
-        if self.b2b_service_step != 'approved':
+        if self.b2b_service_step != 'approved' or not self.b2b_needs_return:
             raise ValidationError(_('Return shipping details can only be submitted after approval. Refresh this page to see the latest progress.'))
         if not carrier.strip() or not tracking.strip() or len(carrier) > 120 or len(tracking) > 160:
             raise ValidationError(_('Enter a valid carrier and tracking number.'))
@@ -229,11 +258,15 @@ class HelpdeskTicket(models.Model):
         self._b2b_step('transit')
 
     def action_repair_order_form(self):
+        if any(t.b2b_service_step and (not t.b2b_needs_return or t.b2b_service_step != 'processing') for t in self):
+            raise ValidationError(_('Native repair orders require an approved return received for processing.'))
         if any(t.b2b_service_step and t.b2b_fulfilment_mode == 'external' for t in self):
             raise ValidationError(_('Record the repair result from your warehouse or ERP in Receipt and Resolution.'))
         return super().action_repair_order_form()
 
     def action_create_replacement(self):
+        if any(t.b2b_service_step and (not t.b2b_needs_dispatch or t.b2b_service_step != 'processing') for t in self):
+            raise ValidationError(_('Approve a dispatch handling method and complete any required return receipt first.'))
         if any(t.b2b_service_step and t.b2b_fulfilment_mode == 'external' for t in self):
             raise ValidationError(_('Record the confirmed dispatch in Ship Back, then confirm shipment.'))
         return super().action_create_replacement()

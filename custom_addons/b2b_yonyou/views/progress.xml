@@ -1,0 +1,91 @@
+<odoo>
+    <template id="order_progress_page" inherit_id="b2b_website.order_erp_status" name="Cached Order Progress">
+        <xpath expr="//t[@t-call='b2b_website.partner_layout']" position="replace">
+            <t t-call="b2b_website.partner_layout">
+                <t t-set="no_index" t-value="True"/>
+                <section class="lt-page-head lt-page-head--compact"><div class="container">
+                    <span class="lt-kicker">ORDER PROGRESS</span><h1 t-out="order.name"/>
+                    <p>Supply and shipment progress for each product in your order.</p>
+                    <a class="lt-btn lt-btn--outline lt-btn--small" t-att-href="'/my/orders/%s' % order.id">Back to Order</a>
+                </div></section>
+                <section class="lt-section"><div class="container">
+                    <div t-if="status" class="lt-order-progress" data-no-soft-navigation-page="true"
+                         t-att-data-pending="'true' if status.get('pending') else 'false'"
+                         t-att-data-check-url="'/my/orders/%s/erp-status/check' % order.id"
+                         t-att-data-refresh-url="'/my/orders/%s/erp-status/refresh' % order.id"
+                         t-att-data-refresh-supported="'true' if status['refresh']['supported'] else 'false'"
+                         t-att-data-retry-after="status['refresh']['retry_after']"
+                         t-att-data-updated-at="status['updated_at'] or ''"
+                         t-att-data-content-key="status['content_key']">
+                        <div class="lt-progress-toolbar">
+                            <p>Last successful update: <strong data-progress-updated="true" t-out="('%s UTC' % status['updated_at']) if status['updated_at'] else 'Not checked yet'"/></p>
+                            <button type="button" class="lt-btn lt-btn--outline lt-btn--small lt-progress-refresh"
+                                    data-progress-refresh="true" t-att-disabled="status['pending'] or not status['refresh']['supported'] or status['refresh']['retry_after']">
+                                <i class="fa fa-refresh" aria-hidden="true"/><span data-progress-button-label="true">Refresh Progress</span>
+                            </button>
+                        </div>
+                        <div class="lt-progress-feedback" role="status" aria-live="polite" data-progress-feedback="true"/>
+                        <p class="lt-progress-cooldown" aria-live="off" data-progress-cooldown="true"/>
+                        <div data-progress-panel="true"><t t-call="b2b_yonyou.progress_panel"/></div>
+                    </div>
+                    <p t-else="" class="lt-progress-notice" role="status">Order progress is temporarily unavailable. Please try again later or contact our team.</p>
+                </div></section>
+            </t>
+        </xpath>
+    </template>
+    <template id="order_progress_link" inherit_id="b2b_website.sale_order_portal_erp_tracking" name="Order Progress Link">
+        <xpath expr="//a[contains(@t-att-href, '/erp-status')]" position="replace">
+            <a t-if="sale_order.state in ('sale', 'done')" class="lt-btn lt-btn--outline lt-btn--small"
+               t-att-href="'/my/orders/%s/erp-status' % sale_order.id"><i class="fa fa-truck"/> Order Progress</a>
+        </xpath>
+    </template>
+    <template id="progress_panel" name="Order Progress Contents">
+        <div t-if="status.get('cancelled') or status.get('changed') or not status.get('enabled') or not status.get('linked') or not status.get('refresh', {}).get('supported') or status.get('pending') or status.get('delayed')" class="lt-progress-notice" role="status" aria-live="polite">
+            <p t-if="status.get('cancelled')">This order has been cancelled. Shipment progress is no longer being refreshed.</p>
+            <p t-elif="status.get('changed')">Your order has changed. Progress for the revised order will be available after our team confirms the update.</p>
+            <p t-elif="not status.get('enabled')">Order progress is temporarily unavailable. Please contact our team if you need an update.</p>
+            <p t-elif="not status.get('linked')">Your order is being registered for fulfilment. Please check back later.</p>
+            <p t-elif="not status.get('refresh', {}).get('supported')">Order progress is temporarily unavailable. Please contact our team if you need an update.</p>
+            <p t-elif="status.get('pending')" data-progress-waiting="true"><i class="fa fa-spinner fa-spin" aria-hidden="true"/> Updating order progress… Your last available progress is shown below.</p>
+            <p t-elif="status.get('delayed')">Updates are temporarily delayed. The last available progress is shown below. Please try again later.</p>
+        </div>
+        <div class="lt-progress-items">
+            <article t-foreach="status.get('items', [])" t-as="item" class="lt-progress-item">
+                <header class="lt-progress-item__head"><div>
+                    <h2 t-out="item['name']"/>
+                    <p t-if="item['sku']" class="lt-progress-sku">SKU: <span t-out="item['sku']"/></p>
+                </div><span class="lt-progress-badge">
+                    <t t-if="item['state'] == 'service'">No shipment required</t>
+                    <t t-elif="item['state'] == 'shipped'">Fully shipped</t>
+                    <t t-elif="item['state'] == 'partial'">Partially shipped</t>
+                    <t t-elif="item['state'] == 'not_shipped'">Not shipped yet</t>
+                    <t t-elif="item['state'] == 'unverified'">Shipment quantity pending</t>
+                    <t t-else="">Awaiting shipment updates</t>
+                </span></header>
+                <dl class="lt-progress-quantities">
+                    <div><dt>Ordered</dt><dd><span t-out="'%g' % item['ordered']"/> <small t-out="item['unit']"/></dd></div>
+                    <div t-if="item['state'] != 'service'"><dt>Shipped Quantity</dt><dd><t t-if="item['shipped'] is not None"><span t-out="'%g' % item['shipped']"/> <small t-out="item['quantity_unit']"/></t><t t-else="">—</t></dd></div>
+                    <div t-if="item['state'] != 'service'"><dt>Remaining Quantity</dt><dd><t t-if="item['remaining'] is not None"><span t-out="'%g' % item['remaining']"/> <small t-out="item['quantity_unit']"/></t><t t-else="">—</t></dd></div>
+                </dl>
+                <dl t-if="item['state'] != 'service'" class="lt-progress-dates">
+                    <div><dt>Supply Order Date</dt><dd><t t-foreach="item['dates'].get('supply_date', [])" t-as="date"><span t-out="date"/></t><span t-if="not item['dates'].get('supply_date')">Not available yet</span></dd></div>
+                    <div><dt>Expected Completion Date</dt><dd><t t-foreach="item['dates'].get('expected_date', [])" t-as="date"><span t-out="date"/></t><span t-if="not item['dates'].get('expected_date')">Not available yet</span></dd></div>
+                    <div><dt>Warehouse Receipt Date</dt><dd><t t-foreach="item['dates'].get('receipt_date', [])" t-as="date"><span t-out="date"/></t><span t-if="not item['dates'].get('receipt_date')">Not available yet</span></dd></div>
+                    <div><dt>Dispatch Date</dt><dd><t t-foreach="item['dates'].get('dispatch_date', [])" t-as="date"><span t-out="date"/></t><span t-if="not item['dates'].get('dispatch_date')">Not available yet</span></dd></div>
+                </dl>
+                <details t-if="len(item['supplies']) > 1" class="lt-progress-supplies">
+                    <summary>View supply progress details</summary>
+                    <div t-foreach="item['supplies']" t-as="supply" class="lt-progress-supply">
+                        <strong>Supply record <t t-out="supply_index + 1"/></strong>
+                        <dl class="lt-progress-dates">
+                            <div><dt>Supply Order Date</dt><dd t-out="supply['supply_date'] or 'Not available yet'"/></div>
+                            <div><dt>Expected Completion Date</dt><dd t-out="supply['expected_date'] or 'Not available yet'"/></div>
+                            <div><dt>Warehouse Receipt Date</dt><dd t-out="supply['receipt_date'] or 'Not available yet'"/></div>
+                            <div><dt>Dispatch Date</dt><dd t-out="supply['dispatch_date'] or 'Not available yet'"/></div>
+                        </dl>
+                    </div>
+                </details>
+            </article>
+        </div>
+    </template>
+</odoo>

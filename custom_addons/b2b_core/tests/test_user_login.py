@@ -9,6 +9,7 @@ class TestEmailLoginNormalization(TransactionCase):
         user = mail_new_test_user(
             self.env,
             login="Partner.User@Example.TEST",
+            password="Portal-Test-2026!",
             groups="base.group_portal",
         )
 
@@ -27,6 +28,7 @@ class TestEmailLoginNormalization(TransactionCase):
         user = mail_new_test_user(
             self.env,
             login="email-login-change",
+            password="Portal-Test-2026!",
             groups="base.group_portal",
         )
 
@@ -39,6 +41,7 @@ class TestEmailLoginNormalization(TransactionCase):
         mail_new_test_user(
             self.env,
             login=email,
+            password="Portal-Test-2026!",
             groups="base.group_portal",
         )
 
@@ -46,6 +49,7 @@ class TestEmailLoginNormalization(TransactionCase):
             mail_new_test_user(
                 self.env,
                 login=email.upper(),
+                password="Portal-Test-2026!",
                 groups="base.group_portal",
             )
 
@@ -53,6 +57,7 @@ class TestEmailLoginNormalization(TransactionCase):
         user = mail_new_test_user(
             self.env,
             login="CaseSensitivePortalUser",
+            password="Portal-Test-2026!",
             groups="base.group_portal",
         )
 

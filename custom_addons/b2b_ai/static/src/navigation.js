@@ -1,6 +1,6 @@
 /** @odoo-module **/
 import { initializePartnerHub } from "@b2b_website/js/partner_hub";
-import { isPageUrl, sameAssets } from "@b2b_ai/navigation_policy";
+import { hasNativeChatter, isPageUrl, sameAssets } from "@b2b_ai/navigation_policy";
 
 const ASSISTANT = 'owl-component[name="b2b_ai.FloatingAssistant"]';
 const EXECUTABLE = 'script:not([type="application/ld+json"]):not([type="application/json"])';
@@ -47,7 +47,7 @@ export class WebsiteNavigator {
         history.replaceState({ ...history.state, partnerHubPage: { x: scrollX, y: scrollY } }, "");
     }
     available() {
-        return !this.committing && isPageUrl(new URL(this.current), this.assistant.state.signedIn) && !document.querySelector(
+        return !this.committing && !hasNativeChatter(document) && isPageUrl(new URL(this.current), this.assistant.state.signedIn) && !document.querySelector(
             '.o_website_edit_mode, .o_we_website_top_actions, .modal.show, [data-lt-payment-status], [data-lt-submitting="true"]');
     }
     click(event) {
@@ -63,6 +63,7 @@ export class WebsiteNavigator {
         this.navigate(url);
     }
     compatible(doc) {
+        if (hasNativeChatter(document) || hasNativeChatter(doc)) return false;
         const host = doc.querySelector(ASSISTANT);
         const wrap = doc.querySelector("#wrapwrap");
         const inlineScripts = page => [...page.head.querySelectorAll(EXECUTABLE)]
@@ -115,6 +116,8 @@ export class WebsiteNavigator {
             // Verify the session again before retaining private chat across pages.
             if (await this.assistant.bootstrap()) { location.assign(final.href); return; }
             if (sequence !== this.sequence) return;
+            // Lazy content may have mounted while fetch/bootstrap was pending.
+            if (!this.available() || !this.compatible(doc)) { location.assign(final.href); return; }
             this.committing = true;
             const nextWrap = doc.querySelector("#wrapwrap");
             for (const child of [...this.wrap.children]) {

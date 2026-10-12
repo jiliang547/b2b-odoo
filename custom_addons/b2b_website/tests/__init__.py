@@ -9,3 +9,5 @@ from . import test_multilingual
 from . import test_portal_presentation
 from . import test_collection
 from . import test_service_workflow
+from . import test_service_request_http
+from . import test_password_policy

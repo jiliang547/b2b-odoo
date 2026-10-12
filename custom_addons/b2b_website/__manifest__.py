@@ -1,7 +1,7 @@
 {
     "name": "Lucky Tone Partner Hub Website",
     "summary": "B2B catalog, portal, ordering, samples, service, and ERP tracking",
-    "version": "19.0.1.16.26",
+    "version": "19.0.1.16.30",
     "category": "Website/Website",
     "license": "LGPL-3",
     "author": "Lucky Tone",
@@ -12,6 +12,7 @@
         "website_sale",
         "website_cf_turnstile",
         "auth_signup",
+        "auth_password_policy",
         "phone_validation",
         "portal",
         "helpdesk",
@@ -22,6 +23,7 @@
         "accountant",
     ],
     "data": [
+        "data/password_policy.xml",
         "security/b2b_role_security.xml",
         "security/b2b_contact_request_security.xml",
         "security/b2b_order_change_security.xml",
@@ -76,6 +78,8 @@
             "b2b_website/static/src/js/frontend_error_branding.js",
             "b2b_website/static/src/js/turnstile_ux.js",
             "b2b_website/static/src/js/partner_hub.js",
+            "b2b_website/static/src/js/password_validation.js",
+            "b2b_website/static/src/js/verification_resend.js",
             "b2b_website/static/src/js/payment_form.js",
             "b2b_website/static/src/js/file_picker.js",
         ],

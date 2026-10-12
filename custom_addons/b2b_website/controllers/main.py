@@ -1146,7 +1146,9 @@ class PartnerHubWebsite(WebsiteController):
             try:
                 order = request.env["sale.order"].browse(self._safe_int(post.get("order_id"))).exists()
                 product = request.env["product.product"].browse(self._safe_int(post.get("product_id"))).exists()
-                request_type = post.get("request_type")
+                # The website is a support intake; staff assess handling separately.
+                # Keep repair/replacement types available for native and historical tickets.
+                request_type = post.get("request_type", "support")
                 description = (post.get("description") or "").strip()
                 if order not in values["orders"]:
                     raise AccessError(_("Select a product from one of your completed or confirmed orders."))
@@ -1156,8 +1158,10 @@ class PartnerHubWebsite(WebsiteController):
                 if product.id not in historical_products.ids:
                     raise AccessError(_("Select a product from one of your completed or confirmed orders."))
                 product = historical_products.filtered(lambda item: item.id == product.id)[:1]
-                if request_type not in ("repair", "replacement") or not description:
-                    raise ValidationError(_("Complete the request type and problem description."))
+                if request_type != "support":
+                    raise ValidationError(_("Please submit a technical support request. Our team will assess the appropriate handling."))
+                if not description:
+                    raise ValidationError(_("Complete the problem description."))
                 fields_to_limit = {
                     "contact_name": 160, "company_name": 200, "email": 254,
                     "phone": 64, "model_number": 160, "serial_number": 160,

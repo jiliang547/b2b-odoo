@@ -84,7 +84,7 @@ class TestThirdPartyProvider(TransactionCase):
             self.assertEqual(website._b2b_ai_ready(), 'test_calls_disabled')
 
     def test_non_admin_cannot_test_or_read_key(self):
-        user = mail_new_test_user(self.env, login='third-party-portal', groups='base.group_portal')
+        user = mail_new_test_user(self.env, login='third-party-portal', password='Portal-Test-2026!', groups='base.group_portal')
         settings = self.env['res.config.settings'].create({})
         with self.assertRaises(AccessError):
             settings.with_user(user).action_b2b_ai_test_provider()
