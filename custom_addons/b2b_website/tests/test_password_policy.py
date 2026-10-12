@@ -2,6 +2,7 @@ import re
 from unittest.mock import patch
 from uuid import uuid4
 
+from odoo import SUPERUSER_ID
 from odoo.addons.mail.models.mail_template import MailTemplate
 from odoo.addons.mail.tests.common import mail_new_test_user
 from odoo.exceptions import UserError
@@ -73,6 +74,49 @@ class TestPartnerPasswordPolicy(TransactionCase):
             {"type": "password", "password": "legacy"}, {"interactive": True})
         self.assertEqual(info["uid"], self.portal.id)
         self.portal.write({"name": "Legacy account remains usable"})
+
+    def test_native_demo_loader_retains_native_hashing_without_lowering_policy(self):
+        loader = self.users.with_user(SUPERUSER_ID).with_context(install_demo=True)
+        self.assertTrue(loader._b2b_is_native_demo_load())
+        for groups, password in (("base.group_user", "demo"), ("base.group_portal", "portal")):
+            user = mail_new_test_user(loader.env, login="demo-policy-%s" % groups,
+                password=password, groups=groups)
+            info = user.with_user(user)._check_credentials(
+                {"type": "password", "password": password}, {"interactive": True})
+            self.assertEqual(info["uid"], user.id)
+            with self.assertRaises(UserError), self.cr.savepoint():
+                self.users.browse(user.id).write({"password": password})
+        self.assertEqual(self.users.get_password_policy()["minlength"], 8)
+
+    def test_demo_context_without_root_identity_cannot_bypass(self):
+        for user in (self.portal, self.env.ref("base.user_admin")):
+            writer = user.with_user(user).sudo().with_context(install_demo=True)
+            self.assertFalse(writer._b2b_is_native_demo_load())
+            with self.assertRaises(UserError), self.cr.savepoint():
+                writer.write({"password": "demo"})
+
+    def test_demo_flag_alone_or_non_boolean_value_cannot_bypass(self):
+        root = self.users.with_user(SUPERUSER_ID)
+        for flag in (False, "True", "1", 1):
+            writer = root.with_context(install_demo=flag).browse(self.portal.id)
+            self.assertFalse(writer._b2b_is_native_demo_load())
+            with self.assertRaises(UserError), self.cr.savepoint():
+                writer.write({"password": "abcd"})
+
+    def test_http_request_cannot_use_root_demo_context_to_bypass(self):
+        writer = self.users.with_user(SUPERUSER_ID).with_context(install_demo=True).browse(self.portal.id)
+        with patch("odoo.addons.b2b_website.models.password_policy.request", object()):
+            self.assertFalse(writer._b2b_is_native_demo_load())
+            with self.assertRaises(UserError), self.cr.savepoint():
+                writer.write({"password": "abcd"})
+
+    def test_demo_compatibility_does_not_relax_explicit_signup_validation(self):
+        loader = self.users.with_user(SUPERUSER_ID).with_context(install_demo=True)
+        with self.assertRaises(UserError):
+            loader._b2b_check_portal_password("portal")
+        self.params.set_param("auth_password_policy.minlength", 12)
+        with self.assertRaises(UserError):
+            loader._b2b_check_portal_password("abcd1234")
 
 
 @tagged("post_install", "-at_install")
