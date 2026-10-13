@@ -88,6 +88,27 @@ class TestYonyouOrders(TestYonyouMapping):
         self.assertEqual(len(order.yonyou_key), 32)
         self.assertEqual(order.yonyou_source['org'], '999')
 
+    def test_review_quote_can_be_submitted_before_erp_configuration_is_ready(self):
+        order = self._order()
+        self.tax.amount = 13  # This test ERP customer requires zero sales tax.
+        order.write({'b2b_checkout_mode': 'review', 'b2b_review_state': 'pending'})
+        with patch.object(type(self.env['b2b.yonyou.client']), '_http', side_effect=AssertionError('Pending review must not refresh ERP')):
+            order.action_quotation_sent()
+        self.assertEqual(order.state, 'sent')
+        self.assertFalse(order.b2b_erp_job_ids)
+        with self._mock(), self.assertRaises(ValidationError):
+            order.action_b2b_mark_review_ready()
+        self.assertEqual(order.b2b_review_state, 'pending')
+        with self.assertRaises(UserError):
+            order.action_confirm()
+
+    def test_regular_quote_keeps_complete_erp_checkout_validation(self):
+        order = self._order()
+        self.tax.amount = 13
+        with self._mock(), self.assertRaises(ValidationError):
+            order.action_quotation_sent()
+        self.assertEqual(order.state, 'draft')
+
     def test_preparation_temporary_failure_retries_same_order(self):
         order, job = self._confirm()
         key, code = order.yonyou_key, order.yonyou_code

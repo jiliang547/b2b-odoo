@@ -138,6 +138,79 @@ class TestYonyouProgress(TransactionCase):
         self.assertNotIn('requires verification', html)
         self.assertNotIn(self.order.yonyou_progress_notes, str(self.order._yonyou_public_progress()))
 
+    def test_unique_unshipped_row_derives_zero_from_valid_remaining_quantity(self):
+        rows = self._rows()
+        rows[0].update({'销售出库数量': None, '销售未发数量': 100, '销售出库日期': None})
+        self._refresh(self._report(rows))
+        item = self.order._yonyou_public_progress()['items'][0]
+        self.assertEqual((item['shipped'], item['remaining'], item['state']), (0, 100, 'not_shipped'))
+
+    def test_partial_field_remains_visible_without_assuming_missing_shipped_quantity(self):
+        rows = self._rows()
+        rows[0]['销售出库数量'] = None
+        self._refresh(self._report(rows))
+        item = self.order._yonyou_public_progress()['items'][0]
+        self.assertIsNone(item['shipped'])
+        self.assertEqual(item['remaining'], 48)
+        self.assertEqual(item['state'], 'waiting')
+
+    def test_zero_shipment_with_erp_dispatch_date_keeps_the_raw_date(self):
+        rows = self._rows()
+        rows[0].update({'销售出库数量': 0, '销售未发数量': 100})
+        self._refresh(self._report(rows))
+        item = self.order._yonyou_public_progress()['items'][0]
+        self.assertEqual(item['state'], 'not_shipped')
+        self.assertEqual(item['dates']['dispatch_date'], ['2026-09-24'])
+
+    def test_invalid_provided_remaining_is_not_hidden_by_missing_shipped(self):
+        rows = self._rows()
+        rows[0].update({'销售出库数量': None, '销售未发数量': 101})
+        self._refresh(self._report(rows))
+        self.assertEqual(self.order.yonyou_progress_state, 'blocked')
+
+    def test_temporary_read_failure_has_two_bounded_native_cron_retries(self):
+        self._refresh()
+        old = deepcopy(self.order.yonyou_progress_snapshot)
+        with patch.object(type(self.env['b2b.yonyou.client']), '_call', side_effect=ERPTemporaryError('HTTP 504')):
+            for attempt, minutes in ((1, 5), (2, 15), (3, 5)):
+                before = fields.Datetime.now()
+                self.order._yonyou_refresh_progress()
+                self.assertEqual(self.order.yonyou_progress_attempts, attempt)
+                self.assertAlmostEqual((self.order.yonyou_progress_next_at - before).total_seconds(), minutes * 60, delta=5)
+                self.assertEqual(self.order.yonyou_progress_snapshot, old)
+                self.assertEqual(self.order._yonyou_public_progress()['retry_scheduled'], attempt < 3)
+        self.order._progress_write({'yonyou_progress_next_at': fields.Datetime.now() - timedelta(seconds=1)})
+        self.assertFalse(self.order._yonyou_request_progress())
+        self._old_attempt()
+        self.assertTrue(self.order._yonyou_request_progress(manual=True))
+        self.assertEqual(self.order.yonyou_progress_attempts, 0)
+
+    def test_cron_only_retries_due_requested_read_cycles(self):
+        self.order._progress_write({'yonyou_progress_state': 'delayed', 'yonyou_progress_attempts': 1,
+            'yonyou_progress_next_at': fields.Datetime.now() - timedelta(seconds=1)})
+        touched = []
+        def refresh(record):
+            touched.append(record.id)
+            record._progress_write({'yonyou_progress_state': 'ready'})
+        with patch.object(type(self.order), '_yonyou_refresh_progress', refresh), \
+                patch.object(type(self.env['ir.cron']), '_commit_progress', return_value=10):
+            self.order._cron_yonyou_progress()
+            self.assertEqual(touched, [self.order.id])
+            for attempts, next_at in ((0, fields.Datetime.now()), (3, fields.Datetime.now()),
+                    (1, fields.Datetime.now() + timedelta(minutes=1))):
+                self.order._progress_write({'yonyou_progress_state': 'delayed',
+                    'yonyou_progress_attempts': attempts, 'yonyou_progress_next_at': next_at})
+                self.order._cron_yonyou_progress()
+            self.assertEqual(touched, [self.order.id])
+
+    def test_retry_stops_when_cancelled_and_never_creates_an_order(self):
+        self.order._progress_write({'yonyou_progress_state': 'delayed', 'yonyou_progress_attempts': 1,
+            'state': 'cancel', 'yonyou_progress_next_at': fields.Datetime.now() - timedelta(seconds=1)})
+        with patch.object(type(self.env['b2b.yonyou.client']), '_call', side_effect=AssertionError('No ERP call')):
+            self.order._yonyou_refresh_progress()
+        self.assertEqual(self.order.yonyou_progress_state, 'blocked')
+        self.assertFalse(self.order._yonyou_public_progress()['retry_scheduled'])
+
     def test_wrong_erp_order_id_rejected_even_when_number_matches(self):
         rows = self._rows()
         rows[0]['源头单据主表id'] = 2609180994360574999

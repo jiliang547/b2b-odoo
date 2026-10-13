@@ -93,8 +93,15 @@ class SaleOrder(models.Model):
                     raise ValidationError(error)
 
     def action_quotation_sent(self):
-        self._yonyou_check_checkout(refresh=True)
+        # A pending quotation is explicitly asking operations to finish its
+        # pricing/tax configuration. It cannot be paid or confirmed yet.
+        self.filtered(lambda order: order.b2b_review_state != 'pending')._yonyou_check_checkout(refresh=True)
         return super().action_quotation_sent()
+
+    def action_b2b_mark_review_ready(self):
+        # Do not expose the payment link until ERP configuration is consistent.
+        self._yonyou_check_checkout(refresh=True)
+        return super().action_b2b_mark_review_ready()
 
     def action_yonyou_check_order(self):
         self.ensure_one()

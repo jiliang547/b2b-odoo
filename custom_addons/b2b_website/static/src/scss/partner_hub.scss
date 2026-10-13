@@ -691,6 +691,20 @@ body:has(.lt-subnav) .o_notification_manager { top: 86px; }
 .lt-checkout-progress .is-complete b { background: #dcfce7; color: var(--lt-green); }
 .lt-checkout-progress .is-active { color: var(--lt-blue); }
 .lt-checkout-progress .is-active b { background: var(--lt-blue); color: #fff; }
+.lt-checkout-payment-actions { width: 100%; }
+.lt-checkout-more-options {
+    width: 100%;
+    summary { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 8px 12px; border-radius: 6px; color: var(--lt-muted); cursor: pointer; list-style: none; text-decoration: none; }
+    summary::-webkit-details-marker { display: none; }
+    summary:hover { background: var(--lt-soft); color: var(--lt-blue); }
+    summary:focus-visible { outline: 2px solid var(--lt-blue); outline-offset: 2px; }
+    summary i { transition: transform .15s ease; }
+    &[open] summary i { transform: rotate(180deg); }
+    .lt-checkout-more-options__body { padding-top: 8px; }
+    // Preserve the native payment button and events, but make it secondary.
+    [name="o_payment_submit_button"], .btn-outline-primary { width: 100% !important; margin-left: 0 !important; background-color: #fff; border-color: var(--lt-blue); color: var(--lt-blue); }
+    [name="o_payment_submit_button"]:hover:not(:disabled), .btn-outline-primary:hover:not(:disabled) { background-color: var(--lt-blue); color: #fff; }
+}
 .lt-confirmation-mark { width: 70px; height: 70px; display: grid; place-items: center; margin: 20px auto; border-radius: 50%; background: #dcfce7; color: var(--lt-green); }
 .lt-confirmation-mark .lt-kicker { display: none; }
 .lt-login-heading { max-width: 430px; margin: 45px auto 20px; text-align: center; }
@@ -962,6 +976,12 @@ form[aria-busy="true"] button[type="submit"] { cursor: wait; opacity: .72; }
 .lt-portal-card > header { min-height: 50px; display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 13px 18px; border-bottom: 1px solid #e5e7eb; }
 .lt-portal-card > header h2 { margin: 0; color: #111827; font-size: 14px; font-weight: 700; }
 .lt-portal-card > header a, .lt-portal-card > header span { color: #2563eb; font-size: 12px; }
+.lt-portal-card.lt-bank-transfer-payment > header { padding: 18px; }
+.lt-portal-card.lt-bank-transfer-payment > header h2 { font-size: 24px; line-height: 1.3; }
+@media (max-width: 767px) {
+    .lt-portal-card.lt-bank-transfer-payment > header { padding: 16px 18px; }
+    .lt-portal-card.lt-bank-transfer-payment > header h2 { font-size: 20px; }
+}
 
 .lt-dashboard-metrics { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; margin: 0 0 22px; }
 .lt-dashboard-metrics a { min-height: 153px; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 17px; border: 1px solid #dfe4ea; border-radius: 8px; background: #fff; color: #111827; }

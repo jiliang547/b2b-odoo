@@ -339,6 +339,7 @@ class B2BOrderChangeRequest(models.Model):
             "tax_ids": [Command.set(line.tax_ids.ids)],
             "sequence": line.sequence,
             "display_type": line.display_type,
+            "is_delivery": line.is_delivery,
         }
 
     def _apply_revision(self):

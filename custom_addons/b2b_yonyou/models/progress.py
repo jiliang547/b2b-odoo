@@ -14,6 +14,7 @@ STAFF = 'b2b_core.group_b2b_operator'
 CACHE_MINUTES = 30
 FAILURE_MINUTES = 5
 MANUAL_SECONDS = 60
+RETRY_MINUTES = (5, 15)  # Two additional reads for one visitor-requested cycle.
 REPORT_FIELDS = [
     '源头单据主表id', '源头单据子表id', '源头单据号', '销售订单行号',
     '客户编码', '物料编码', '单据id', '编码', '供应行号',
@@ -100,6 +101,7 @@ class SaleOrder(models.Model):
     yonyou_progress_next_at = fields.Datetime(copy=False, readonly=True, groups=STAFF)
     yonyou_progress_error = fields.Text(string='Progress Update Error', copy=False, readonly=True, groups=STAFF)
     yonyou_progress_notes = fields.Text(string='Progress Data Notes', copy=False, readonly=True, groups=STAFF)
+    yonyou_progress_attempts = fields.Integer(default=0, copy=False, readonly=True, groups=STAFF)
 
     def _progress_write(self, values):
         return self.sudo().with_context(_yonyou_write=WRITE_TOKEN).write(values)
@@ -172,6 +174,11 @@ class SaleOrder(models.Model):
         now = fields.Datetime.now()
         if locked.yonyou_progress_state == 'queued':
             return False
+        if (not manual and locked.yonyou_progress_state == 'delayed'
+                and locked.yonyou_progress_attempts >= len(RETRY_MINUTES) + 1):
+            # Exhaustion requires an explicit new manual request, not a page
+            # reload starting an endless background retry cycle.
+            return False
         info = locked._yonyou_manual_refresh_info()
         if manual and (not info['supported'] or info['retry_after']):
             return False
@@ -182,7 +189,8 @@ class SaleOrder(models.Model):
                 'yonyou_progress_error': 'ERP connection changed; review this order before querying.',
                 'yonyou_progress_next_at': now + timedelta(minutes=CACHE_MINUTES)})
             return False
-        locked._progress_write({'yonyou_progress_state': 'queued', 'yonyou_progress_requested_at': now})
+        locked._progress_write({'yonyou_progress_state': 'queued', 'yonyou_progress_requested_at': now,
+                                'yonyou_progress_attempts': 0})
         self.env.ref('b2b_yonyou.ir_cron_order_progress').sudo()._trigger()
         return True
 
@@ -212,12 +220,14 @@ class SaleOrder(models.Model):
     def _yonyou_refresh_progress(self):
         self.ensure_one()
         now = fields.Datetime.now()
-        self._progress_write({'yonyou_progress_attempt_at': now})
+        self._progress_write({'yonyou_progress_attempt_at': now,
+                              'yonyou_progress_attempts': self.yonyou_progress_attempts + 1})
         try:
             config = self.env.ref('b2b_yonyou.connection').sudo()
             if not config.enabled or self.yonyou_manual_review or self.state == 'cancel' or not self.yonyou_id:
                 raise UserError(_('Order progress requires review of the ERP order link.'))
-            if (self.yonyou_source or {}).get('connection_revision') not in (None, config.revision):
+            if ((self.yonyou_source or {}).get('connection_revision') not in (None, config.revision)
+                    or (self.yonyou_progress_snapshot or {}).get('connection_revision') not in (None, config.revision)):
                 raise UserError(_('ERP connection identity changed. Review the original order.'))
             client = self.env['b2b.yonyou.client']
             if not self.yonyou_progress_bindings:
@@ -253,7 +263,7 @@ class SaleOrder(models.Model):
                 'yonyou_progress_state': 'ready', 'yonyou_progress_updated_at': completed,
                 'yonyou_progress_next_at': completed + timedelta(minutes=CACHE_MINUTES),
                 'yonyou_progress_notes': '\n'.join(notes) or False,
-                'yonyou_progress_error': False})
+                'yonyou_progress_error': False, 'yonyou_progress_attempts': 0})
         except Exception as exc:
             temporary = isinstance(exc, ERPTemporaryError)
             error = str(exc)[:1000] if isinstance(exc, (UserError, ValueError)) else \
@@ -261,8 +271,11 @@ class SaleOrder(models.Model):
             if temporary:
                 error = error.replace('Retry will check the existing record first.',
                     'Only the progress report will be queried again; no sales order is resubmitted.')
+            attempt = self.yonyou_progress_attempts
+            delay = (RETRY_MINUTES[attempt - 1] if temporary and 1 <= attempt <= len(RETRY_MINUTES)
+                     else FAILURE_MINUTES if temporary else CACHE_MINUTES)
             self._progress_write({'yonyou_progress_state': 'delayed' if temporary else 'blocked',
-                'yonyou_progress_next_at': fields.Datetime.now() + timedelta(minutes=FAILURE_MINUTES if temporary else CACHE_MINUTES),
+                'yonyou_progress_next_at': fields.Datetime.now() + timedelta(minutes=delay),
                 'yonyou_progress_error': error})
 
     def _yonyou_normalize_progress(self, rows):
@@ -282,6 +295,16 @@ class SaleOrder(models.Model):
                      for key, field in DATE_FIELDS.items()}
             # Pending supply records may have no shipment quantities yet. Keep
             # their dates without turning an unknown quantity into a false zero.
+            # Validate every provided quantity, even if another field is null.
+            # Known values must not disappear just because one value is absent.
+            provided = [{key: quantity(row[field]) if row[field] not in (None, '') else None
+                         for key, field in (('ordered', '下单数量'), ('shipped', '销售出库数量'),
+                                            ('remaining', '销售未发数量'))} for row in group]
+            for amounts in provided:
+                if amounts['ordered'] is not None and any(
+                        amounts[key] is not None and amounts[key] > amounts['ordered'] + 0.000001
+                        for key in ('shipped', 'remaining')):
+                    raise ValueError('Inconsistent shipment quantities')
             metrics = {(quantity(r['下单数量']), quantity(r['销售出库数量']), quantity(r['销售未发数量']))
                        for r in group if all(r[k] not in (None, '')
                            for k in ('下单数量', '销售出库数量', '销售未发数量'))}
@@ -293,6 +316,25 @@ class SaleOrder(models.Model):
             quantity_verified = len(group) == 1 and len(metrics) == 1
             issue = False if quantity_verified else 'ambiguous' if len(group) > 1 else 'missing'
             ordered, shipped, remaining = next(iter(metrics), (None, None, None))
+            shipped_verified = remaining_verified = quantity_verified
+            if len(group) == 1 and provided[0]['ordered'] is not None:
+                ordered, shipped, remaining = (provided[0][key] for key in ('ordered', 'shipped', 'remaining'))
+                # Verify the report's base quantity against the bound Odoo line
+                # before independently displaying or deriving partial fields.
+                bound_ids = [int(key) for key, value in (self.yonyou_progress_bindings or {}).items()
+                             if value.get('id') == line_id and value.get('code') == next(iter(codes))]
+                lines = self.order_line.filtered(lambda line: line.id in bound_ids)
+                base_matches = len(lines) == 1 and abs(lines.product_uom_id._compute_quantity(
+                    lines.product_uom_qty, lines.product_id.uom_id) - ordered) <= 0.000001
+                shipped_verified = quantity_verified or bool(base_matches and shipped is not None)
+                remaining_verified = quantity_verified or bool(base_matches and remaining is not None)
+                # This narrow zero case is supported by quantity conservation,
+                # not by treating every ERP null as zero. Raw dates stay intact.
+                if (base_matches and shipped is None and remaining is not None
+                        and abs(ordered - remaining) <= 0.000001 and not dates['dispatch_date']):
+                    shipped = 0.0
+                    shipped_verified = quantity_verified = True
+                    issue = False
             supplies = []
             for row in group:
                 supply = {key: date_value(row[field]) for key, field in DATE_FIELDS.items()}
@@ -301,14 +343,19 @@ class SaleOrder(models.Model):
             output.append({'erp_line_id': line_id, 'code': next(iter(codes)),
                 'dates': dates, 'supplies': supplies, 'quantity_verified': quantity_verified, 'quantity_issue': issue,
                 'ordered': ordered if quantity_verified else None,
-                'shipped': shipped if quantity_verified else None,
-                'remaining': remaining if quantity_verified else None})
+                'shipped_verified': shipped_verified, 'remaining_verified': remaining_verified,
+                'shipped': shipped if shipped_verified else None,
+                'remaining': remaining if remaining_verified else None})
         return {'rows': output}
 
     @api.model
     def _cron_yonyou_progress(self, limit=2):
         # Only visitors' requests; no periodic scanning of all confirmed orders.
-        domain = [('yonyou_progress_state', '=', 'queued')]
+        domain = ['|', ('yonyou_progress_state', '=', 'queued'), '&', '&', '&',
+                  ('yonyou_progress_state', '=', 'delayed'),
+                  ('yonyou_progress_attempts', '>', 0),
+                  ('yonyou_progress_attempts', '<', len(RETRY_MINUTES) + 1),
+                  ('yonyou_progress_next_at', '<=', fields.Datetime.now())]
         candidates = self.sudo().search(domain, order='yonyou_progress_requested_at, id', limit=limit)
         cron = self.env['ir.cron']
         cron._commit_progress(remaining=self.sudo().search_count(domain))
@@ -343,12 +390,17 @@ class SaleOrder(models.Model):
                          'partial' if row['shipped'] else 'not_shipped')
             items.append({'name': line.name, 'sku': line.product_id.default_code or '',
                 'ordered': line.product_uom_qty, 'unit': line.product_uom_id.name,
-                'shipped': row['shipped'] if row and row['quantity_verified'] and not no_shipment else None,
-                'remaining': row['remaining'] if row and row['quantity_verified'] and not no_shipment else None,
+                'shipped': row['shipped'] if row and (row['quantity_verified'] or row.get('shipped_verified')) and not no_shipment else None,
+                'remaining': row['remaining'] if row and (row['quantity_verified'] or row.get('remaining_verified')) and not no_shipment else None,
                 'quantity_unit': line.product_id.uom_id.name,
                 'state': state, 'dates': row['dates'] if row and not no_shipment else {},
                 'supplies': row['supplies'] if row and not no_shipment else []})
+        retry_scheduled = bool(self.yonyou_progress_state == 'delayed' and not changed
+            and 0 < self.yonyou_progress_attempts <= len(RETRY_MINUTES)
+            and self._yonyou_manual_refresh_info()['supported'] and self.yonyou_progress_next_at)
         return {'items': items, 'pending': self.yonyou_progress_state == 'queued' and not changed,
+            'retry_scheduled': retry_scheduled,
+            'retry_after': max(0, math.ceil((self.yonyou_progress_next_at - fields.Datetime.now()).total_seconds())) if retry_scheduled else 0,
             'refresh': self._yonyou_manual_refresh_info(),
             'content_key': sha256(json.dumps(items, sort_keys=True, ensure_ascii=False).encode()).hexdigest(),
             'updated_at': fields.Datetime.to_string(self.yonyou_progress_updated_at) if self.yonyou_progress_updated_at else False,

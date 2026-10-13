@@ -103,4 +103,29 @@ await test('malformed RPC data is not inserted into the page', async () => {
     h.replies.push({pending: false, html: '<script>bad</script>'}); await h.instance.refresh(event);
     assert.equal(h.nodes.panel.innerHTML, 'Safe contents');
 });
+await test('automatic retry only reads local cache after backoff and stops scheduling after a bound', async () => {
+    const h = harness();
+    h.instance.scheduleAutomaticCheck({retry_scheduled: true, retry_after: 300});
+    const timer = h.timers.get(h.instance.automaticTimer);
+    assert.equal(timer.delay, 395000);
+    h.replies.push(result({content_key: 'recovered'}));
+    await timer.fn();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(h.calls, ['/check']);
+    assert.equal(h.nodes.panel.innerHTML, '<p>Cached progress</p>');
+    h.instance.automaticChecks = 3;
+    h.instance.scheduleAutomaticCheck({retry_scheduled: true, retry_after: 0});
+    assert.equal(h.timers.has(h.instance.automaticTimer), false);
+});
+await test('automatic recovery replaces an earlier failure notice', async () => {
+    const h = harness();
+    h.instance.manualCycle = true;
+    h.instance.applyResult(result({delayed: true, retry_scheduled: true, retry_after: 300}));
+    assert.match(h.nodes.feedback.textContent, /retry automatically/);
+    h.instance.automaticChecks = 1;
+    h.instance.applyResult(result({content_key: 'recovered'}));
+    assert.equal(h.nodes.feedback.textContent, 'Progress updated.');
+    h.instance.applyResult(result({content_key: 'recovered'}));
+    assert.equal(h.nodes.feedback.textContent, 'Progress checked. No new updates.');
+});
 console.log(`${count} interaction tests passed`);

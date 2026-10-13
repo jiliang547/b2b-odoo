@@ -4,6 +4,9 @@ from odoo import fields, models
 class ResConfigSettings(models.TransientModel):
     _inherit = "res.config.settings"
 
+    b2b_manual_freight = fields.Boolean(related="website_id.b2b_manual_freight", readonly=False)
+    b2b_freight_product_id = fields.Many2one(related="website_id.b2b_freight_product_id", readonly=False)
+
     b2b_website_logo = fields.Binary(
         string="Partner Hub Logo",
         related="website_id.logo",

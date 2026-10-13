@@ -6,6 +6,14 @@
         <field name="inherit_id" ref="b2b_core.res_config_settings_view_form_b2b"/>
         <field name="arch" type="xml">
             <block id="b2b_partner_hub_settings" position="inside">
+                <setting string="Manual freight" help="No automatic freight line at checkout. Add the freight product to the quotation before releasing payment, or use the existing change-request workflow after payment.">
+                    <field name="b2b_manual_freight"/>
+                    <div class="content-group" invisible="not b2b_manual_freight">
+                        <label for="b2b_freight_product_id"/>
+                        <field name="b2b_freight_product_id" options="{'no_create': True}"/>
+                        <div class="text-muted">Use a shared service product with a verified ERP material code. Freight is excluded from the FOB / EXW goods threshold.</div>
+                    </div>
+                </setting>
                 <setting string="Partner Hub branding" help="The selected website logo is used in the Partner Hub header and footer.">
                     <field name="b2b_website_logo" widget="image" class="oe_avatar"/>
                 </setting>

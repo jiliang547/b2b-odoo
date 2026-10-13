@@ -16,6 +16,8 @@
                          t-att-data-refresh-supported="'true' if status['refresh']['supported'] else 'false'"
                          t-att-data-retry-after="status['refresh']['retry_after']"
                          t-att-data-updated-at="status['updated_at'] or ''"
+                         t-att-data-auto-retry="'true' if status.get('retry_scheduled') else 'false'"
+                         t-att-data-auto-retry-after="status.get('retry_after', 0)"
                          t-att-data-content-key="status['content_key']">
                         <div class="lt-progress-toolbar">
                             <p>Last successful update: <strong data-progress-updated="true" t-out="('%s UTC' % status['updated_at']) if status['updated_at'] else 'Not checked yet'"/></p>
@@ -47,6 +49,7 @@
             <p t-elif="not status.get('linked')">Your order is being registered for fulfilment. Please check back later.</p>
             <p t-elif="not status.get('refresh', {}).get('supported')">Order progress is temporarily unavailable. Please contact our team if you need an update.</p>
             <p t-elif="status.get('pending')" data-progress-waiting="true"><i class="fa fa-spinner fa-spin" aria-hidden="true"/> Updating order progress… Your last available progress is shown below.</p>
+            <p t-elif="status.get('retry_scheduled')">Updates are temporarily delayed. Your last available progress is shown below. We will retry automatically.</p>
             <p t-elif="status.get('delayed')">Updates are temporarily delayed. The last available progress is shown below. Please try again later.</p>
         </div>
         <div class="lt-progress-items">

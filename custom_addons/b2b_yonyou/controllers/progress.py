@@ -16,6 +16,7 @@ class OrderProgress(http.Controller):
     def _response(self, order):
         status = order._yonyou_public_progress()
         return {'pending': status['pending'], 'updated_at': status['updated_at'],
+            'retry_scheduled': status['retry_scheduled'], 'retry_after': status['retry_after'],
             'refresh': status['refresh'], 'content_key': status['content_key'],
             'delayed': status['delayed'], 'html': request.env['ir.ui.view']._render_template(
                 'b2b_yonyou.progress_panel', {'order': order, 'status': status})}

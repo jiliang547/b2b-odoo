@@ -1,5 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <template id="collection_payment_amount_selector" inherit_id="sale.sale_order_portal_pay_modal_amount_selector" priority="130">
+        <xpath expr="//div[@role='group']" position="before">
+            <div t-if="sale_order.b2b_collection_active" class="d-flex btn-group mb-3" role="group">
+                <button name="o_sale_portal_amount_prepayment_button" class="btn btn-light active">
+                    Down payment<br/>
+                    <span t-out="min(sale_order.b2b_payable_now or sale_order.b2b_balance, sale_order.b2b_balance)"
+                          t-options="{'widget': 'monetary', 'display_currency': sale_order.currency_id}" class="fw-bold"/>
+                </button>
+                <button name="o_sale_portal_amount_total_button" class="btn btn-light">
+                    <t t-if="sale_order.b2b_net_received &gt; 0">Remaining balance</t><t t-else="">Full amount</t><br/>
+                    <span t-field="sale_order.b2b_balance" class="fw-bold"/>
+                </button>
+            </div>
+        </xpath>
+        <xpath expr="//div[@role='group'][not(@t-if)]" position="attributes">
+            <attribute name="t-if">not sale_order.b2b_collection_active</attribute>
+        </xpath>
+    </template>
     <template id="review_customer_total" inherit_id="sale.sale_order_portal_content" priority="120">
         <xpath expr="//div[@id='total']" position="before">
             <p t-if="sale_order.b2b_review_state == 'pending'" class="text-end text-muted">Estimated Total — shipping and final pricing are awaiting confirmation.</p>
@@ -13,7 +31,7 @@
     </template>
     <template id="review_collection_waiting" inherit_id="b2b_website.portal_collection" priority="120">
         <xpath expr="//header[hasclass('lt-portal-heading')]" position="after">
-            <div t-if="order.b2b_review_state == 'pending'" class="alert alert-info" role="status"><strong>Awaiting Final Quote</strong><p class="mb-0">We’re confirming shipping costs and any requested adjustments. We’ll notify you when your final quote is ready. No payment is required now.</p></div>
+            <div t-if="order.b2b_review_state == 'pending'" class="alert alert-info lt-awaiting-final-quote" role="status"><strong>Awaiting Final Quote</strong></div>
         </xpath>
         <xpath expr="//dd[span[@t-field='order.b2b_payable_now']]" position="replace">
             <dd class="col-5"><span t-if="order.b2b_review_state == 'pending'">Pending final quote</span><span t-else="" t-field="order.b2b_payable_now"/></dd>

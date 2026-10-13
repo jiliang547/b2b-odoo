@@ -12,6 +12,7 @@ class OrderProgress extends Interaction {
         this.busy = false;
         this.waiting = false;
         this.manualCycle = false;
+        this.automaticChecks = 0;
         this.supported = this.el.dataset.refreshSupported === "true";
         this.contentKey = this.el.dataset.contentKey;
         this.updatedAt = this.el.dataset.updatedAt || false;
@@ -20,13 +21,31 @@ class OrderProgress extends Interaction {
             this.stopped = true;
             clearTimeout(this.timer);
             clearTimeout(this.cooldownTimer);
+            clearTimeout(this.automaticTimer);
             this.controller?.abort();
         });
         if (this.el.dataset.pending === "true") this.beginWaiting();
         else this.updateButton();
+        this.scheduleAutomaticCheck({retry_scheduled: this.el.dataset.autoRetry === "true",
+            retry_after: Number(this.el.dataset.autoRetryAfter || 0)});
     }
 
     alive() { return !this.stopped && !this.isDestroyed && this.el.isConnected; }
+
+    scheduleAutomaticCheck(result) {
+        clearTimeout(this.automaticTimer);
+        if (!result.retry_scheduled || this.automaticChecks >= 3 ||
+            !Number.isFinite(result.retry_after) || result.retry_after < 0) return;
+        // Read only our local snapshot after the native cron's due time plus
+        // its one-minute scheduling interval and the report's HTTP allowance.
+        // Do not poll ERP during backoff or keep an indefinite polling loop.
+        this.automaticTimer = setTimeout(() => {
+            if (!this.alive() || this.busy || this.waiting) return;
+            this.automaticChecks++;
+            this.deadline = Date.now() + 90000;
+            this.check();
+        }, (result.retry_after + 95) * 1000);
+    }
 
     setFeedback(message) {
         if (this.alive()) this.el.querySelector("[data-progress-feedback]").textContent = message;
@@ -105,10 +124,12 @@ class OrderProgress extends Interaction {
         this.el.querySelector("[data-progress-updated]").textContent =
             result.updated_at ? result.updated_at + " UTC" : _t("Not checked yet");
         this.el.dataset.pending = String(result.pending);
+        this.scheduleAutomaticCheck(result);
         if (!result.pending) {
             this.waiting = false;
             if (this.manualCycle) {
-                const message = result.delayed ?
+                const message = result.retry_scheduled ?
+                    _t("Updates are temporarily delayed. Your last available progress has been kept. We will retry automatically.") : result.delayed ?
                     _t("Updates are temporarily delayed. Your last available progress has been kept.") :
                     !result.refresh.supported ? _t("Order progress is temporarily unavailable.") :
                     this.priorUpdatedAt === result.updated_at ? _t("No new check has completed. Please try again shortly.") :
@@ -116,6 +137,10 @@ class OrderProgress extends Interaction {
                     _t("Progress updated.");
                 this.setFeedback(message);
                 this.manualCycle = false;
+            } else if (this.automaticChecks > 0 && !result.delayed && result.refresh.supported) {
+                // Replace a previous manual failure notice after auto-recovery.
+                this.setFeedback(this.contentKey === result.content_key ?
+                    _t("Progress checked. No new updates.") : _t("Progress updated."));
             }
             this.contentKey = result.content_key;
             this.updatedAt = result.updated_at;
@@ -127,6 +152,8 @@ class OrderProgress extends Interaction {
         event.preventDefault();
         if (!this.alive() || this.busy || this.waiting || !this.supported || Date.now() < this.cooldownUntil) return;
         this.busy = true;
+        this.automaticChecks = 0;
+        clearTimeout(this.automaticTimer);
         this.manualCycle = true;
         this.priorContentKey = this.contentKey;
         this.priorUpdatedAt = this.updatedAt;
