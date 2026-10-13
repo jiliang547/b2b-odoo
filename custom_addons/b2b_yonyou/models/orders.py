@@ -93,8 +93,15 @@ class SaleOrder(models.Model):
                     raise ValidationError(error)
 
     def action_quotation_sent(self):
-        self._yonyou_check_checkout(refresh=True)
+        # A pending quotation is explicitly asking operations to finish its
+        # pricing/tax configuration. It cannot be paid or confirmed yet.
+        self.filtered(lambda order: order.b2b_review_state != 'pending')._yonyou_check_checkout(refresh=True)
         return super().action_quotation_sent()
+
+    def action_b2b_mark_review_ready(self):
+        # Do not expose the payment link until ERP configuration is consistent.
+        self._yonyou_check_checkout(refresh=True)
+        return super().action_b2b_mark_review_ready()
 
     def action_yonyou_check_order(self):
         self.ensure_one()
@@ -416,6 +423,7 @@ class ERPService(models.AbstractModel):
         ledger._claim(reference.yonyou_key)
         detail = client._call(ORDER_DETAIL, {'id': erp_id})
         self._yonyou_validate_readback(header, detail, reference.currency_id)
+        reference._yonyou_store_progress_bindings(detail)
         # Existing orders found before any send must also stay query-only.
         ledger._remember(reference.yonyou_key, erp_id)
         reference.with_context(_yonyou_write=WRITE_TOKEN).write({'yonyou_id': erp_id})

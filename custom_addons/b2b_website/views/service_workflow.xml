@@ -5,20 +5,21 @@
         <field name="arch" type="xml">
             <xpath expr="//header" position="inside">
                 <field name="b2b_service_step" invisible="1"/>
+                <field name="b2b_needs_return" invisible="1"/><field name="b2b_needs_dispatch" invisible="1"/>
                 <button name="action_b2b_review" type="object" string="Review Request" invisible="b2b_service_step != 'submitted'"/>
-                <button name="action_b2b_approve" type="object" string="Approve Return" invisible="b2b_service_step != 'review'"/>
+                <button name="action_b2b_approve" type="object" string="Approve Service" invisible="b2b_service_step != 'review'"/>
                 <button name="action_b2b_reject" type="object" string="Reject Request" invisible="b2b_service_step not in ['submitted', 'review']"/>
                 <button name="action_b2b_received" type="object" string="Confirm Return Received" invisible="b2b_service_step != 'transit'"/>
                 <button name="action_b2b_process" type="object" string="Start Inspection / Resolution" invisible="b2b_service_step != 'received'"/>
-                <button name="action_b2b_ship" type="object" string="Confirm Shipped Back" invisible="b2b_service_step != 'processing'"/>
-                <button name="action_b2b_complete" type="object" string="Complete Service" invisible="b2b_service_step != 'shipped'" confirm="Confirm that the customer has received the shipment and the service request is resolved?"/>
+                <button name="action_b2b_ship" type="object" string="Confirm Dispatch" invisible="b2b_service_step != 'processing' or not b2b_needs_dispatch"/>
+                <button name="action_b2b_complete" type="object" string="Complete Service" invisible="b2b_service_step != 'shipped' and not (b2b_service_step == 'processing' and not b2b_needs_dispatch)" confirm="Confirm the request is resolved and any required delivery has reached the customer? This does not issue a refund."/>
             </xpath>
             <xpath expr="//sheet" position="inside">
                 <group string="Return and Resolution" invisible="not b2b_service_step">
-                    <group string="Approval"><field name="b2b_fulfilment_mode"/><field name="b2b_return_instructions" placeholder="Customer-facing return address, recipient, telephone and packing instructions"/><field name="b2b_return_deadline"/></group>
-                    <group string="Customer Shipment"><field name="b2b_return_carrier" readonly="1"/><field name="b2b_return_tracking" readonly="1"/><field name="b2b_return_date" readonly="1"/></group>
-                    <group string="Receipt and Resolution"><field name="b2b_receipt_note" placeholder="Received quantity, serial number and condition"/><field name="b2b_resolution_note" placeholder="Customer-facing resolution or reason for rejection"/></group>
-                    <group string="Ship Back"><field name="b2b_outbound_carrier"/><field name="b2b_outbound_tracking"/><field name="b2b_outbound_date"/></group>
+                    <group string="Approval"><field name="b2b_service_route" readonly="b2b_service_step not in ['submitted', 'review']"/><field name="b2b_fulfilment_mode"/><field name="b2b_return_instructions" invisible="not b2b_needs_return" placeholder="Customer-facing return address, recipient, telephone and packing instructions"/><field name="b2b_return_deadline" invisible="not b2b_needs_return"/></group>
+                    <group string="Customer Shipment" invisible="not b2b_needs_return"><field name="b2b_return_carrier" readonly="1"/><field name="b2b_return_tracking" readonly="1"/><field name="b2b_return_date" readonly="1"/></group>
+                    <group string="Receipt and Resolution"><field name="b2b_receipt_note" invisible="not b2b_needs_return" placeholder="Received quantity, serial number and condition"/><field name="b2b_resolution_note" placeholder="Customer-facing resolution or reason for rejection"/></group>
+                    <group string="Dispatch to Customer" invisible="not b2b_needs_dispatch"><field name="b2b_outbound_carrier"/><field name="b2b_outbound_tracking"/><field name="b2b_outbound_date"/></group>
                 </group>
                 <div class="alert alert-info" role="status" invisible="not b2b_service_step or b2b_fulfilment_mode != 'external'">Record confirmed receipt and dispatch information from your warehouse or ERP here. Customer progress changes only when you confirm the corresponding action.</div>
             </xpath>
@@ -35,15 +36,16 @@
         </xpath>
         <xpath expr="//div[@id='card_body']" position="inside">
             <section t-if="ticket.b2b_service_step" class="lt-service-progress">
-                <h2>Return &amp; service progress</h2>
-                <p t-if="ticket.b2b_service_step in ('submitted', 'review')">Our team is reviewing your request. Please wait for return approval before shipping any goods.</p>
+                <h2>Service Progress</h2>
+                <p t-if="ticket.b2b_service_step in ('submitted', 'review')">Our team is reviewing your request and will confirm whether a return is needed. Please do not ship any goods until instructed.</p>
+                <p t-if="not ticket.b2b_needs_return and ticket.b2b_service_step in ('processing', 'shipped', 'completed')">No return required.</p>
                 <div t-if="request.params.get('service_error')" class="alert alert-warning" role="alert" t-out="request.params.get('service_error')"/>
                 <div t-if="request.params.get('return_submitted')" class="alert alert-success" role="status">Your return shipment details have been recorded.</div>
-                <t t-if="ticket.b2b_return_instructions and ticket.b2b_service_step not in ('submitted', 'review', 'rejected')">
+                <t t-if="ticket.b2b_needs_return and ticket.b2b_return_instructions and ticket.b2b_service_step not in ('submitted', 'review', 'rejected')">
                     <h4>Return instructions</h4><p style="white-space: pre-line" t-out="ticket.b2b_return_instructions"/>
                     <p t-if="ticket.b2b_return_deadline">Please ship by <span t-field="ticket.b2b_return_deadline"/>. If you need more time, message our team.</p>
                 </t>
-                <form t-if="ticket.b2b_service_step == 'approved' and not request.env.user._is_public() and ticket.partner_id.commercial_partner_id == request.env.user.partner_id.commercial_partner_id" t-att-action="'/my/service/%s/tracking' % ticket.id" method="post" data-lt-submit-once="">
+                <form t-if="ticket.b2b_needs_return and ticket.b2b_service_step == 'approved' and not request.env.user._is_public() and ticket.partner_id.commercial_partner_id == request.env.user.partner_id.commercial_partner_id" t-att-action="'/my/service/%s/tracking' % ticket.id" method="post" data-lt-submit-once="">
                     <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                     <div class="lt-form-grid">
                         <div class="lt-field"><label for="return-carrier">Carrier</label><input id="return-carrier" name="carrier" maxlength="120" required="required"/></div>
@@ -54,7 +56,7 @@
                 </form>
                 <t t-if="ticket.b2b_return_tracking"><h4>Your return shipment</h4><p><span t-out="ticket.b2b_return_carrier"/> · <strong t-out="ticket.b2b_return_tracking"/> · <span t-field="ticket.b2b_return_date"/></p></t>
                 <t t-if="ticket.b2b_resolution_note and ticket.b2b_service_step in ('rejected', 'shipped', 'completed')"><h4>Resolution</h4><p style="white-space: pre-line" t-out="ticket.b2b_resolution_note"/></t>
-                <t t-if="ticket.b2b_service_step in ('shipped', 'completed')"><h4>Shipment back to you</h4><p><span t-out="ticket.b2b_outbound_carrier"/> · <strong t-out="ticket.b2b_outbound_tracking"/> · <span t-field="ticket.b2b_outbound_date"/></p></t>
+                <t t-if="ticket.b2b_needs_dispatch and ticket.b2b_service_step in ('shipped', 'completed')"><h4>Shipment to you</h4><p><span t-out="ticket.b2b_outbound_carrier"/> · <strong t-out="ticket.b2b_outbound_tracking"/> · <span t-field="ticket.b2b_outbound_date"/></p></t>
             </section>
         </xpath>
     </template>

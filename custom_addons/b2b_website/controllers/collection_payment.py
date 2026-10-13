@@ -22,7 +22,9 @@ class CollectionSalePortal(CustomerPortal):
             # Confirmed orders rely on an explicit amount to expose the native
             # payment dialog. Only quotations need the original-deposit check
             # avoided; resolve confirmed-order dues from the live order.
-            payment_amount = (order.b2b_payable_now or order.b2b_balance) if (
+            selected_amount = (order.b2b_balance if kw.get('amount_selection') == 'full_amount'
+                               else order.b2b_payable_now or order.b2b_balance)
+            payment_amount = selected_amount if (
                 payment_amount and order.state == 'sale'
                 and order.b2b_review_state != 'pending' and not order.b2b_is_change_revision
             ) else None
@@ -32,7 +34,11 @@ class CollectionSalePortal(CustomerPortal):
         if order_sudo.b2b_collection_active:
             # Native Sales supports partial payments; ecommerce's cart route
             # deliberately accepts only the entire cart total.
-            amount = min(payment_amount or order_sudo.b2b_payable_now or order_sudo.b2b_balance, order_sudo.b2b_balance)
+            # Native amount_selection has already resolved is_down_payment.
+            # A full payment pays the unpaid balance, not the production deposit
+            # and not the original total after a verified bank receipt.
+            amount = (order_sudo.b2b_payable_now or order_sudo.b2b_balance) if is_down_payment else order_sudo.b2b_balance
+            amount = min(amount, order_sudo.b2b_balance)
             values = super()._get_payment_values(order_sudo, is_down_payment=amount < order_sudo.amount_total, payment_amount=amount, **kwargs)
             values['b2b_quote_token'] = order_sudo._b2b_quote_token()
             return values

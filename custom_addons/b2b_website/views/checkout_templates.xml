@@ -8,6 +8,39 @@
     <template id="checkout_layout_partner_style" inherit_id="website_sale.checkout_layout" name="Partner Hub Checkout Style">
         <xpath expr="//div[@id='wrap']" position="attributes"><attribute name="class" add="lt-checkout" separator=" "/></xpath>
     </template>
+    <template id="checkout_delivery_terms" inherit_id="website_sale.delivery_method" name="Partner Hub Checkout Delivery Terms">
+        <xpath expr="//span[hasclass('o_wsale_delivery_price_badge')]" position="replace">
+            <t t-set="b2b_delivery_terms" t-value="order._b2b_checkout_delivery_terms() if order and order.website_id else False"/>
+            <span class="o_wsale_delivery_price_badge text-muted fw-bold text-end" name="price" t-att-data-lt-delivery-terms="b2b_delivery_terms">
+                <t t-if="b2b_delivery_terms" t-out="b2b_delivery_terms"/>
+                <small t-else="" class="fw-normal">Select to compute delivery rate</small>
+            </span>
+        </xpath>
+    </template>
+    <template id="checkout_manual_freight" inherit_id="website_sale.delivery_form" name="Partner Hub Manual Freight Terms">
+        <!-- Keep the native form ID: address changes refresh this container. -->
+        <xpath expr="//form[@id='o_delivery_form']" position="before">
+            <form t-if="order._b2b_uses_manual_freight()" id="o_delivery_form" class="o_delivery_form" data-lt-manual-freight="">
+                <h4 class="mb-3">Delivery terms</h4>
+                <div class="list-group-item rounded border fw-bold" data-lt-manual-delivery-terms="" t-out="order._b2b_checkout_delivery_terms()"/>
+            </form>
+        </xpath>
+        <xpath expr="//form[@id='o_delivery_form'][not(@data-lt-manual-freight)]" position="attributes">
+            <attribute name="t-if">not order._b2b_uses_manual_freight()</attribute>
+        </xpath>
+    </template>
+    <template id="checkout_manual_freight_total" inherit_id="website_sale.total" name="Partner Hub Optional Freight Total">
+        <xpath expr="//tr[@name='o_order_delivery']" position="attributes">
+            <attribute name="t-if">website_sale_order._has_deliverable_products() and (not website_sale_order._b2b_uses_manual_freight() or website_sale_order.order_line.filtered('is_delivery'))</attribute>
+        </xpath>
+        <xpath expr="//tr[@name='o_order_delivery']/td[last()]" position="replace">
+            <td class="text-end pe-0 pt-0 pb-2 border-0">
+                <span t-if="website_sale_order._b2b_uses_manual_freight() or website_sale_order.carrier_id" t-out="website_sale_order.amount_delivery" class="monetary_field" style="white-space: nowrap;" t-options="{'widget': 'monetary', 'display_currency': website_sale_order.currency_id}"/>
+                <span t-else="" name="o_message_no_dm_set" title="Price will be updated after choosing a delivery method">-</span>
+                <span t-if="not website_sale_order._b2b_uses_manual_freight() and not website_sale_order.carrier_id" t-out="website_sale_order.amount_delivery" class="monetary_field d-none" t-options="{'widget': 'monetary', 'display_currency': website_sale_order.currency_id}"/>
+            </td>
+        </xpath>
+    </template>
     <template id="ordering_unavailable" name="Partner Ordering Unavailable">
         <t t-call="b2b_website.partner_layout"><t t-set="no_index" t-value="True"/>
             <section class="lt-section"><div class="container lt-narrow"><div class="lt-state-card"><i class="fa fa-lock"/><span class="lt-kicker">ACCOUNT ACCESS</span><h1>Ordering is not enabled yet</h1><p>Your account may need approval or price access before products can be added to an order.</p><div class="lt-actions"><a class="lt-btn lt-btn--primary" href="/my">Open my account</a><a class="lt-btn lt-btn--ghost-dark" href="/contact">Contact us</a></div></div></div></section>
@@ -22,15 +55,25 @@
     </template>
 
     <template id="payment_submit_for_review" inherit_id="website_sale.navigation_buttons" name="Submit Order for Review">
-        <xpath expr="//t[@t-if=&quot;current_website_checkout_step_href == '/shop/payment'&quot;]" position="inside">
-            <div t-if="not errors and website_sale_order._is_cart_ready()" class="lt-checkout-alternatives d-flex flex-column gap-2">
-                    <form action="/shop/submit-for-review" method="post" data-lt-submit-once="">
-                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-                        <button type="submit" class="btn btn-outline-primary w-100" data-lt-stable-submit="">
-                            Submit Order
-                        </button>
-                    </form>
-                    <small class="text-muted text-center">Confirm shipping and final pricing with our team before payment.</small>
+        <!-- Keep the native zero-total confirmation branch and payment widget.
+             Only organize the payable cart's existing actions. -->
+        <xpath expr="//t[@t-elif='not hide_payment_button'][@t-call='payment.submit_button']" position="replace">
+            <div t-elif="not hide_payment_button" class="lt-checkout-payment-actions d-flex flex-column gap-2">
+                <div t-if="not errors and website_sale_order._is_cart_ready()" class="lt-checkout-bank-action d-flex flex-column gap-2"/>
+                <details class="lt-checkout-more-options">
+                    <summary><span>More options</span><i class="fa fa-angle-down" aria-hidden="true"/></summary>
+                    <div class="lt-checkout-more-options__body d-flex flex-column gap-2">
+                        <t t-call="payment.submit_button"/>
+                        <div t-if="not errors and website_sale_order._is_cart_ready()" class="lt-checkout-alternatives d-flex flex-column gap-2">
+                            <form action="/shop/submit-for-review" method="post" data-lt-submit-once="">
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                <button type="submit" class="btn btn-outline-primary w-100" data-lt-stable-submit="">
+                                    Submit Order
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </details>
             </div>
         </xpath>
     </template>

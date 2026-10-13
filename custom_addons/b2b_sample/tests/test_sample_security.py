@@ -49,7 +49,7 @@ class TestSampleSecurity(SampleCase):
             "name": "Other Contact", "parent_id": other_company.id, "email": "other@example.com"
         })
         other_user = mail_new_test_user(
-            self.env, login="sample-other", groups="base.group_portal", partner_id=other_contact.id
+            self.env, login="sample-other", password="Portal-Test-2026!", groups="base.group_portal", partner_id=other_contact.id
         )
         with self.assertRaises(AccessError):
             sample.with_user(other_user).read(["name"])

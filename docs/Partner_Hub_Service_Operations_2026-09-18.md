@@ -1,6 +1,22 @@
 # Partner Hub 售后退回、维修与换货操作说明
 
-适用版本：b2b_website 19.0.1.16.20。当前正式使用方式为外部 ERP / 人工确认履约结果。
+适用版本：b2b_website 19.0.1.16.30（2026-10-12 更新）。当前正式使用方式为外部 ERP / 人工确认履约结果。
+
+## 本次更新：售后不一定需要寄回
+
+审核时在 `Return and Resolution → Approval → Service Handling` 选择处理方式，再点击 `Approve Service`：
+
+| 选择项 | 适用情况 | 后续操作 |
+| --- | --- | --- |
+| Pending Assessment | 新申请默认值 | 先评估，未选定方式不能批准 |
+| No Logistics Required | 远程指导、配置解决 | 批准后直接 In Progress，填写解决结果，Complete Service |
+| Dispatch Without Return | 免退补件／换新 | 批准后直接 In Progress，填写结果和发货信息，Confirm Dispatch，收到后 Complete Service |
+| Return and Dispatch | 寄回维修／换货 | 按下方完整寄回流程操作 |
+| Return Only | 仅需收回，无需再发货 | 收货、处理后填写结果，Complete Service；不会自动退款 |
+
+无需寄回时不显示退回地址和客户运单表单；无需发货时不要求出库信息。批准后处理方式锁定，已有物流记录时也不能直接切换。升级前的工单保留 Return and Dispatch，不改变旧流程。网站新申请统一为 `Technical Support`（后台存储为 `Technical Support / Other Issue`）；申请类型不决定物流方式。历史维修、换货工单及后台原生功能保留。
+
+下方第 4、5 节仅适用于需要寄回的工单，第 6 节仅适用于需要发货的工单。新版按钮 `Approve Service` 替代旧 `Approve Return`，`Confirm Dispatch` 替代旧 `Confirm Shipped Back`；状态 `In Progress` 和 `Dispatched` 分别替代旧处理、寄出名称。客户详情标题统一为 `Service Progress`。
 
 ## 1. 初始化和权限
 
@@ -15,7 +31,7 @@
 ## 2. 客户提交
 
 1. 登录网站，进入 `Service Center`，点击 `New Service Request`。
-2. 选择 `Repair`（维修）或 `Replacement`（换货）。
+2. `Request type` 只显示 `Technical Support`，默认选中，无需另外选择维修或换货；运营人员后续评估实际处理方式。
 3. 选择已确认订单，再选择该订单里的产品；填写型号、序列号、问题描述和联系资料。
 4. 如有需要，附上照片或文件。点击 `Submit service request`。
 5. 页面返回 Service Center，新申请显示 `Submitted`。点击申请进入详情查看后续进度。
@@ -27,17 +43,17 @@
 1. 后台进入 `Helpdesk`，找到对应的 `Partner Support — 公司名称`。
 2. 点击该团队的 `Open` 数量或 `Tickets`，打开客户工单。
 3. 点击顶部 `Review Request`，进入 `Under Review`。
-4. 在页面下方 `Return and Resolution → Approval` 的 `Return address and instructions` 填写收货人、电话、完整退回地址、允许退回的数量/序列号和包装要求。
+4. 在页面下方 `Return and Resolution → Approval` 选择 `Service Handling`。仅需要寄回时，在 `Return address and instructions` 填写收货人、电话、完整退回地址、允许退回的数量/序列号和包装要求。
 5. `Return by` 可填写建议寄出期限；这是一项给客户的提示，不会拒收客户已寄出的迟到包裹。
-6. 点击 `Approve Return`。按钮会先保存当前表单，然后推进阶段；如只保存资料，使用 Odoo 表单顶部的保存图标。
+6. 选择 `Service Handling`（完整寄回流程选 `Return and Dispatch`），点击 `Approve Service`。按钮会先保存当前表单，然后推进阶段；如只保存资料，使用 Odoo 表单顶部的保存图标。
 
-批准后客户看到 `Awaiting Customer Shipment`，详情出现退回说明和运单输入框。
+需要寄回的申请批准后，客户看到 `Awaiting Customer Shipment`，详情出现退回说明和运单输入框。不需要寄回的申请直接进入 `In Progress`。
 
 如果拒绝，在 `Customer resolution / rejection reason` 填写客户可见原因，再点击 `Reject Request`。无理由不能拒绝。
 
 ## 4. 客户寄回并填写运单
 
-客户打开工单详情，在 `Return & Service Progress` 区域填写：
+客户打开工单详情，在 `Service Progress` 区域填写：
 
 - `Carrier`：承运商，例如 DHL。
 - `Tracking number`：退回运单号。
@@ -50,16 +66,16 @@
 1. 运营打开同一张工单，确认 `Customer Shipment` 中的运单信息。
 2. 仓库或 ERP 确认收到货物后，在 `Receipt / inspection record` 写明实际数量、序列号、包装和产品状态。
 3. 点击 `Confirm Return Received`，客户看到 `Received`。
-4. 点击 `Start Inspection / Resolution`，进入 `Inspection / Repair / Replacement`。
+4. 点击 `Start Inspection / Resolution`，进入 `In Progress`。
 
 外部 ERP 模式下，此操作记录经确认的实际结果，不产生 Odoo 库存调拨。缺少收货记录时按钮会提示补充。
 
 ## 6. 处理完成并寄回客户
 
 1. 在 `Customer resolution / rejection reason` 填写客户可见的检测和处理结论。
-2. 在 `Ship Back` 填写 `Ship-back carrier`、`Ship-back tracking`、`Shipped back on`。
-3. 实际寄出后点击 `Confirm Shipped Back`。
-4. 客户页面显示 `Shipped Back`、处理结论和寄回运单。
+2. 在 `Dispatch to Customer` 填写 `Ship-back carrier`、`Ship-back tracking`、`Shipped back on`。
+3. 实际寄出后点击 `Confirm Dispatch`。
+4. 客户页面显示 `Dispatched`、处理结论和发货运单。
 5. 确认客户收到货且问题已解决后，点击 `Complete Service` 并确认，状态变为 `Completed`。
 
 维修与换货共用这一套流程；不要因为维修已经完成就提前结案。涉及退款或收费维修时仍需单独处理原生报价、贷项通知单及财务收退款；本流程不会自动执行退款或收款。
@@ -78,7 +94,7 @@ Odoo inventory 模式下，具有相应原生库存权限的人员可使用工�
 
 ## 8. 客户状态与通知
 
-正常顺序：Submitted → Under Review → Awaiting Customer Shipment → Return in Transit → Received → Inspection / Repair / Replacement → Shipped Back → Completed。
+完整寄回顺序：Submitted → Under Review → Awaiting Customer Shipment → Return in Transit → Received → In Progress → Dispatched → Completed。无需物流：Submitted → Under Review → In Progress → Completed。免退补发仅增加 Dispatched；仅寄回不经过 Dispatched。
 
 Service Center 的 `Assigned` 表示已分配负责人，`Closed` 包含已完成和已拒绝；不能把分配负责人当作实际维修进度。页面重新打开或刷新时读取最新状态。
 

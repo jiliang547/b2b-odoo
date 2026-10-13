@@ -17,3 +17,5 @@ from . import message_center
 from . import collection_policy
 from . import order_collection
 from . import bank_receipt
+from . import password_policy
+from . import manual_freight

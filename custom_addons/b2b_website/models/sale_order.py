@@ -5,6 +5,24 @@ from odoo.exceptions import AccessError, UserError
 class SaleOrder(models.Model):
     _inherit = "sale.order"
 
+    def _b2b_checkout_delivery_terms(self):
+        """Checkout copy only; never change a carrier, charge or stored Incoterm."""
+        self.ensure_one()
+        lines = self.order_line.filtered(lambda line: not line.display_type and not line.is_delivery)
+        # Native delivery products also identify manually added freight SKUs.
+        # Do not guess shipping from translated product names or service type.
+        delivery_products = self.env["delivery.carrier"].sudo().with_context(active_test=False).search([
+            ("product_id", "in", lines.product_id.ids),
+        ]).product_id
+        freight_product = self.website_id.sudo().b2b_freight_product_id
+        subtotal = sum(lines.filtered(lambda line: line.product_id not in (delivery_products | freight_product)).mapped("price_subtotal"))
+        usd = self.env.ref("base.USD")
+        amount_usd = self.currency_id._convert(
+            subtotal, usd, self.company_id,
+            fields.Date.to_date(self.date_order) or fields.Date.context_today(self),
+        )
+        return "FOB GUANGZHOU" if usd.compare_amounts(amount_usd, 20000) > 0 else "EXW GUANGZHOU"
+
     def _get_lang(self):
         language = super()._get_lang()
         if self.website_id and language and language.startswith("zh_"):

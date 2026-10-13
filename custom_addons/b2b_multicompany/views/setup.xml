@@ -103,5 +103,6 @@
     <record id="action_business_setup" model="ir.actions.act_window">
         <field name="name">Business Setup</field><field name="res_model">b2b.business.setup</field><field name="view_mode">form</field><field name="target">current</field>
     </record>
-    <record id="external_collection_notice" model="ir.ui.view"><field name="active" eval="True"/></record>
+    <!-- Explicitly update the existing view; do not declare a second view. -->
+    <record id="b2b_multicompany.external_collection_notice" model="ir.ui.view" forcecreate="False"><field name="active" eval="True"/></record>
 </odoo>

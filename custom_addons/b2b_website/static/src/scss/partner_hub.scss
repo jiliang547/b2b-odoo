@@ -691,6 +691,20 @@ body:has(.lt-subnav) .o_notification_manager { top: 86px; }
 .lt-checkout-progress .is-complete b { background: #dcfce7; color: var(--lt-green); }
 .lt-checkout-progress .is-active { color: var(--lt-blue); }
 .lt-checkout-progress .is-active b { background: var(--lt-blue); color: #fff; }
+.lt-checkout-payment-actions { width: 100%; }
+.lt-checkout-more-options {
+    width: 100%;
+    summary { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 8px 12px; border-radius: 6px; color: var(--lt-muted); cursor: pointer; list-style: none; text-decoration: none; }
+    summary::-webkit-details-marker { display: none; }
+    summary:hover { background: var(--lt-soft); color: var(--lt-blue); }
+    summary:focus-visible { outline: 2px solid var(--lt-blue); outline-offset: 2px; }
+    summary i { transition: transform .15s ease; }
+    &[open] summary i { transform: rotate(180deg); }
+    .lt-checkout-more-options__body { padding-top: 8px; }
+    // Preserve the native payment button and events, but make it secondary.
+    [name="o_payment_submit_button"], .btn-outline-primary { width: 100% !important; margin-left: 0 !important; background-color: #fff; border-color: var(--lt-blue); color: var(--lt-blue); }
+    [name="o_payment_submit_button"]:hover:not(:disabled), .btn-outline-primary:hover:not(:disabled) { background-color: var(--lt-blue); color: #fff; }
+}
 .lt-confirmation-mark { width: 70px; height: 70px; display: grid; place-items: center; margin: 20px auto; border-radius: 50%; background: #dcfce7; color: var(--lt-green); }
 .lt-confirmation-mark .lt-kicker { display: none; }
 .lt-login-heading { max-width: 430px; margin: 45px auto 20px; text-align: center; }
@@ -962,6 +976,12 @@ form[aria-busy="true"] button[type="submit"] { cursor: wait; opacity: .72; }
 .lt-portal-card > header { min-height: 50px; display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 13px 18px; border-bottom: 1px solid #e5e7eb; }
 .lt-portal-card > header h2 { margin: 0; color: #111827; font-size: 14px; font-weight: 700; }
 .lt-portal-card > header a, .lt-portal-card > header span { color: #2563eb; font-size: 12px; }
+.lt-portal-card.lt-bank-transfer-payment > header { padding: 18px; }
+.lt-portal-card.lt-bank-transfer-payment > header h2 { font-size: 24px; line-height: 1.3; }
+@media (max-width: 767px) {
+    .lt-portal-card.lt-bank-transfer-payment > header { padding: 16px 18px; }
+    .lt-portal-card.lt-bank-transfer-payment > header h2 { font-size: 20px; }
+}
 
 .lt-dashboard-metrics { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; margin: 0 0 22px; }
 .lt-dashboard-metrics a { min-height: 153px; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 17px; border: 1px solid #dfe4ea; border-radius: 8px; background: #fff; color: #111827; }
@@ -1423,6 +1443,9 @@ form[aria-busy="true"] button[type="submit"] { cursor: wait; opacity: .72; }
 .lt-registration-form .lt-field small { color: #6b7280; font-size: 12px; line-height: 1.5; }
 .lt-registration-form .lt-field .lt-field-error { color: #b91c1c; }
 .lt-field-error:empty { display: none; }
+.lt-password-hint, .lt-password-error { display: block; margin-top: 5px; font-size: 12px; line-height: 1.5; }
+.lt-password-hint { color: #6b7280; }
+.lt-password-error { color: #b91c1c; }
 .lt-registration-heading { padding: 35px 32px 28px; border-bottom: 1px solid rgba(232,56,12,.22); text-align: center; }
 .lt-registration-heading .lt-kicker, .lt-registration-result .lt-kicker { color: #e8380c; letter-spacing: .17em; }
 .lt-registration-heading h1, .lt-registration-result h1 { margin: 11px 0 8px; color: #111827; font-size: 31px; font-weight: 750; letter-spacing: -.025em; }
@@ -1502,6 +1525,10 @@ form[aria-busy="true"] button[type="submit"] { cursor: wait; opacity: .72; }
 .lt-registration-result__icon.is-success { background: #dcfce7; color: #15803d; }
 .lt-registration-result p { max-width: 480px; margin: 0; color: #6b7280; line-height: 1.6; }
 .lt-resend-form { margin: 2px 0; }
+.lt-resend-timer { display: block; min-height: 20px; margin-top: 10px; color: #6b7280; font-size: 13px; }
+.lt-resend-timer[hidden] { display: none; }
+.lt-resend-form .lt-btn { min-height: 46px; }
+.lt-resend-form .lt-btn:disabled { opacity: .6; cursor: not-allowed; }
 
 @media (max-width: 767.98px) {
     .lt-auth-main { padding: 24px 12px 48px; }

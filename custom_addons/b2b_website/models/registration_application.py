@@ -1,4 +1,5 @@
 import secrets
+from math import ceil
 from datetime import timedelta
 from urllib.parse import quote, urljoin
 
@@ -141,25 +142,34 @@ class B2BRegistrationApplication(models.Model):
             "/web/signup/verify?token=%s" % quote(self.verification_token),
         )
 
+    def _verification_retry_after(self):
+        self.ensure_one()
+        if not self.verification_sent_at:
+            return 0
+        return max(0, ceil((self.verification_sent_at + timedelta(seconds=60)
+            - fields.Datetime.now()).total_seconds()))
+
     def action_send_verification_email(self):
         self.ensure_one()
-        if self.state not in ("awaiting_email", "expired"):
+        if not self.try_lock_for_update():
+            raise UserError(_("A verification request is already being processed. Please try again shortly."))
+        self.invalidate_recordset()
+        if (self.state not in ("awaiting_email", "expired") or self.email_verified_at
+                or not self.user_id.with_context(active_test=False)._is_portal()):
             raise UserError(_("This email address has already been verified."))
-        if (
-            self.verification_sent_at
-            and fields.Datetime.now() < self.verification_sent_at + timedelta(seconds=60)
-        ):
+        if self._verification_retry_after():
             raise UserError(_("Please wait one minute before requesting another email."))
-        self._new_verification_token()
-        if not self.env.context.get("b2b_skip_registration_email"):
-            template = self.env.ref(
-                "b2b_website.mail_template_registration_verify",
-                raise_if_not_found=False,
-            )
-            if template:
+        # A failed native mail send must not invalidate the previous link or
+        # consume the cooldown. Keep the account/application unchanged.
+        with self.env.cr.savepoint():
+            self._new_verification_token()
+            if not self.env.context.get("b2b_skip_registration_email"):
+                template = self.env.ref("b2b_website.mail_template_registration_verify", raise_if_not_found=False)
+                if not template:
+                    raise UserError(_("Verification email is unavailable. Please contact support."))
                 template.sudo().with_context(
                     lang=self.partner_id.lang or self.website_id.default_lang_id.code,
-                ).send_mail(self.id, force_send=True)
+                ).send_mail(self.id, force_send=True, raise_exception=True)
         return True
 
     @api.model
@@ -171,6 +181,13 @@ class B2BRegistrationApplication(models.Model):
             limit=1,
         )
         if not application:
+            return self.browse(), "invalid"
+        if not application.try_lock_for_update():
+            return application, "busy"
+        application.invalidate_recordset()
+        if (application.verification_token != token or application.email_verified_at
+                or application.state not in ("awaiting_email", "expired")
+                or not application.user_id.with_context(active_test=False)._is_portal()):
             return self.browse(), "invalid"
         if (
             not application.verification_expires_at

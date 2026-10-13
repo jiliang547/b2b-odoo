@@ -35,6 +35,7 @@ class TestB2BOrderChange(TransactionCase):
         cls.portal_user = mail_new_test_user(
             cls.env,
             login="paid-order-customer",
+            password="Portal-Test-2026!",
             groups="base.group_portal",
             partner_id=cls.portal_contact.id,
         )
@@ -423,7 +424,7 @@ class TestB2BOrderChange(TransactionCase):
             "name": "Other Contact", "parent_id": other_partner.id,
         })
         other_user = mail_new_test_user(
-            self.env, login="other-order-customer", groups="base.group_portal",
+            self.env, login="other-order-customer", password="Portal-Test-2026!", groups="base.group_portal",
             partner_id=other_contact.id,
         )
         with self.assertRaises(AccessError):

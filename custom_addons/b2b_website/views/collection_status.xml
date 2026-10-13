@@ -45,5 +45,5 @@
             <button name="action_b2b_request_balance_payment" type="object" string="Request Balance Payment" class="btn-primary" groups="b2b_core.group_b2b_manager" invisible="not b2b_collection_active or state != 'sale' or b2b_balance &lt;= 0 or b2b_balance_payment_requested" confirm="Notify the customer to pay the outstanding balance? This does not change invoice due dates or confirm shipment."/>
         </xpath></field>
     </record>
-    <record id="collection_summary_status" model="ir.ui.view"><field name="active" eval="True"/></record>
+    <record id="b2b_website.collection_summary_status" model="ir.ui.view" forcecreate="False"><field name="active" eval="True"/></record>
 </odoo>

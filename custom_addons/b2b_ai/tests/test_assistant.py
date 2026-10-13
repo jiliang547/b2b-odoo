@@ -20,9 +20,9 @@ class TestPartnerAI(TransactionCase):
         cls.website.write({"b2b_ai_agent_id": cls.env.ref("b2b_ai.customer_agent").id,
                            "b2b_ai_enabled": True})
         cls.customer = cls.env["res.partner"].create({"name": "AI Approved Customer", "is_company": True, "b2b_approved": True})
-        cls.user = mail_new_test_user(cls.env, login="ai-customer-test", groups="base.group_portal",
+        cls.user = mail_new_test_user(cls.env, login="ai-customer-test", password="Portal-Test-2026!", groups="base.group_portal",
                                      partner_id=cls.env["res.partner"].create({"name": "AI Contact", "parent_id": cls.customer.id}).id)
-        cls.other = mail_new_test_user(cls.env, login="ai-other-test", groups="base.group_portal",
+        cls.other = mail_new_test_user(cls.env, login="ai-other-test", password="Portal-Test-2026!", groups="base.group_portal",
                                       partner_id=cls.env["res.partner"].create({"name": "AI Colleague", "parent_id": cls.customer.id}).id)
         cls.service = cls.env["b2b.ai.service"].with_user(cls.user)
         cls.public_product = cls.env["product.template"].create({"name": "AI Ceiling Speaker", "sale_ok": True,

@@ -24,9 +24,10 @@ ORDER_DETAIL = '/yonbip/sd/voucherorder/detail'
 STAFF_DETAIL = '/yonbip/digitalModel/staff/detail'
 DEPARTMENT_DETAIL = '/yonbip/digitalModel/admindept/detail'
 ORG_DETAIL = '/yonbip/digitalModel/orgunit/detail'
+REPORT_QUERY = '/yonbip/CPC/semantic/v1/query_report'
 GET_PATHS = {ORDER_DETAIL, STAFF_DETAIL, DEPARTMENT_DETAIL, ORG_DETAIL}
 PATHS = {PRODUCT_LIST, PRODUCT_DETAIL, CUSTOMER_LIST, CUSTOMER_DETAIL, CLASS_LIST,
-         CUSTOMER_CREATE, ORDER_CREATE, ORDER_LIST} | GET_PATHS
+         CUSTOMER_CREATE, ORDER_CREATE, ORDER_LIST, REPORT_QUERY} | GET_PATHS
 
 
 class NoRedirect(request.HTTPRedirectHandler):
@@ -62,12 +63,12 @@ class Client(models.AbstractModel):
         return config
 
     @api.model
-    def _http(self, url, body=None):
+    def _http(self, url, body=None, *, timeout=20):
         req = request.Request(url, method='POST' if body is not None else 'GET',
             data=json.dumps(body, ensure_ascii=False).encode() if body is not None else None,
             headers={'Content-Type': 'application/json', 'Accept': 'application/json'})
         try:
-            with request.build_opener(NoRedirect()).open(req, timeout=20) as response:
+            with request.build_opener(NoRedirect()).open(req, timeout=timeout) as response:
                 raw = response.read(5_000_001)
             if len(raw) > 5_000_000:
                 raise UserError(_('ERP response exceeds the safe size limit.'))
@@ -130,8 +131,9 @@ class Client(models.AbstractModel):
         params = {'access_token': token}
         if path in GET_PATHS:
             params.update(payload)
-        result = self._http(GATEWAY + path + '?' + parse.urlencode(params),
-                            None if path in GET_PATHS else payload)
+        url = GATEWAY + path + '?' + parse.urlencode(params)
+        result = (self._http(url, payload, timeout=35) if path == REPORT_QUERY else
+                  self._http(url, None if path in GET_PATHS else payload))
         # C4 customer-list API reports an empty search as a business status.
         # Match only this endpoint/status/message; permission failures must not
         # be mistaken for permission to create a new customer.

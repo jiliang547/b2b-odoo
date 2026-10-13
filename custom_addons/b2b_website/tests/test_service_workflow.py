@@ -10,7 +10,7 @@ class TestPartnerServiceWorkflow(TransactionCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.customer = cls.env['res.partner'].create({'name': 'Service test customer'})
-        cls.user = mail_new_test_user(cls.env, login='service-portal-test', groups='base.group_portal', partner_id=cls.customer.id)
+        cls.user = mail_new_test_user(cls.env, login='service-portal-test', password='Portal-Test-2026!', groups='base.group_portal', partner_id=cls.customer.id)
         cls.order = cls.env['sale.order'].create({'partner_id': cls.customer.id})
         cls.product = cls.env['product.product'].create({'name': 'Service test product'})
 
@@ -19,7 +19,82 @@ class TestPartnerServiceWorkflow(TransactionCase):
             'name': 'Service workflow test', 'partner_id': self.customer.id,
             'b2b_sale_order_id': self.order.id, 'b2b_product_id': self.product.id,
             'b2b_request_type': 'repair',
+            'b2b_service_route': 'roundtrip',
         })
+
+    def test_assessment_required_and_remote_resolution(self):
+        ticket = self.new_ticket()
+        ticket.b2b_service_route = 'assessment'
+        ticket.action_b2b_review()
+        with self.assertRaises(ValidationError):
+            ticket.action_b2b_approve()
+        ticket.b2b_service_route = 'remote'
+        ticket.action_b2b_approve()
+        self.assertEqual(ticket.b2b_service_step, 'processing')
+        with self.assertRaises(ValidationError):
+            ticket.action_b2b_complete()
+        with self.assertRaises(ValidationError):
+            ticket._b2b_submit_tracking('DHL', 'INVALID', fields.Date.today())
+        with self.assertRaises(ValidationError):
+            ticket.b2b_service_route = 'roundtrip'
+        ticket.b2b_resolution_note = 'Resolved by configuration guidance.'
+        ticket.action_b2b_complete()
+        self.assertEqual(ticket.b2b_service_step, 'completed')
+        self.assertFalse(ticket.picking_ids)
+        self.assertFalse(ticket.b2b_return_instructions)
+
+    def test_dispatch_without_return(self):
+        ticket = self.new_ticket()
+        ticket.b2b_service_route = 'dispatch'
+        ticket.action_b2b_review()
+        ticket.action_b2b_approve()
+        with self.assertRaises(ValidationError):
+            ticket.action_b2b_complete()
+        with self.assertRaises(ValidationError):
+            ticket.action_b2b_ship()
+        ticket.write({'b2b_resolution_note': 'Replacement part sent',
+                      'b2b_outbound_carrier': 'DHL', 'b2b_outbound_tracking': 'PART-001',
+                      'b2b_outbound_date': fields.Date.today()})
+        ticket.action_b2b_ship()
+        ticket.action_b2b_complete()
+        self.assertFalse(ticket.b2b_return_tracking)
+
+    def test_return_only(self):
+        ticket = self.new_ticket()
+        ticket.b2b_service_route = 'return_only'
+        ticket.action_b2b_review()
+        ticket.b2b_return_instructions = 'Return address'
+        ticket.action_b2b_approve()
+        ticket._b2b_submit_tracking('DHL', 'RETURN-001', fields.Date.today())
+        ticket.b2b_receipt_note = 'Received one unit'
+        ticket.action_b2b_received()
+        ticket.action_b2b_process()
+        ticket.b2b_resolution_note = 'Return received. Any refund is handled separately.'
+        ticket.action_b2b_complete()
+        self.assertFalse(ticket.b2b_outbound_tracking)
+
+    def test_customer_cannot_change_handling(self):
+        ticket = self.new_ticket().with_user(self.user)
+        with self.assertRaises(AccessError):
+            ticket.write({'b2b_service_route': 'remote'})
+
+    def test_new_request_defaults_to_assessment(self):
+        ticket = self.env['helpdesk.ticket'].create({
+            'name': 'Support only', 'partner_id': self.customer.id,
+            'b2b_sale_order_id': self.order.id, 'b2b_request_type': 'support'})
+        self.assertEqual(ticket.b2b_service_route, 'assessment')
+
+    def test_remote_staff_without_inventory_access(self):
+        staff = mail_new_test_user(self.env, login='service-no-stock',
+            groups='base.group_user,b2b_core.group_b2b_after_sales,helpdesk.group_helpdesk_manager,sales_team.group_sale_salesman_all_leads')
+        ticket = self.new_ticket().with_user(staff)
+        self.assertFalse(staff.has_group('stock.group_stock_user'))
+        ticket.b2b_service_route = 'remote'
+        ticket.action_b2b_review()
+        ticket.action_b2b_approve()
+        ticket.b2b_resolution_note = 'Guidance resolved the issue'
+        ticket.action_b2b_complete()
+        self.assertEqual(ticket.b2b_service_step, 'completed')
 
     def test_native_demo_delivery_without_reserved_stock(self):
         product = self.env['product.product'].create({
@@ -203,7 +278,7 @@ class TestPartnerServiceWorkflow(TransactionCase):
         self.assertEqual(ticket.company_id, other_company)
         portal_tickets = self.env['helpdesk.ticket'].with_user(self.user).with_context(allowed_company_ids=self.user.company_ids.ids)
         self.assertEqual(portal_tickets.search([('id', '=', ticket.id)]), ticket)
-        stranger = mail_new_test_user(self.env, login='service-stranger', groups='base.group_portal')
+        stranger = mail_new_test_user(self.env, login='service-stranger', password='Portal-Test-2026!', groups='base.group_portal')
         self.assertFalse(self.env['helpdesk.ticket'].with_user(stranger).search([('id', '=', ticket.id)]))
 
     def test_future_shipment_rejected(self):

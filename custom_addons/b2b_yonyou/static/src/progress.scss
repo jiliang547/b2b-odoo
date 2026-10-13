@@ -1,0 +1,38 @@
+.lt-order-progress {
+    .lt-progress-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 24px; background: #f4f7fa; border-radius: 12px; color: #475569; }
+    .lt-progress-toolbar p { margin: 0; font-size: 14px; }
+    .lt-progress-refresh { flex: 0 0 190px; width: 190px; height: 42px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+    .lt-progress-refresh, .lt-progress-refresh:hover, .lt-progress-refresh:focus, .lt-progress-refresh:active { transform: none; }
+    .lt-progress-refresh:disabled { opacity: .65; cursor: default; }
+    .lt-progress-feedback { min-height: 24px; margin-top: 8px; font-size: 13px; color: #475569; }
+    .lt-progress-cooldown { min-height: 20px; margin: 0 0 16px; font-size: 12px; color: #64748b; }
+    .lt-progress-notice { padding: 20px 24px; margin-bottom: 24px; background: #f4f7fa; border-radius: 12px; color: #475569; }
+    .lt-progress-notice p { margin: 0 0 6px; }
+    .lt-progress-items { display: grid; gap: 24px; }
+    .lt-progress-item { border: 1px solid #e2e8f0; border-radius: 14px; padding: 24px; background: #fff; }
+    .lt-progress-item__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+    .lt-progress-item__head h2 { font-size: 20px; margin: 0 0 6px; white-space: pre-line; }
+    .lt-progress-sku { font-size: 13px; color: #64748b; }
+    .lt-progress-badge { background: #eef4f8; color: #334155; border-radius: 20px; padding: 6px 12px; font-size: 12px; flex-shrink: 0; }
+    dl { margin: 0; }
+    dt { font-size: 12px; font-weight: 500; color: #64748b; margin-bottom: 8px; }
+    dd { margin: 0; font-size: 14px; color: #0f172a; }
+    dd span { display: block; }
+    .lt-progress-quantities { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; padding: 18px 0; }
+    .lt-progress-quantities dd { font-size: 21px; font-weight: 600; }
+    .lt-progress-quantities dd span { display: inline; }
+    .lt-progress-quantities small { font-size: 12px; font-weight: 400; }
+    .lt-progress-dates { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; padding-top: 18px; border-top: 1px solid #e2e8f0; }
+    .lt-progress-supplies { margin-top: 18px; }
+    .lt-progress-supplies summary { cursor: pointer; font-size: 14px; }
+    .lt-progress-supply { margin-top: 16px; padding: 16px; background: #f8fafc; border-radius: 8px; }
+    .lt-progress-supply strong { display: block; margin-bottom: 12px; }
+    @media (max-width: 767px) {
+        .lt-progress-toolbar { flex-direction: column; align-items: flex-start; padding: 18px; }
+        .lt-progress-refresh { flex-basis: auto; }
+        .lt-progress-item { padding: 18px; }
+        .lt-progress-item__head { flex-direction: column; }
+        .lt-progress-dates { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .lt-progress-quantities { gap: 10px; }
+    }
+}

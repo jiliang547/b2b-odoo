@@ -26,6 +26,7 @@ class TestContactRequestSecurity(TransactionCase):
         cls.portal_user = mail_new_test_user(
             cls.env,
             login="contact-request-portal",
+            password="Portal-Test-2026!",
             groups="base.group_portal",
             partner_id=cls.contact.id,
         )
@@ -287,6 +288,7 @@ class TestContactRequestSecurity(TransactionCase):
         other_user = mail_new_test_user(
             self.env,
             login="other-contact-request-portal",
+            password="Portal-Test-2026!",
             groups="base.group_portal",
             partner_id=other_contact.id,
         )

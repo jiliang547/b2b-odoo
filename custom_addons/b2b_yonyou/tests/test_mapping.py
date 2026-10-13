@@ -20,7 +20,7 @@ class TestYonyouMapping(TransactionCase):
         cls.manager = mail_new_test_user(cls.env, login='erp-uat-manager',
             groups='b2b_core.group_b2b_manager,b2b_core.group_b2b_product_manager')
         cls.operator = mail_new_test_user(cls.env, login='erp-uat-operator', groups='b2b_core.group_b2b_operator')
-        cls.portal = mail_new_test_user(cls.env, login='erp-uat-portal', groups='base.group_portal')
+        cls.portal = mail_new_test_user(cls.env, login='erp-uat-portal', password='Portal-Test-2026!', groups='base.group_portal')
         cls.brand = cls.env['b2b.product.brand'].create({'name': 'ERP Unit Test Brand',
             'b2b_selling_company_id': cls.env.company.id, 'yonyou_class_code': '05',
             'yonyou_salesperson': 'LQS0008', 'yonyou_department': '05'})
@@ -241,7 +241,7 @@ class TestYonyouMapping(TransactionCase):
             self.config.management_org = 'global00'
 
     def _application(self):
-        user = mail_new_test_user(self.env, login='erp-reg-new', groups='base.group_portal')
+        user = mail_new_test_user(self.env, login='erp-reg-new', password='Portal-Test-2026!', groups='base.group_portal')
         kind = self.env['b2b.customer.type'].create({'name': 'ERP Registration UAT'})
         return self.env['b2b.registration.application'].create({
             'user_id': user.id, 'partner_id': user.partner_id.id, 'website_id': self.env['website'].search([], limit=1).id,

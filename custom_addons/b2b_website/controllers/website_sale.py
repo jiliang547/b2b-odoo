@@ -9,6 +9,10 @@ from odoo.addons.website_sale.controllers.main import WebsiteSale
 from odoo.addons.website_sale.controllers.cart import Cart
 from odoo.addons.website_sale.controllers.payment import PaymentPortal
 from odoo.addons.website_sale.controllers.variant import WebsiteSaleVariantController
+from odoo.tools.translate import LazyTranslate
+from .errors import render_checkout_error
+
+_native = LazyTranslate("website_sale")
 
 
 def _can_view_cart_prices():
@@ -28,11 +32,22 @@ def _can_checkout():
 
 
 class PartnerHubWebsiteSale(WebsiteSale):
+    def _get_shop_payment_errors(self, order):
+        errors = super()._get_shop_payment_errors(order)
+        if order._b2b_uses_manual_freight():
+            native_shipping_error = (
+                order.env._(_native("Sorry, we are unable to ship your order.")),
+                order.env._(_native("No shipping method is available for your current order and shipping address."
+                                   " Please contact us for more information.")),
+            )
+            errors = [error for error in errors if error != native_shipping_error]
+        return errors
+
     def _get_shop_payment_values(self, order, **kwargs):
         values = super()._get_shop_payment_values(order, **kwargs)
         if order.b2b_collection_active:
             from .collection_payment import CollectionSalePortal
-            values.update(CollectionSalePortal()._get_payment_values(order, website_id=request.website.id))
+            values.update(CollectionSalePortal()._get_payment_values(order, is_down_payment=True, website_id=request.website.id))
             values.update({'display_submit_button': False, 'sale_order_id': order.id,
                            'landing_route': order.get_portal_url(),
                            'transaction_route': order.get_portal_url(suffix='/transaction')})
@@ -88,6 +103,8 @@ class PartnerHubWebsiteSale(WebsiteSale):
     def shop_checkout(self, try_skip_step=None, **query_params):
         if not _can_checkout():
             return request.render("b2b_website.ordering_unavailable", {"page_name": "ordering_unavailable"})
+        if request.cart:
+            request.cart.sudo()._b2b_clear_legacy_free_delivery()
         return super().shop_checkout(try_skip_step=try_skip_step, **query_params)
 
     @route()
@@ -118,7 +135,18 @@ class PartnerHubWebsiteSale(WebsiteSale):
         if not order._is_cart_ready():
             return request.redirect("/shop/checkout")
 
-        order = order.sudo()
+        try:
+            # Roll back partial form changes as one native transaction, keeping
+            # the same cart and session available after a business validation.
+            with request.env.cr.savepoint():
+                self._submit_review_order(order.sudo())
+        except UserError:
+            return render_checkout_error()
+        request.session["sale_last_order_id"] = order.id
+        request.website.sale_reset()
+        return request.redirect("/my/orders/%s?review_submitted=1" % order.id)
+
+    def _submit_review_order(self, order):
         for line in order.order_line.filtered(
             lambda item: not item.display_type and not item.is_delivery
         ):
@@ -152,9 +180,6 @@ class PartnerHubWebsiteSale(WebsiteSale):
         order.message_post(body=_(
             "The customer submitted this order for review before payment."
         ))
-        request.session["sale_last_order_id"] = order.id
-        request.website.sale_reset()
-        return request.redirect("/my/orders/%s?review_submitted=1" % order.id)
 
     @route()
     def shop_payment_validate(self, sale_order_id=None, **post):

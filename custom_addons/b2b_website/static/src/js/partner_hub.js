@@ -5,6 +5,8 @@ import { _t, translationIsReady } from "@web/core/l10n/translation";
 import {rpc} from "@web/core/network/rpc";
 import {registry} from "@web/core/registry";
 import {Interaction} from "@web/public/interaction";
+import { initializePasswordValidation } from "./password_validation";
+import { initializeVerificationResend } from "./verification_resend";
 
 let cartRefreshSequence = 0;
 function synchronizeCartQuantity(quantity) {
@@ -793,6 +795,7 @@ function initializeLocalizedValidationMessages() {
             return;
         }
         if (field.dataset.ltContactValidity) return;
+        if (field.hasAttribute("data-lt-password-policy") || field.hasAttribute("data-lt-password-confirm")) return;
 
         field.setCustomValidity("");
         if (field.validity.valid) {
@@ -834,6 +837,8 @@ export function initializePartnerHub() {
     if (initializedPages.has(page)) return;
     initializedPages.add(page);
     initializeLocalizedValidationMessages();
+    initializePasswordValidation();
+    initializeVerificationResend();
     initializeRegistrationContacts();
     initializeNavigation();
     initializeFilters();

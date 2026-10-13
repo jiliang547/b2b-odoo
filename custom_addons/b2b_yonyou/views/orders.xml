@@ -8,6 +8,13 @@
                 <field name="yonyou_code" groups="b2b_core.group_b2b_operator"/>
                 <field name="yonyou_id" groups="b2b_core.group_b2b_operator"/>
                 <field name="yonyou_manual_review" groups="b2b_core.group_b2b_operator"/>
+                <field name="yonyou_progress_state" widget="badge" groups="b2b_core.group_b2b_operator"/>
+                <field name="yonyou_progress_updated_at" groups="b2b_core.group_b2b_operator"/>
+                <field name="yonyou_progress_attempt_at" groups="b2b_core.group_b2b_operator"/>
+                <field name="yonyou_progress_error" groups="b2b_core.group_b2b_operator"/>
+                <field name="yonyou_progress_notes" groups="b2b_core.group_b2b_operator"/>
+                <button name="action_yonyou_refresh_progress" type="object" string="Refresh Order Progress"
+                    groups="b2b_erp_connector.group_b2b_integration_manager" invisible="not yonyou_id"/>
                 <button name="action_yonyou_check_order" type="object" string="Check ERP Order Setup" groups="b2b_core.group_b2b_manager" invisible="state not in ('draft', 'sent')"/>
             </field>
         </field>

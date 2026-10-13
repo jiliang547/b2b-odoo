@@ -1,0 +1,12 @@
+<odoo noupdate="1">
+    <record id="ir_cron_order_progress" model="ir.cron">
+        <field name="name">Partner Hub: Requested Order Progress</field>
+        <field name="model_id" ref="sale.model_sale_order"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_yonyou_progress()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">minutes</field>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="active">True</field>
+    </record>
+</odoo>

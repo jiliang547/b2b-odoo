@@ -12,6 +12,7 @@ from unittest.mock import patch, PropertyMock
 from uuid import uuid4
 from werkzeug.datastructures import FileStorage
 from PIL import Image
+from lxml import html
 from odoo.tools.pdf import PdfWriter
 from odoo.addons.b2b_website.controllers.collection import CollectionPortal, validate_payment_proof
 from odoo.addons.b2b_website.controllers.collection_payment import CollectionSalePortal
@@ -42,7 +43,7 @@ class B2BCollectionCommon(AccountTestInvoicingCommon):
         cls.website.b2b_default_account_brand_id = cls.brand
         cls.finance = mail_new_test_user(cls.env, login='collection-finance', groups='b2b_website.group_b2b_finance', company_id=cls.env.company.id, company_ids=[Command.set(cls.env.company.ids)])
         cls.operator = mail_new_test_user(cls.env, login='collection-operator', groups='b2b_core.group_b2b_operator')
-        cls.portal_user = mail_new_test_user(cls.env, login='collection-portal', groups='base.group_portal', partner_id=cls.env['res.partner'].create({'name': 'Collection Contact', 'parent_id': cls.customer.id}).id)
+        cls.portal_user = mail_new_test_user(cls.env, login='collection-portal', password='Portal-Test-2026!', groups='base.group_portal', partner_id=cls.env['res.partner'].create({'name': 'Collection Contact', 'parent_id': cls.customer.id}).id)
 
     def _order(self, policy='a'):
         self.customer.b2b_collection_policy_id = self.env.ref('b2b_website.collection_policy_' + policy)
@@ -272,6 +273,30 @@ class TestB2BCollection(B2BCollectionCommon):
         with self.assertRaises(UserError), self.env.cr.savepoint():
             order.order_line.price_unit = 130
         self.assertEqual(order.amount_total, 120)
+
+    def test_full_amount_and_deposit_use_distinct_native_payment_amounts(self):
+        order = self._order('b20')
+        portal = CollectionSalePortal()
+        for down, amount in ((True, 20), (False, 100)):
+            with patch.object(NativeSalePortal, '_get_payment_values', return_value={}) as native:
+                values = portal._get_payment_values(order, is_down_payment=down)
+            self.assertEqual(native.call_args.kwargs['payment_amount'], amount)
+            self.assertEqual(values['b2b_quote_token'], order._b2b_quote_token())
+
+    def test_verified_partial_bank_receipt_full_payment_is_only_remaining_balance(self):
+        order = self._order('b20')
+        self._receipt(order, 5).action_confirm_receipt()
+        portal = CollectionSalePortal()
+        for down, amount in ((True, 15), (False, 95)):
+            with patch.object(NativeSalePortal, '_get_payment_values', return_value={}) as native:
+                portal._get_payment_values(order, is_down_payment=down, payment_amount=999)
+            self.assertEqual(native.call_args.kwargs['payment_amount'], amount)
+        with patch.object(NativeSalePortal, 'portal_order_page', return_value='page') as native, \
+                patch.object(portal, '_document_check_access', return_value=order):
+            CollectionSalePortal.portal_order_page.__wrapped__(portal, order.id,
+                payment_amount='999', amount_selection='full_amount')
+        self.assertIsNone(native.call_args.kwargs['payment_amount'])
+        self.assertEqual(native.call_args.kwargs['amount_selection'], 'full_amount')
 
     def test_uat_proof_content_validation(self):
         for content in (b'%PDF-1.7\n%%EOF', b'\x89PNG\r\n\x1a\n', b'\xff\xd8\xff', b'', b'x' * (8 * 1024 * 1024 + 1)):
@@ -590,6 +615,54 @@ class TestB2BCollection(B2BCollectionCommon):
         self.assertEqual(order.b2b_net_received, 30)
         self.assertEqual(order.b2b_balance, 50)
 
+    def test_manual_freight_paid_revision_keeps_receipts_and_requests_only_required_topup(self):
+        for policy, paid, topup in (('b20', 20, 6), ('a', 100, 30)):
+            with self.subTest(policy=policy):
+                freight_product = self.env['product.product'].create({
+                    'name': 'Negotiated Freight', 'type': 'service', 'sale_ok': True,
+                    'taxes_id': [Command.clear()],
+                })
+                self.website.write({'b2b_manual_freight': True, 'b2b_freight_product_id': freight_product.id})
+                order = self._order(policy)
+                self._receipt(order, paid).action_confirm_receipt()
+                original_name = order.name
+                change = self.env['b2b.order.change.request'].create({
+                    'order_id': order.id, 'requested_changes': 'Add the agreed freight charge.',
+                })
+                change.action_start_review()
+                freight = self.env['sale.order.line'].create({
+                    'order_id': change.revision_order_id.id, 'product_id': freight_product.id,
+                    'product_uom_qty': 1, 'price_unit': 30, 'tax_ids': [Command.clear()],
+                })
+                self.assertTrue(freight.is_delivery)
+                change.action_send_proposal()
+                change.with_user(self.portal_user).action_customer_accept()
+                self.assertEqual(order.name, original_name)
+                self.assertEqual(order.amount_total, 130)
+                self.assertEqual(order.amount_delivery, 30)
+                self.assertEqual(order.b2b_net_received, paid)
+                self.assertEqual(order.b2b_payable_now, topup)
+                self.assertEqual(change.state, 'balance_due')
+                self.assertTrue(order.b2b_change_payment_hold)
+                self._receipt(order, topup).action_confirm_receipt()
+                self.assertEqual(change.state, 'completed')
+                self.assertFalse(order.b2b_change_payment_hold)
+
+    def test_manual_freight_is_in_pi_and_native_total_without_a_default_carrier(self):
+        freight_product = self.env['product.product'].create({
+            'name': 'Negotiated Freight', 'type': 'service', 'sale_ok': True,
+            'taxes_id': [Command.clear()],
+        })
+        self.website.write({'b2b_manual_freight': True, 'b2b_freight_product_id': freight_product.id})
+        order = self._order()
+        self.assertFalse(order.order_line.filtered('is_delivery'))
+        self.env['sale.order.line'].create({'order_id': order.id, 'product_id': freight_product.id,
+            'product_uom_qty': 1, 'price_unit': 30, 'tax_ids': [Command.clear()]})
+        self.assertFalse(order.carrier_id)
+        content, _ = self.env['ir.actions.report']._render_qweb_html('b2b_website.action_report_collection_pi', order.ids)
+        self.assertIn(b'Negotiated Freight', content)
+        self.assertIn(b'130.00', content)
+
     def test_bank_refund_uses_actual_excess_and_native_outbound_payment(self):
         order = self._order('b30')
         self._receipt(order, 30).action_confirm_receipt()
@@ -762,10 +835,54 @@ class TestB2BCollection(B2BCollectionCommon):
 
 @tagged('post_install', '-at_install')
 class TestB2BCollectionHttp(B2BCollectionCommon, HttpCase):
+    def test_collection_payment_copy_and_pending_review_guards(self):
+        order = self._order('b20')
+        self.authenticate(self.portal_user.login, 'Portal-Test-2026!')
+        response = self.url_open('/my/orders/%s/collection' % order.id)
+        self.assertEqual(response.status_code, 200)
+        page = html.fromstring(response.text)
+        online = page.xpath("//a[normalize-space(.)='Pay by PayPal']")
+        self.assertEqual(len(online), 1)
+        self.assertIn('/my/orders/%s' % order.id, online[0].get('href'))
+        self.assertIn('payment_amount=', online[0].get('href'))
+        card = page.xpath("//section[contains(@class, 'lt-bank-transfer-payment')]")[0]
+        self.assertEqual(card.xpath('./header/h2')[0].text_content().strip(), 'Pay by Bank Transfer')
+        form = card.xpath('.//form')[0]
+        self.assertEqual(form.get('action'), '/my/orders/%s/collection/proof' % order.id)
+        self.assertEqual(form.get('enctype'), 'multipart/form-data')
+        self.assertEqual(form.get('method'), 'post')
+        self.assertTrue(form.xpath("./input[@name='csrf_token']"))
+        self.assertTrue(form.xpath("./input[@name='submission_key']"))
+        self.assertIsNotNone(form.xpath(".//input[@name='proof']")[0].get('required'))
+        self.assertEqual(form.xpath('./button')[0].text_content().strip(), 'Submit Payment Proof')
+        order.write({'b2b_checkout_mode': 'review', 'b2b_review_state': 'pending'})
+        response = self.url_open('/my/orders/%s/collection' % order.id)
+        self.assertEqual(response.status_code, 200)
+        page = html.fromstring(response.text)
+        banner = page.xpath("//div[contains(@class, 'lt-awaiting-final-quote')]")[0]
+        self.assertEqual(banner.text_content().strip(), 'Awaiting Final Quote')
+        self.assertFalse(banner.xpath('./p | ./small | .//a'))
+        self.assertFalse(page.xpath("//a[normalize-space(.)='Pay by PayPal'] | //section[contains(@class, 'lt-bank-transfer-payment')]"))
+
+    def test_pending_order_banner_keeps_only_title_and_short_submission_toast(self):
+        order = self._order('b20')
+        order.write({'b2b_checkout_mode': 'review', 'b2b_review_state': 'pending'})
+        self.authenticate(self.portal_user.login, 'Portal-Test-2026!')
+        response = self.url_open('/my/orders/%s?review_submitted=1' % order.id)
+        self.assertEqual(response.status_code, 200)
+        page = html.fromstring(response.text)
+        banner = page.xpath("//div[contains(@class, 'lt-awaiting-final-quote')]")[0]
+        self.assertEqual(banner.text_content().strip(), 'Awaiting Final Quote')
+        self.assertFalse(banner.xpath('./p | ./small | .//a'))
+        toast = page.xpath("//div[@data-lt-toast-type='success']")[0]
+        self.assertEqual(toast.text_content().strip(), 'Order submitted.')
+        self.assertFalse(page.xpath("//a[@id='o_sale_portal_paynow']"))
+        self.assertTrue(page.xpath("//*[@id='sale_order_communication']"))
+
     def test_authenticated_multipart_upload_and_repeat_submission(self):
         """Exercise the real HTTP/CSRF/file parser, not a mocked request."""
         order = self._order()
-        self.authenticate(self.portal_user.login, self.portal_user.login)
+        self.authenticate(self.portal_user.login, 'Portal-Test-2026!')
         page = self.url_open('/my/orders/%s/collection' % order.id)
         self.assertEqual(page.status_code, 200)
         payload = {name: re.search(r'name="%s" value="([^"]+)"' % name, page.text).group(1)

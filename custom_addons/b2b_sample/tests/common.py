@@ -18,7 +18,7 @@ class SampleCase(TransactionCase):
             "name": "Sample Contact", "parent_id": cls.company.id, "email": "sample@example.com"
         })
         cls.portal_user = mail_new_test_user(
-            cls.env, login="sample-portal", groups="base.group_portal", partner_id=cls.contact.id
+            cls.env, login="sample-portal", password="Portal-Test-2026!", groups="base.group_portal", partner_id=cls.contact.id
         )
         cls.product = cls.env["product.product"].create({
             "name": "Sample Product",
