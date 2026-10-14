@@ -1,0 +1,7 @@
+<odoo>
+    <record id="rule_yonyou_job_company" model="ir.rule">
+        <field name="name">Yonyou orders: allowed selling companies</field>
+        <field name="model_id" ref="b2b_erp_connector.model_b2b_integration_job"/>
+        <field name="domain_force">['|', ('yonyou_order', '=', False), ('yonyou_company_id', 'in', company_ids)]</field>
+    </record>
+</odoo>

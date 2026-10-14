@@ -5,6 +5,13 @@ import { patch } from "@web/core/utils/patch";
 import { PaymentForm } from "@payment/interactions/payment_form";
 
 patch(PaymentForm.prototype, {
+    _prepareTransactionRouteParams() {
+        const values = super._prepareTransactionRouteParams(...arguments);
+        if (this.paymentContext.b2bQuoteToken) {
+            values.b2b_quote_token = this.paymentContext.b2bQuoteToken;
+        }
+        return values;
+    },
     async submitForm(event) {
         event.preventDefault();
         event.stopPropagation();

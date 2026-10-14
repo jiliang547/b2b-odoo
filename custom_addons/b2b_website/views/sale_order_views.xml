@@ -16,6 +16,11 @@
                 <field name="b2b_is_change_revision" invisible="not b2b_is_change_revision" readonly="1"/>
                 <field name="b2b_source_order_id" invisible="not b2b_is_change_revision" readonly="1"/>
             </xpath>
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_b2b_open_unresolved_payments" type="object" class="oe_stat_button" icon="fa-credit-card" invisible="not b2b_unresolved_payment_count" groups="b2b_core.group_b2b_manager,b2b_website.group_b2b_finance">
+                    <field name="b2b_unresolved_payment_count" widget="statinfo" string="Payment Processing"/>
+                </button>
+            </xpath>
         </field>
     </record>
     <!-- Reuse the native quotation editor and native dialog save/discard lifecycle. -->

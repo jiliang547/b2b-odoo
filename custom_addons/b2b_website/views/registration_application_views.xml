@@ -67,7 +67,7 @@
                     <group string="Company Resolution">
                         <group>
                             <field name="company_resolution" required="state in ('pending', 'rejected')" readonly="state not in ('pending', 'rejected')"/>
-                            <field name="company_id" context="{'default_is_company': True}" invisible="company_resolution != 'existing'" required="company_resolution == 'existing'" readonly="state not in ('pending', 'rejected')"/>
+                            <field name="resolved_partner_id" context="{'default_is_company': True}" invisible="company_resolution != 'existing'" required="company_resolution == 'existing'" readonly="state not in ('pending', 'rejected')"/>
                         </group>
                         <group>
                             <div class="alert alert-info" role="alert" invisible="company_resolution != 'create'">A new company will be created from the reviewed company name, country, phone, website and business type.</div>

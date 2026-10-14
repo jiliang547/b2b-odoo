@@ -1,9 +1,27 @@
-from odoo import SUPERUSER_ID, _, api, fields, models
+from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, UserError
 
 
 class SaleOrder(models.Model):
     _inherit = "sale.order"
+
+    def _b2b_checkout_delivery_terms(self):
+        """Checkout copy only; never change a carrier, charge or stored Incoterm."""
+        self.ensure_one()
+        lines = self.order_line.filtered(lambda line: not line.display_type and not line.is_delivery)
+        # Native delivery products also identify manually added freight SKUs.
+        # Do not guess shipping from translated product names or service type.
+        delivery_products = self.env["delivery.carrier"].sudo().with_context(active_test=False).search([
+            ("product_id", "in", lines.product_id.ids),
+        ]).product_id
+        freight_product = self.website_id.sudo().b2b_freight_product_id
+        subtotal = sum(lines.filtered(lambda line: line.product_id not in (delivery_products | freight_product)).mapped("price_subtotal"))
+        usd = self.env.ref("base.USD")
+        amount_usd = self.currency_id._convert(
+            subtotal, usd, self.company_id,
+            fields.Date.to_date(self.date_order) or fields.Date.context_today(self),
+        )
+        return "FOB GUANGZHOU" if usd.compare_amounts(amount_usd, 20000) > 0 else "EXW GUANGZHOU"
 
     def _get_lang(self):
         language = super()._get_lang()
@@ -62,11 +80,13 @@ class SaleOrder(models.Model):
         product = self.env["product.product"].browse(product_id).exists()
         service = self.env["b2b.product.service"]
         if self._b2b_is_trusted_payment_confirmation():
-            # The transaction/order/customer relationship was verified above.
-            # Change the policy evaluator's user rather than globally bypassing
-            # the catalog rules for normal portal requests.
-            service = service.with_user(SUPERUSER_ID)
-            product = product.with_user(SUPERUSER_ID)
+            # The transaction/order/customer relationship was verified above
+            # and the customer is paying an already-issued quotation. Do not
+            # re-apply today's catalog publication policy to that frozen order:
+            # a product may have been unpublished after the quotation was
+            # approved. Normal cart edits and direct confirmations still pass
+            # through the policy checks below.
+            return
         if not product or not service.is_visible(
             product.product_tmpl_id,
             partner=self.partner_id,
@@ -227,14 +247,18 @@ class SaleOrderLine(models.Model):
         self._b2b_check_revision_orders_editable(
             self.env["sale.order"].browse(order_ids).exists()
         )
+        self.env['sale.order'].browse(order_ids).exists()._b2b_check_commercial_edit()
         return super().create(vals_list)
 
     def write(self, vals):
         self._b2b_check_revision_orders_editable(self.mapped("order_id"))
+        if set(vals) & {'product_id', 'product_uom_qty', 'product_uom_id', 'price_unit', 'discount', 'tax_ids', 'name', 'order_id'}:
+            (self.order_id | self.env['sale.order'].browse(vals.get('order_id', [])))._b2b_check_commercial_edit()
         return super().write(vals)
 
     def unlink(self):
         self._b2b_check_revision_orders_editable(self.mapped("order_id"))
+        self.order_id._b2b_check_commercial_edit()
         return super().unlink()
 
 

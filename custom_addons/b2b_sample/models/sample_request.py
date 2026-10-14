@@ -25,6 +25,13 @@ class B2BSampleRequest(models.Model):
         "res.partner", required=True, index=True, readonly=True
     )
     contact_id = fields.Many2one("res.partner", required=True, index=True)
+    website_id = fields.Many2one(
+        "website",
+        required=True,
+        index=True,
+        default=lambda self: self.env["website"].get_current_website(),
+        help="Website that received the request and owns its customer-facing quotation.",
+    )
     contact_name = fields.Char(required=True)
     company_name = fields.Char(required=True)
     email = fields.Char(required=True)
@@ -165,7 +172,11 @@ class B2BSampleRequest(models.Model):
     def write(self, vals):
         if "state" in vals and self.env.context.get("b2b_state_transition") is not _STATE_TRANSITION_TOKEN:
             raise UserError(_("Use the sample workflow actions to change state."))
-        if not self.env.user._is_internal() and set(vals) - {"notes"}:
+        if (
+            not self.env.user._is_internal()
+            and self.env.context.get("b2b_state_transition") is not _STATE_TRANSITION_TOKEN
+            and set(vals) - {"notes"}
+        ):
             raise AccessError(_("Portal users cannot modify a submitted sample request."))
         return super().write(vals)
 
@@ -217,20 +228,30 @@ class B2BSampleRequest(models.Model):
         self.ensure_one()
         if self.sale_order_id:
             return self.sale_order_id
+        order = self.env["sale.order"].sudo().create(
+            self._prepare_sample_quotation_values()
+        )
+        if order.amount_total <= 0:
+            raise UserError(
+                _("The sample quotation total must be greater than zero. Configure a product or pricelist price before approval.")
+            )
+        order.action_quotation_sent()
+        return order
+
+    def _prepare_sample_quotation_values(self):
+        self.ensure_one()
         company = self.commercial_partner_id
         contact = self.contact_id or company
         addresses = company.address_get(["invoice", "delivery"])
         shipping = self.shipping_partner_id
         if shipping and shipping.commercial_partner_id != company:
             raise ValidationError(_("The selected shipping address is not available to this company."))
-        # Approval is already restricted to B2B Managers. Elevate only the
-        # server-owned quotation creation so managers do not also need broad
-        # Sales application permissions.
-        order = self.env["sale.order"].sudo().create({
+        return {
             "partner_id": contact.id,
             "partner_invoice_id": addresses.get("invoice") or company.id,
             "partner_shipping_id": shipping.id or addresses.get("delivery") or company.id,
             "pricelist_id": company.property_product_pricelist.id,
+            "website_id": self.website_id.id,
             "origin": self.name,
             "client_order_ref": _("Paid sample request %s", self.name),
             "require_signature": False,
@@ -245,13 +266,7 @@ class B2BSampleRequest(models.Model):
                 })
                 for line in self.line_ids
             ],
-        })
-        if order.amount_total <= 0:
-            raise UserError(
-                _("The sample quotation total must be greater than zero. Configure a product or pricelist price before approval.")
-            )
-        order.action_quotation_sent()
-        return order
+        }
 
     def action_reject(self):
         if not self.env.user.has_group("b2b_core.group_b2b_manager"):
@@ -365,17 +380,29 @@ class SaleOrder(models.Model):
 
     def action_confirm(self):
         result = super().action_confirm()
-        for order in self.filtered("b2b_sample_request_id"):
-            sample = order.b2b_sample_request_id
-            if sample.state != "quotation":
-                continue
-            if self.env["b2b.erp.service"].is_enabled():
+        self._b2b_sync_sample_state()
+        return result
+
+    def _b2b_sync_sample_state(self):
+        """Reconcile server-owned sample state after native order confirmation.
+
+        Payment polling deliberately keeps the portal user's uid while using a
+        sudoed transaction. Elevate only this fixed transition; generic portal
+        writes to sample requests remain forbidden.
+        """
+        for order in self.sudo().filtered(
+            lambda item: item.b2b_sample_request_id
+            and item.state in ("sale", "done")
+            and item.b2b_sample_request_id.state == "quotation"
+        ):
+            sample = order.b2b_sample_request_id.sudo()
+            if self.env["b2b.erp.service"].sudo().is_enabled():
                 order._b2b_enqueue_erp_sync()
                 sample._transition({"quotation"}, "erp_pending")
             else:
                 sample._transition({"quotation"}, "order_confirmed")
             sample.message_post(body=_("Sample order %s was confirmed after payment.", order.name))
-        return result
+        return True
 
     def _b2b_on_erp_job_success(self, job, result):
         response = super()._b2b_on_erp_job_success(job, result)

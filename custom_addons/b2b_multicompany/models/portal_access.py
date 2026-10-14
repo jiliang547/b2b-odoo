@@ -10,8 +10,20 @@ class IrRule(models.Model):
     def _compute_domain(self, model_name, mode='read'):
         domain = super()._compute_domain(model_name, mode)
         user = self.env.user
-        if mode != 'read' or model_name not in ('sale.order', 'sale.order.line') or not user.share or user._is_public():
+        if mode != 'read' or model_name not in ('sale.order', 'sale.order.line', 'helpdesk.ticket') or not user.share or user._is_public():
             return domain
+        if model_name == 'helpdesk.ticket':
+            own_ticket = Domain.AND([
+                Domain('b2b_request_type', '!=', False),
+                Domain('partner_id.commercial_partner_id', '=', user.partner_id.commercial_partner_id.id),
+            ])
+            allowed = set(self.env.companies.ids) | {False}
+            def allow_own_ticket(condition):
+                if condition.field_expr == 'company_id' and condition.operator == 'in' and set(condition.value) == allowed:
+                    return condition | own_ticket
+                return condition
+            # Preserve native follower and portal-team visibility rules.
+            return domain.map_conditions(allow_own_ticket)
         prefix = 'order_id.' if model_name == 'sale.order.line' else ''
         own_routed = Domain.AND([
             Domain(prefix + 'b2b_routed_company', '=', True),

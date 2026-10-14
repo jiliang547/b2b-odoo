@@ -8,3 +8,10 @@ from . import test_export_language
 from . import test_multilingual
 from . import test_portal_presentation
 from . import test_collection
+from . import test_service_workflow
+from . import test_service_request_http
+from . import test_password_policy
+from . import test_checkout_delivery_terms
+from . import test_checkout_payment_actions
+from . import test_manual_freight
+from . import test_checkout_recovery

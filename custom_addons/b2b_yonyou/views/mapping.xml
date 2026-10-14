@@ -1,0 +1,119 @@
+<odoo>
+    <record id="connection_form" model="ir.ui.view">
+        <field name="name">b2b.yonyou.connection.form</field><field name="model">b2b.yonyou.connection</field>
+        <field name="arch" type="xml"><form create="0" delete="0"><sheet>
+            <h1><field name="name"/></h1>
+            <div class="alert alert-info" role="status">Test organization 999 only. Newly confirmed orders are sent only when order submission is enabled. Existing orders are not backfilled. Configure customer mappings, tax rules and freight material mappings first. Customer creation and order submission have separate switches.</div>
+            <group><group string="Connection">
+                <field name="enabled"/><field name="registration_sync"/><field name="test_mode"/>
+                <field name="management_org"/><field name="default_use_org"/>
+                <field name="app_key" groups="base.group_system" password="True"/>
+                <field name="app_secret" groups="base.group_system" password="True"/>
+            </group><group string="New Customer Defaults">
+                <field name="code_prefix"/><field name="transaction_type"/><field name="exchange_rate_type"/>
+                <field name="tax_category"/><field name="pay_way"/><field name="price_marking"/>
+            </group></group>
+            <group string="Confirmed Sales Orders">
+                <field name="order_sync"/><field name="sales_org"/><field name="usd_rate"/>
+                <p>Invoice and stock organizations follow the sales organization. Base currency: CNY. Empty ERP transaction currency: USD. Transaction: KC. Exchange type: 03. Prices exclude tax. Shipment planning: confirmation date + 90 days. Freight is a mapped product line.</p>
+            </group>
+            <p>Customer categories: 05 LIKE, 06 LUCKY, 07 BF, 08 LDU, 09 PG, 99 Other. These are ERP categories, not website customer pricing types. Verify against ERP before use.</p>
+        </sheet></form></field>
+    </record>
+    <record id="action_connection" model="ir.actions.act_window">
+        <field name="name">Yonyou ERP Mapping</field><field name="res_model">b2b.yonyou.connection</field>
+        <field name="view_mode">form</field><field name="res_id" ref="connection"/>
+    </record>
+    <menuitem id="menu_connection" name="Yonyou ERP Mapping" parent="b2b_management.menu_b2b_configuration" action="action_connection" sequence="60" groups="base.group_system,b2b_core.group_b2b_manager"/>
+    <record id="product_template_mapping" model="ir.ui.view">
+        <field name="name">product.template.yonyou.mapping</field><field name="model">product.template</field>
+        <field name="inherit_id" ref="b2b_core.product_template_form_b2b"/>
+        <field name="arch" type="xml"><xpath expr="//page[@name='b2b_partner_hub']" position="inside">
+            <group string="ERP Material Mapping" invisible="product_variant_count &gt; 1" groups="b2b_core.group_b2b_manager,b2b_core.group_b2b_product_manager">
+                <label for="yonyou_code"/><div class="o_row"><field name="yonyou_code" placeholder="Exact ERP material code"/><button name="action_yonyou_verify" type="object" string="Verify" class="btn-secondary"/></div>
+                <field name="yonyou_company_id" options="{'no_create': True}"/>
+                <field name="yonyou_status" widget="badge"/><field name="yonyou_result"/><field name="yonyou_checked_at"/>
+            </group>
+            <div class="alert alert-info" role="status" invisible="product_variant_count &lt;= 1" groups="b2b_core.group_b2b_manager,b2b_core.group_b2b_product_manager">Maintain a separate ERP material mapping on each product variant. Website names, prices and images are not synchronized with ERP.</div>
+        </xpath></field>
+    </record>
+    <record id="product_variant_mapping" model="ir.ui.view">
+        <field name="name">product.product.yonyou.mapping</field><field name="model">product.product</field>
+        <field name="inherit_id" ref="product.product_normal_form_view"/>
+        <field name="arch" type="xml"><xpath expr="//notebook" position="inside"><page string="ERP Mapping" groups="b2b_core.group_b2b_manager,b2b_core.group_b2b_product_manager"><group>
+            <label for="yonyou_code"/><div class="o_row"><field name="yonyou_code"/><button name="action_yonyou_verify" type="object" string="Verify" class="btn-secondary"/></div>
+            <field name="yonyou_company_id" options="{'no_create': True}"/><field name="yonyou_status" widget="badge"/>
+            <field name="yonyou_result"/><field name="yonyou_checked_at"/>
+        </group></page></xpath></field>
+    </record>
+    <record id="partner_mapping" model="ir.ui.view">
+        <field name="name">res.partner.yonyou.mapping</field><field name="model">res.partner</field>
+        <field name="inherit_id" ref="b2b_multicompany.partner_seller_form"/>
+        <field name="arch" type="xml">
+            <field name="b2b_erp_customer_id" position="attributes"><attribute name="readonly">1</attribute></field>
+            <field name="b2b_selling_company_id" position="after">
+                <label for="yonyou_class_code" groups="b2b_core.group_b2b_manager"/>
+                <div class="o_row" groups="b2b_core.group_b2b_manager"><field name="yonyou_class_code" placeholder="05 / 06 / 07 / 08 / 09 / 99"/><button name="action_yonyou_verify_class" type="object" string="Verify" class="btn-secondary"/></div>
+                <field name="yonyou_class_result" groups="b2b_core.group_b2b_manager"/>
+            </field>
+            <field name="b2b_erp_customer_id" position="before">
+                <label for="yonyou_code" invisible="not b2b_is_commercial_entity" groups="b2b_core.group_b2b_manager"/>
+                <div class="o_row" invisible="not b2b_is_commercial_entity" groups="b2b_core.group_b2b_manager"><field name="yonyou_code"/><button name="action_yonyou_verify" type="object" string="Verify &amp; Refresh" class="btn-secondary"/></div>
+                <field name="yonyou_bound_id" invisible="1" groups="b2b_core.group_b2b_manager"/>
+                <field name="yonyou_salesperson" readonly="yonyou_bound_id" invisible="not b2b_is_commercial_entity" groups="b2b_core.group_b2b_manager"/>
+                <field name="yonyou_salesperson_name" invisible="not b2b_is_commercial_entity" groups="b2b_core.group_b2b_manager"/>
+                <field name="yonyou_department" readonly="yonyou_bound_id" invisible="not b2b_is_commercial_entity" groups="b2b_core.group_b2b_manager" placeholder="Leave blank to detect a unique department"/>
+                <field name="yonyou_department_name" invisible="not b2b_is_commercial_entity" groups="b2b_core.group_b2b_manager"/>
+                <button name="action_yonyou_verify_principal" type="object" string="Verify Salesperson" class="btn-secondary" invisible="not b2b_is_commercial_entity or yonyou_bound_id" groups="b2b_core.group_b2b_manager"/>
+                <field name="yonyou_principal_status" widget="badge" invisible="not b2b_is_commercial_entity" groups="b2b_core.group_b2b_manager"/>
+                <field name="yonyou_principal_result" invisible="not b2b_is_commercial_entity" groups="b2b_core.group_b2b_manager"/>
+                <div class="text-muted" invisible="not b2b_is_commercial_entity" groups="b2b_core.group_b2b_manager">Existing ERP customer: change the default salesperson in ERP, then Verify &amp; Refresh. New registration: assign the salesperson on the registration review before approval. Saving codes here does not create or update an ERP customer.</div>
+                <field name="yonyou_status" invisible="not b2b_is_commercial_entity" widget="badge" groups="b2b_core.group_b2b_manager"/>
+                <field name="yonyou_order_currency" invisible="not b2b_is_commercial_entity" groups="b2b_core.group_b2b_manager"/>
+                <field name="yonyou_fiscal_position_id" invisible="not b2b_is_commercial_entity" domain="[('company_id', '=', b2b_selling_company_id)]" options="{'no_create': True}" groups="b2b_core.group_b2b_manager"/>
+                <field name="yonyou_result" invisible="not b2b_is_commercial_entity" groups="b2b_core.group_b2b_manager"/>
+                <field name="yonyou_contact_code" invisible="b2b_is_commercial_entity" groups="b2b_core.group_b2b_manager"/>
+            </field>
+        </field>
+    </record>
+    <record id="brand_mapping" model="ir.ui.view">
+        <field name="name">b2b.brand.yonyou.mapping</field><field name="model">b2b.product.brand</field>
+        <field name="inherit_id" ref="b2b_multicompany.brand_seller_form"/>
+        <field name="arch" type="xml"><field name="b2b_selling_company_id" position="after">
+            <label for="yonyou_class_code" groups="b2b_core.group_b2b_manager"/><div class="o_row" groups="b2b_core.group_b2b_manager"><field name="yonyou_class_code"/><button name="action_yonyou_verify_class" type="object" string="Verify" class="btn-secondary"/></div>
+            <field name="yonyou_class_result"/><field name="yonyou_salesperson"/><field name="yonyou_salesperson_name"/>
+            <field name="yonyou_department" placeholder="Leave blank to detect a unique department"/><field name="yonyou_department_name"/>
+            <button name="action_yonyou_verify_principal" type="object" string="Verify Salesperson" class="btn-secondary" groups="b2b_core.group_b2b_manager"/>
+            <field name="yonyou_principal_status" widget="badge"/><field name="yonyou_principal_result"/>
+            <div class="text-muted" groups="b2b_core.group_b2b_manager">Defaults for new registrations only. Reviewers can assign a different salesperson before approval. Existing ERP customers are not changed.</div>
+        </field></field>
+    </record>
+    <record id="registration_mapping" model="ir.ui.view">
+        <field name="name">b2b.registration.yonyou.mapping</field><field name="model">b2b.registration.application</field>
+        <field name="inherit_id" ref="b2b_website.view_b2b_registration_application_form"/>
+        <field name="arch" type="xml"><xpath expr="//sheet" position="inside">
+            <group string="ERP Customer Mapping" groups="b2b_core.group_b2b_manager">
+                <field name="yonyou_brand_id" readonly="state == 'approved' or yonyou_create_payload" invisible="company_resolution != 'create'" options="{'no_create': True}"/>
+                <label for="yonyou_class_code" invisible="company_resolution != 'create'"/>
+                <div class="o_row" invisible="company_resolution != 'create'"><field name="yonyou_class_code" readonly="state == 'approved' or yonyou_create_payload"/><button name="action_yonyou_verify_class" type="object" string="Verify" invisible="state == 'approved'" class="btn-secondary"/></div>
+                <field name="yonyou_class_result" invisible="company_resolution != 'create'"/>
+                <field name="yonyou_salesperson" readonly="state == 'approved' or yonyou_create_payload" invisible="company_resolution != 'create'"/>
+                <field name="yonyou_salesperson_name" invisible="company_resolution != 'create'"/>
+                <field name="yonyou_department" readonly="state == 'approved' or yonyou_create_payload" invisible="company_resolution != 'create'" placeholder="Leave blank to detect a unique department"/>
+                <field name="yonyou_department_name" invisible="company_resolution != 'create'"/>
+                <button name="action_yonyou_verify_principal" type="object" string="Verify Salesperson" class="btn-secondary" invisible="company_resolution != 'create' or state == 'approved' or yonyou_create_payload"/>
+                <field name="yonyou_principal_status" widget="badge" invisible="company_resolution != 'create'"/>
+                <field name="yonyou_principal_result" invisible="company_resolution != 'create'"/>
+                <field name="yonyou_code" readonly="state == 'approved' or yonyou_create_payload" invisible="company_resolution != 'create'"/>
+                <field name="yonyou_result"/><field name="yonyou_pending_company_id"/>
+                <field name="yonyou_create_payload" invisible="1"/>
+                <div class="alert alert-info" role="status">When ERP approval synchronization is enabled, Approve &amp; Activate verifies the existing company's binding or creates a new ERP customer in test organization 999. An ERP failure keeps this application under review. Existing ERP customer details are never overwritten.</div>
+            </group>
+        </xpath></field>
+    </record>
+    <record id="company_org" model="ir.ui.view">
+        <field name="name">res.company.yonyou.org</field><field name="model">res.company</field>
+        <field name="inherit_id" ref="base.view_company_form"/>
+        <field name="arch" type="xml"><field name="currency_id" position="after"><field name="yonyou_use_org" groups="base.group_system"/></field></field>
+    </record>
+</odoo>

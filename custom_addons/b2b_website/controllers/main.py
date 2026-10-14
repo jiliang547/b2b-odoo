@@ -591,13 +591,16 @@ class PartnerHubWebsite(WebsiteController):
         company = request.env.user.partner_id.commercial_partner_id
         Ticket = request.env["helpdesk.ticket"]
         domain = [("partner_id", "child_of", company.id)]
-        tickets = Ticket.search(domain, limit=8, order="create_date desc")
+        pager = portal_pager(url='/service-center', total=Ticket.search_count(domain),
+                             page=max(1, self._safe_int(kwargs.get('page'))), step=20)
+        tickets = Ticket.search(domain, limit=20, offset=pager['offset'], order="create_date desc")
         open_domain = Domain.AND([domain, [("stage_id.fold", "=", False)]])
         closed_domain = Domain.AND([domain, [("stage_id.fold", "=", True)]])
         return request.render(
             "b2b_website.service_center",
             {
                 "tickets": tickets,
+                "pager": pager,
                 "ticket_total": Ticket.search_count(domain),
                 "ticket_open": Ticket.search_count(open_domain),
                 "ticket_in_progress": Ticket.search_count(Domain.AND([open_domain, [("user_id", "!=", False)]])),
@@ -1143,7 +1146,9 @@ class PartnerHubWebsite(WebsiteController):
             try:
                 order = request.env["sale.order"].browse(self._safe_int(post.get("order_id"))).exists()
                 product = request.env["product.product"].browse(self._safe_int(post.get("product_id"))).exists()
-                request_type = post.get("request_type")
+                # The website is a support intake; staff assess handling separately.
+                # Keep repair/replacement types available for native and historical tickets.
+                request_type = post.get("request_type", "support")
                 description = (post.get("description") or "").strip()
                 if order not in values["orders"]:
                     raise AccessError(_("Select a product from one of your completed or confirmed orders."))
@@ -1153,8 +1158,10 @@ class PartnerHubWebsite(WebsiteController):
                 if product.id not in historical_products.ids:
                     raise AccessError(_("Select a product from one of your completed or confirmed orders."))
                 product = historical_products.filtered(lambda item: item.id == product.id)[:1]
-                if request_type not in ("repair", "replacement") or not description:
-                    raise ValidationError(_("Complete the request type and problem description."))
+                if request_type != "support":
+                    raise ValidationError(_("Please submit a technical support request. Our team will assess the appropriate handling."))
+                if not description:
+                    raise ValidationError(_("Complete the problem description."))
                 fields_to_limit = {
                     "contact_name": 160, "company_name": 200, "email": 254,
                     "phone": 64, "model_number": 160, "serial_number": 160,
@@ -1170,12 +1177,7 @@ class PartnerHubWebsite(WebsiteController):
                 if not tools.single_email_re.match((post.get("email") or "").strip()):
                     raise ValidationError(_("Please enter a valid email address."))
                 uploads = self._validated_uploads()
-                team_id = self._safe_int(request.env["ir.config_parameter"].sudo().get_param(
-                    "b2b_website.helpdesk_team_id"
-                ))
-                team = request.env["helpdesk.team"].sudo().browse(team_id).exists()
-                if not team:
-                    raise UserError(_("Partner service is not configured yet. Please contact us."))
+                team = request.env['helpdesk.team']._b2b_team_for_company(order.sudo().company_id)
                 submission, is_new = self._claim_submission(post, "service_request")
                 if not is_new:
                     return self._completed_submission_redirect(submission)
@@ -1184,7 +1186,7 @@ class PartnerHubWebsite(WebsiteController):
                     escape(description).replace("\n", Markup("<br/>")),
                 )
                 contact = request.env.user.partner_id
-                ticket = request.env["helpdesk.ticket"].sudo().create({
+                ticket = request.env["helpdesk.ticket"].sudo().with_company(order.sudo().company_id).create({
                     "name": _("%s request for %s", request_type.title(), product.display_name),
                     "team_id": team.id,
                     "partner_id": contact.id,

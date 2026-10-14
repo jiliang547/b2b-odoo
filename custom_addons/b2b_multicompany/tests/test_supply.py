@@ -112,7 +112,7 @@ class TestFactorySupply(B2BCollectionCommon):
         change = self.env['b2b.order.change.request'].create({'order_id': order.id, 'requested_changes': 'External revision'})
         change.action_start_review()
         change.revision_order_id.order_line.product_uom_qty = 2
-        with self.assertRaises(UserError):
+        with self.assertRaisesRegex(UserError, 'Open the Factory Permission tab'):
             change.action_send_proposal()
         change.b2b_factory_permission_note = 'External provider approved REF-EXTERNAL'
         change.action_confirm_factory_permission()

@@ -1,5 +1,7 @@
 import re
 
+from lxml import html
+
 from odoo import Command
 from odoo.addons.mail.tests.common import mail_new_test_user
 from odoo.addons.website_sale.tests.common import MockRequest
@@ -21,7 +23,7 @@ class TestWebsiteOrderSecurity(TransactionCase):
             "name": "Unapproved Contact", "parent_id": cls.company.id, "email": "pending@example.com"
         })
         cls.portal_user = mail_new_test_user(
-            cls.env, login="website-unapproved", groups="base.group_portal", partner_id=cls.contact.id
+            cls.env, login="website-unapproved", password="Portal-Test-2026!", groups="base.group_portal", partner_id=cls.contact.id
         )
         cls.product = cls.env["product.product"].create({
             "name": "Public Information Product",
@@ -58,6 +60,7 @@ class TestWebsiteSaleQuantity(TransactionCase):
         cls.portal_user = mail_new_test_user(
             cls.env,
             login="website-quantity",
+            password="Portal-Test-2026!",
             groups="base.group_portal",
             partner_id=cls.contact.id,
         )
@@ -130,6 +133,7 @@ class TestWebsiteCustomerPricing(TransactionCase):
         cls.portal_user = mail_new_test_user(
             cls.env,
             login="website-pricing-user",
+            password="Portal-Test-2026!",
             groups="base.group_portal",
             partner_id=cls.contact.id,
         )
@@ -195,7 +199,7 @@ class TestPartnerHubCartBrowser(HttpCase):
             "parent_id": cls.company.id,
             "email": "browser-cart@example.com",
         })
-        cls.login = "browser-cart-portal"
+        cls.login = "browser-cart-portal-2026"
         cls.portal_user = mail_new_test_user(
             cls.env,
             login=cls.login,
@@ -224,7 +228,7 @@ class TestPartnerHubCartBrowser(HttpCase):
                         const initialQuantity = Number(quantityElement?.textContent || 0);
                         const startedAt = Date.now();
                         let increasedAt = 0;
-                        form.requestSubmit();
+                        form.querySelector("button[type='submit']").click();
                         const timer = setInterval(() => {
                             const failed = [...document.querySelectorAll('.o_notification')].some(
                                 (item) => item.textContent.includes('We could not add this product')
@@ -248,17 +252,71 @@ class TestPartnerHubCartBrowser(HttpCase):
                 }
             """,
             login=self.login,
+            ready="!!document.querySelector('[data-lt-cart-form] button[type=submit]:not(:disabled)')",
             timeout=30,
         )
 
-    def test_catalog_card_add_uses_native_cart_service(self):
-        self._assert_add_to_cart_succeeds(
-            "/products?search=BROWSER-CART-REGRESSION"
-        )
+    def _assert_catalog_details_only(self):
+        response = self.url_open("/products?search=BROWSER-CART-REGRESSION")
+        self.assertEqual(response.status_code, 200)
+        page = html.fromstring(response.content)
+        actions = page.xpath("//div[contains(concat(' ', normalize-space(@class), ' '), ' lt-product-card__actions ')]")
+        self.assertTrue(actions)
+        for action in actions:
+            self.assertFalse(action.xpath(".//form | .//button"))
+            links = action.xpath("./a")
+            self.assertEqual(len(links), 1)
+            self.assertEqual(links[0].text_content().strip(), "Details")
+            self.assertIn("lt-btn--blue", links[0].get("class").split())
+            self.assertIn("lt-btn--wide", links[0].get("class").split())
+            self.assertTrue(links[0].get("href").startswith("/products/"))
+
+    def test_catalog_cards_show_only_blue_full_width_details(self):
+        self.authenticate(self.login, self.login)
+        self._assert_catalog_details_only()
+
+    def test_public_catalog_cards_show_only_details(self):
+        self.authenticate(None, None)
+        self._assert_catalog_details_only()
+
+    def test_multivariant_catalog_cards_do_not_show_select_options(self):
+        attribute = self.env["product.attribute"].create({
+            "name": "Catalog test finish", "create_variant": "always",
+        })
+        values = self.env["product.attribute.value"].create([
+            {"name": "Black", "attribute_id": attribute.id},
+            {"name": "White", "attribute_id": attribute.id},
+        ])
+        # product.product.create returns a variant-suppressed context; use the
+        # normal template context so native attribute changes create variants.
+        template = self.env["product.template"].browse(self.product.product_tmpl_id.id)
+        template.write({"b2b_model_number": "BROWSER-CART-REGRESSION", "attribute_line_ids": [Command.create({
+            "attribute_id": attribute.id, "value_ids": [Command.set(values.ids)],
+        })]})
+        self.assertEqual(template.product_variant_count, 2)
+        self.authenticate(self.login, self.login)
+        self._assert_catalog_details_only()
 
     def test_product_detail_add_uses_native_cart_service(self):
         slug = self.env["ir.http"]._slug(self.product.product_tmpl_id)
         self._assert_add_to_cart_succeeds("/products/%s" % slug)
+
+    def test_catalog_option_does_not_change_related_product_cards(self):
+        related = self.env["product.template"].create({
+            "name": "Related cart scope test", "sale_ok": True,
+            "is_published": True, "b2b_visibility_mode": "all",
+        })
+        self.product.product_tmpl_id.alternative_product_ids = related
+        self.authenticate(self.login, self.login)
+        self._assert_catalog_details_only()
+        slug = self.env["ir.http"]._slug(self.product.product_tmpl_id)
+        response = self.url_open("/products/%s" % slug)
+        self.assertEqual(response.status_code, 200)
+        page = html.fromstring(response.content)
+        actions = page.xpath("//section[contains(concat(' ', normalize-space(@class), ' '), ' lt-related ')]//div[contains(concat(' ', normalize-space(@class), ' '), ' lt-product-card__actions ')]")
+        self.assertEqual(len(actions), 1)
+        self.assertIn("lt-btn--outline", actions[0].xpath("./a")[0].get("class").split())
+        self.assertEqual(len(actions[0].xpath("./form[@data-lt-cart-form]//button")), 1)
 
 @tagged("post_install", "-at_install")
 class TestPartnerHubPublicBranding(HttpCase):
@@ -312,7 +370,7 @@ class TestWebsiteIDOR(HttpCase):
         cls.portal_user = mail_new_test_user(
             cls.env,
             login="portal-http",
-            password="portal-http",
+            password="Portal-Http-2026!",
             groups="base.group_portal",
             partner_id=cls.contact.id,
         )
@@ -328,7 +386,7 @@ class TestWebsiteIDOR(HttpCase):
 
     def test_restricted_product_direct_url_returns_not_found(self):
         self.assertTrue(self.portal_user.has_group("base.group_portal"))
-        self.authenticate("portal-http", "portal-http")
+        self.authenticate("portal-http", "Portal-Http-2026!")
         slug = self.env["ir.http"]._slug(self.restricted_product)
         response = self.url_open("/products/%s" % slug)
         # Both statuses disclose no record data. The standalone HttpCase web
@@ -338,7 +396,7 @@ class TestWebsiteIDOR(HttpCase):
 
     def test_other_company_erp_status_returns_not_found(self):
         self.assertTrue(self.portal_user.has_group("base.group_portal"))
-        self.authenticate("portal-http", "portal-http")
+        self.authenticate("portal-http", "Portal-Http-2026!")
         response = self.url_open("/my/orders/%s/erp-status" % self.other_order.id)
         self.assertIn(response.status_code, (403, 404), response.text[:500])
 
@@ -355,13 +413,13 @@ class TestCompanyOnboardingHttp(HttpCase):
         cls.portal_user = mail_new_test_user(
             cls.env,
             login="company-onboarding-http",
-            password="company-onboarding-http",
+            password="Company-Onboarding-2026!",
             groups="base.group_portal",
             partner_id=cls.contact.id,
         )
 
     def _authenticate(self):
-        self.authenticate("company-onboarding-http", "company-onboarding-http")
+        self.authenticate("company-onboarding-http", "Company-Onboarding-2026!")
 
     def test_unlinked_contact_sees_setup_prompt_and_form(self):
         self._authenticate()

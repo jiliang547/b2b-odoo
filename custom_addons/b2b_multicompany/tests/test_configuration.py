@@ -306,6 +306,100 @@ class TestSellingConfiguration(TransactionCase):
         with MockRequest(website.env, website=website, sale_order_id=order.id) as http_request:
             self.assertFalse(http_request.cart)
 
+    def test_routed_cart_shares_legacy_customer_addresses(self):
+        invoice = self.env['res.partner'].create({
+            'name': 'UAT Legacy Invoice', 'parent_id': self.customer.id,
+            'type': 'invoice', 'company_id': self.website.company_id.id,
+        })
+        delivery = self.env['res.partner'].create({
+            'name': 'UAT Legacy Delivery', 'parent_id': self.customer.id,
+            'type': 'delivery', 'company_id': self.website.company_id.id,
+        })
+        unrelated = self.env['res.partner'].create({
+            'name': 'UAT Unrelated Address', 'company_id': self.website.company_id.id,
+        })
+        historic_order = self.env['sale.order'].with_company(self.website.company_id).create({
+            'partner_id': self.customer.id, 'company_id': self.website.company_id.id,
+            'partner_invoice_id': invoice.id, 'partner_shipping_id': delivery.id,
+        })
+        order = self.env['sale.order'].create({
+            'partner_id': self.customer.id, 'website_id': self.website.id,
+            'partner_invoice_id': invoice.id, 'partner_shipping_id': delivery.id,
+        })
+        self.assertEqual(order.company_id, self.seller)
+        self.assertEqual(order.partner_invoice_id, invoice)
+        self.assertEqual(order.partner_shipping_id, delivery)
+        self.assertFalse(invoice.company_id)
+        self.assertFalse(delivery.company_id)
+        self.assertEqual(self.customer.b2b_selling_company_id, self.seller)
+        self.assertEqual(self.customer.b2b_account_brand_id, self.brand)
+        self.customer._b2b_share_order_addresses([unrelated.id])
+        self.assertEqual(unrelated.company_id, self.website.company_id)
+        self.assertEqual(historic_order.company_id, self.website.company_id)
+        self.assertEqual(historic_order.partner_invoice_id, invoice)
+        historic_order._check_company()
+
+    def test_sample_quotation_uses_customer_legal_seller(self):
+        manager = self.env['res.users'].create({
+            'name': 'UAT Sample Routing Manager',
+            'login': 'uat-sample-routing-manager@example.test',
+            'company_id': self.env.company.id,
+            'company_ids': [Command.set((self.env.company | self.seller).ids)],
+            'group_ids': [Command.set(self.env.ref('b2b_core.group_b2b_manager').ids)],
+        })
+        product = self.env['product.product'].create({
+            'name': 'UAT Routed Sample', 'list_price': 100,
+            'type': 'consu', 'taxes_id': [Command.clear()],
+            'b2b_visibility_mode': 'all',
+        })
+        sample = self.env['b2b.sample.request'].create({
+            'website_id': self.website.id,
+            'partner_id': self.customer.id,
+            'contact_id': self.customer.id,
+            'contact_name': 'UAT Sample Contact',
+            'company_name': self.customer.name,
+            'email': 'routed-sample@example.test',
+            'phone': '+1 555 0102',
+            'shipping_address': '1 Routed Sample Street',
+            'reason': 'Verify legal seller routing',
+            'line_ids': [Command.create({
+                'product_id': product.id, 'quantity': 1,
+                'uom_id': product.uom_id.id,
+            })],
+        })
+        sample.with_user(manager).action_submit()
+        sample.with_user(manager).action_approve()
+
+        self.assertEqual(sample.sale_order_id.website_id, self.website)
+        self.assertEqual(sample.sale_order_id.company_id, self.seller)
+        self.assertTrue(sample.sale_order_id.b2b_routed_company)
+        self.assertFalse(sample.sale_order_id.b2b_collection_active)
+
+    def test_portal_address_values_are_shared_for_routed_cart(self):
+        from odoo.addons.b2b_multicompany.controllers.website_sale import (
+            PartnerHubMultiCompanyWebsiteSale,
+        )
+
+        user = self.env['res.users'].create({
+            'name': 'UAT Shared Address Portal', 'login': 'uat-shared-address@example.test',
+            'partner_id': self.customer.id,
+            'company_id': self.website.company_id.id,
+            'company_ids': [Command.set(self.website.company_id.ids)],
+            'group_ids': [Command.set(self.env.ref('base.group_portal').ids)],
+        })
+        order = self.env['sale.order'].create({
+            'partner_id': self.customer.id, 'website_id': self.website.id,
+        })
+        website = self.website.with_user(user).with_context(
+            allowed_company_ids=self.website.company_id.ids)
+        values = {'name': 'UAT New Shared Delivery'}
+        with MockRequest(website.env, website=website, sale_order_id=order.id):
+            PartnerHubMultiCompanyWebsiteSale()._complete_address_values(
+                values, 'delivery', False, order_sudo=order,
+            )
+        self.assertFalse(values['company_id'])
+        self.assertEqual(values['parent_id'], self.customer.id)
+
     def test_portal_reads_only_own_routed_orders_without_company_grants(self):
         self.assertTrue(self.website.b2b_multicompany_enabled)
         user = self.env['res.users'].create({

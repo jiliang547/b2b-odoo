@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="action_collection_policies" model="ir.actions.act_window">
+    <record id="b2b_website.action_collection_policies" model="ir.actions.act_window" forcecreate="False">
         <field name="name">Production / Shipment Collection Conditions</field>
     </record>
-    <record id="menu_collection_policies" model="ir.ui.menu">
+    <record id="b2b_website.menu_collection_policies" model="ir.ui.menu" forcecreate="False">
         <field name="name">Production / Shipment Collection Conditions</field>
     </record>
     <record id="collection_policy_configuration_clarity" model="ir.ui.view">

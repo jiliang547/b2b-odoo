@@ -54,6 +54,38 @@ class Partner(models.Model):
         related='commercial_partner_id.b2b_selling_company_id',
         string='Effective Selling Company', groups='b2b_core.group_b2b_operator')
 
+    def _b2b_share_order_addresses(self, extra_partner_ids=()):
+        """Keep external customer addresses usable by their routed legal seller.
+
+        ``company_id`` on a contact is Odoo's record-owning company, not this
+        module's legal-seller assignment. Partner Hub customers are routed by
+        ``b2b_selling_company_id`` / account brand, so their ordering addresses
+        must stay shared. Native ``check_company`` remains enabled on orders.
+        """
+        self.ensure_one()
+        commercial = self.sudo().commercial_partner_id
+        if not commercial:
+            return self.env['res.partner']
+
+        # Never turn an internal legal entity's own company contact into a
+        # shared customer record, even if it is selected accidentally.
+        if self.env['res.company'].sudo().search_count([
+            ('partner_id', '=', commercial.id),
+        ], limit=1):
+            return self.env['res.partner']
+
+        address_ids = set(commercial.address_get(['invoice', 'delivery']).values())
+        address_ids.update(int(partner_id) for partner_id in extra_partner_ids if partner_id)
+        address_ids.add(commercial.id)
+        addresses = self.env['res.partner'].sudo().with_context(active_test=False).browse(
+            address_ids
+        ).exists().filtered(
+            lambda address: address.commercial_partner_id == commercial and address.company_id
+        )
+        if addresses:
+            addresses.with_context(tracking_disable=True).write({'company_id': False})
+        return addresses
+
     @api.onchange('b2b_account_brand_id')
     def _onchange_account_brand_seller(self):
         if self.b2b_account_brand_id.b2b_selling_company_id:

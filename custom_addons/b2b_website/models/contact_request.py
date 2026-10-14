@@ -1,7 +1,8 @@
 import uuid
 
 from odoo import _, api, fields, models
-from odoo.exceptions import ValidationError
+from odoo.exceptions import AccessError, ValidationError
+from markupsafe import escape
 
 
 class B2BContactRequest(models.Model):
@@ -96,6 +97,9 @@ class B2BContactRequest(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        if not self.env.su and not self.env.user.has_group("b2b_core.group_b2b_manager"):
+            if any(v.get("request_type") == "company_change" and v.get("state") in ("resolved", "closed") for v in vals_list):
+                raise AccessError(_("Only a B2B Manager can complete a company change review."))
         pending_partners = set()
         for vals in vals_list:
             if vals.get("name", _("New")) == _("New"):
@@ -127,6 +131,13 @@ class B2BContactRequest(models.Model):
             followers = record.partner_id | record.assigned_user_id.partner_id
             if followers:
                 record.message_subscribe(partner_ids=followers.ids)
+            if record.request_type == "company_change" and record.partner_id:
+                # A submitted customer request is a real incoming message.
+                # Native notifications target followers except the author.
+                record.message_post(
+                    body=escape(record.message), author_id=record.partner_id.id,
+                    message_type="comment", subtype_xmlid="mail.mt_comment",
+                )
             # The acknowledgement is part of the submission response, not a
             # new staff reply that should light up the portal notification.
             record.with_context(b2b_skip_portal_unread=True)._post_customer_message(
@@ -152,52 +163,17 @@ class B2BContactRequest(models.Model):
                 )
         return records
 
-    def message_post(self, **kwargs):
-        message = super().message_post(**kwargs)
-        if self.env.context.get("b2b_skip_portal_unread"):
-            return message
-
-        # Odoo forces portal users to receive chatter notifications by email.
-        # Email notifications are normally created as already read because the
-        # backend has no portal reading surface. Partner Hub does have one, so
-        # keep the native mail.notification record unread until that customer
-        # opens the inquiry. Email delivery itself remains unchanged.
-        for record in self:
-            customer = record.partner_id
-            if (
-                customer
-                and not message.is_internal
-                and message.message_type != "user_notification"
-                and message.author_id != customer
-            ):
-                notification = self.env["mail.notification"].sudo().search([
-                    ("mail_message_id", "=", message.id),
-                    ("res_partner_id", "=", customer.id),
-                ])
-                notification.write({"is_read": False, "read_date": False})
-        return message
-
     @api.model
     def get_portal_unread_message_count(self):
-        """Count native unread notifications on inquiries visible to the user."""
-        if self.env.user._is_public():
-            return 0
-        notifications = self.env["mail.notification"].sudo().search([
-            ("res_partner_id", "=", self.env.user.partner_id.id),
-            ("is_read", "=", False),
-            ("mail_message_id.model", "=", self._name),
-            ("mail_message_id.message_type", "!=", "user_notification"),
-        ])
-        if not notifications:
-            return 0
-        candidate_ids = notifications.mail_message_id.mapped("res_id")
-        visible_request_ids = set(self.search([("id", "in", candidate_ids)]).ids)
-        return sum(
-            notification.mail_message_id.res_id in visible_request_ids
-            for notification in notifications
-        )
+        """Compatibility shim for the former inquiry-only header counter."""
+        return self.env["b2b.message.thread"].get_portal_unread_message_count()
 
     def write(self, vals):
+        if not self.env.su and not self.env.user.has_group("b2b_core.group_b2b_manager"):
+            for record in self:
+                if record.request_type == "company_change" or vals.get("request_type") == "company_change":
+                    if ("request_type" in vals and vals["request_type"] != record.request_type) or vals.get("state") in ("resolved", "closed"):
+                        raise AccessError(_("Only a B2B Manager can complete or reclassify a company change review."))
         if any(
             field_name in vals
             for field_name in ("partner_id", "request_type", "state")
@@ -227,6 +203,12 @@ class B2BContactRequest(models.Model):
                         "A company setup or change request is already under review."
                     ))
         result = super().write(vals)
+        if "request_type" in vals or "website_id" in vals:
+            threads = self.env["b2b.message.thread"].sudo().search([
+                ("source_model", "=", self._name), ("res_id", "in", self.ids),
+            ])
+            for thread in threads:
+                thread._sync_from_message(thread.last_message_id)
         if "assigned_user_id" in vals:
             for record in self.filtered("assigned_user_id"):
                 record.message_subscribe(
@@ -268,6 +250,7 @@ class B2BContactRequest(models.Model):
         )
 
     def action_resolve(self):
+        self._check_company_review_manager()
         self.write({"state": "resolved"})
         self._complete_assignment_activities(_("Contact request resolved."))
         self._post_customer_message(
@@ -275,6 +258,11 @@ class B2BContactRequest(models.Model):
         )
 
     def action_close(self):
+        self._check_company_review_manager()
         self.write({"state": "closed"})
         self._complete_assignment_activities(_("Contact request closed."))
         self._post_customer_message(_("Your inquiry has been closed."))
+
+    def _check_company_review_manager(self):
+        if self.filtered(lambda r: r.request_type == "company_change") and not self.env.su and not self.env.user.has_group("b2b_core.group_b2b_manager"):
+            raise AccessError(_("Only a B2B Manager can complete a company change review."))

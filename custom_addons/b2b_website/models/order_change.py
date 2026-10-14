@@ -19,6 +19,20 @@ class B2BOrderChangeRequest(models.Model):
     _order = "create_date desc, id desc"
     _mail_post_access = "read"
 
+    _one_open_per_order = models.UniqueIndex(
+        "(order_id) WHERE state IN ('submitted', 'under_review', 'customer_confirmation', 'balance_due', 'finance_review', 'applying')",
+        "Another order change request is already open for this order.",
+    )
+
+    def init(self):
+        # Never silently cancel historical financial work to install the index.
+        self.env.cr.execute("""SELECT order_id FROM b2b_order_change_request
+            WHERE state IN %s GROUP BY order_id HAVING count(*) > 1""", [OPEN_STATES])
+        duplicates = self.env.cr.fetchall()
+        if duplicates:
+            raise ValidationError(_("Resolve duplicate open order changes before upgrading. Order IDs: %s",
+                                    ', '.join(str(row[0]) for row in duplicates)))
+
     name = fields.Char(default=lambda self: _("New"), readonly=True, copy=False, index=True)
     order_id = fields.Many2one(
         "sale.order", required=True, ondelete="restrict", index=True, tracking=True
@@ -276,6 +290,10 @@ class B2BOrderChangeRequest(models.Model):
         for request in self:
             if request.state != "under_review" or not request.revision_order_id:
                 raise ValidationError(_("Prepare the proposed revision before sending it."))
+            request.order_id._b2b_lock_collection()
+            if request.order_id.currency_id.compare_amounts(request.order_id.b2b_balance, 0) <= 0:
+                request.order_id._b2b_resolve_safe_demo_payment_conflicts()
+            request.order_id._b2b_check_unresolved_online_payments()
             if any(line.qty_delivered > 0 for line in request.order_id.sudo().order_line):
                 raise ValidationError(_("Delivered orders must use the return or replacement workflow."))
             proposed_amount = request.revision_order_id.sudo().amount_total
@@ -321,6 +339,7 @@ class B2BOrderChangeRequest(models.Model):
             "tax_ids": [Command.set(line.tax_ids.ids)],
             "sequence": line.sequence,
             "display_type": line.display_type,
+            "is_delivery": line.is_delivery,
         }
 
     def _apply_revision(self):
@@ -366,6 +385,9 @@ class B2BOrderChangeRequest(models.Model):
             request.order_id._b2b_lock_collection()
             if request.state != "customer_confirmation":
                 raise ValidationError(_("This proposal is not awaiting customer confirmation."))
+            if request.order_id.currency_id.compare_amounts(request.order_id.b2b_balance, 0) <= 0:
+                request.order_id._b2b_resolve_safe_demo_payment_conflicts()
+            request.order_id._b2b_check_unresolved_online_payments()
             request.write({"state": "applying", "customer_confirmed_at": fields.Datetime.now()})
             request.order_id.b2b_change_payment_hold = True
             request._apply_revision()
@@ -410,6 +432,8 @@ class B2BOrderChangeRequest(models.Model):
             raise AccessError(_("This order change does not belong to your company."))
 
     def _on_order_payment_updated(self):
+        self.order_id._b2b_lock_collection()
+        self.invalidate_recordset(['state'])
         for request in self.filtered(lambda item: item.state == "balance_due"):
             order = request.order_id
             if (order.b2b_collection_active and order._b2b_can_produce()) or order.currency_id.compare_amounts(order.amount_paid, order.amount_total) >= 0:
@@ -425,13 +449,14 @@ class B2BOrderChangeRequest(models.Model):
 
     def _schedule_finance_review_activity(self):
         finance_group = self.env.ref("account.group_account_invoice")
-        finance_user = self.env["res.users"].sudo().search([
-            ("active", "=", True),
-            ("share", "=", False),
-            ("all_group_ids", "in", finance_group.ids),
-        ], limit=1)
-        if finance_user:
-            for request in self:
+        for request in self:
+            finance_user = self.env["res.users"].sudo().search([
+                ("active", "=", True), ("share", "=", False),
+                ("all_group_ids", "in", finance_group.ids),
+                ("company_ids", "in", request.order_id.company_id.ids),
+            ], limit=1)
+            summary = _("Complete financial adjustment %(request)s", request=request.name)
+            if finance_user and not request.activity_ids.filtered(lambda activity: activity.summary == summary):
                 request.activity_schedule(
                     "mail.mail_activity_data_todo",
                     user_id=finance_user.id,
@@ -491,7 +516,7 @@ class B2BOrderChangeRequest(models.Model):
             })
             request.order_id.b2b_change_payment_hold = False
             request.activity_ids.filtered(
-                lambda activity: activity.user_id == self.env.user
+                lambda activity: activity.summary == _("Complete financial adjustment %(request)s", request=request.name)
                 and activity.activity_type_id == self.env.ref("mail.mail_activity_data_todo")
             ).action_feedback(feedback=_("Financial adjustment completed."))
             request.message_post(

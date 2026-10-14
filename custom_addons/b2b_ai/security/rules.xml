@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="session_owner_rule" model="ir.rule">
+        <field name="name">AI projects belong to their creator and current customer company</field>
+        <field name="model_id" ref="model_b2b_ai_session"/>
+        <field name="domain_force">[] if user.has_group('base.group_system') else [('owner_id', '=', user.id), ('commercial_partner_id', '=', user.partner_id.commercial_partner_id.id)]</field>
+        <field name="groups" eval="[Command.link(ref('base.group_portal')), Command.link(ref('base.group_user'))]"/>
+    </record>
+    <record id="turn_owner_rule" model="ir.rule">
+        <field name="name">AI requests belong to an owned project</field>
+        <field name="model_id" ref="model_b2b_ai_turn"/>
+        <field name="domain_force">[] if user.has_group('base.group_system') else [('session_id.owner_id', '=', user.id), ('session_id.commercial_partner_id', '=', user.partner_id.commercial_partner_id.id)]</field>
+        <field name="groups" eval="[Command.link(ref('base.group_portal')), Command.link(ref('base.group_user'))]"/>
+    </record>
+</odoo>

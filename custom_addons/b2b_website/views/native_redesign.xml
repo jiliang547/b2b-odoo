@@ -234,17 +234,23 @@
 
     <template id="signup_figma" inherit_id="auth_signup.signup" name="Partner Hub Registration">
         <xpath expr="//form" position="replace">
-            <section t-if="message" class="lt-registration-result" role="status">
+            <section t-if="registration_exists" class="lt-registration-result" role="status">
+                <span class="lt-registration-result__icon"><i class="fa fa-envelope-o"/></span>
+                <span class="lt-kicker">POWER &amp; GRACE PARTNER HUB</span>
+                <h1>Continue your registration</h1>
+                <p>This email is already registered. If you haven't verified your email yet, request a new verification email. Otherwise, sign in.</p>
+                <p><strong t-out="signup_email"/></p>
+                <t t-set="email" t-value="signup_email"/>
+                <t t-call="b2b_website.registration_resend_form"/>
+                <a class="lt-auth-text-link" href="/web/login">Sign in</a>
+            </section>
+            <section t-elif="message" class="lt-registration-result" role="status">
                 <span class="lt-registration-result__icon"><i class="fa fa-envelope-o"/></span>
                 <span class="lt-kicker">POWER &amp; GRACE PARTNER HUB</span>
                 <h1>Verify your business email</h1>
                 <p t-out="message"/>
                 <p t-if="signup_email"><strong t-out="signup_email"/></p>
-                <form t-if="signup_email" action="/web/signup/resend" method="post" class="lt-resend-form">
-                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-                    <input type="hidden" name="email" t-att-value="signup_email"/>
-                    <button type="submit" class="lt-btn lt-btn--outline">Resend verification email</button>
-                </form>
+                <t t-if="signup_email"><t t-set="email" t-value="signup_email"/><t t-call="b2b_website.registration_resend_form"/></t>
                 <a class="lt-auth-text-link" href="/web/login">Return to sign in</a>
             </section>
 
@@ -254,7 +260,7 @@
                 <div class="mb-3 field-name"><label for="name" class="form-label">Name</label><input type="text" name="name" t-att-value="name" id="name" class="form-control" required="required"/></div>
                 <div class="mb-3 field-login"><label for="login" class="form-label">Email</label><input type="email" name="login" t-att-value="login" id="login" class="form-control" required="required" readonly="readonly"/></div>
                 <t t-call="auth_signup.fields"><t t-set="autofocus" t-value="1"/></t>
-                <p class="alert alert-danger" t-if="error" role="alert"><t t-esc="error"/></p>
+                <p class="alert alert-danger" t-if="error and not password_error and not confirm_password_error" role="alert"><t t-esc="error"/></p>
                 <input type="hidden" name="redirect" t-att-value="redirect"/>
                 <input type="hidden" name="token" t-att-value="token"/>
                 <div class="oe_login_buttons d-grid pt-3"><button type="submit" class="lt-btn lt-btn--blue lt-btn--wide">Activate account</button></div>
@@ -275,7 +281,7 @@
                             <div class="lt-field"><label for="job_title">Job Title <b>*</b></label><input type="text" name="job_title" t-att-value="job_title" id="job_title" placeholder="Sales Manager" maxlength="160" autocomplete="organization-title" required="required"/></div>
                             <div class="lt-field"><label for="company_name">Company Name <b>*</b></label><input type="text" name="company_name" t-att-value="company_name" id="company_name" placeholder="Company name" maxlength="200" autocomplete="organization" required="required"/></div>
                             <div class="lt-field"><label for="country_id">Country / Region <b>*</b></label><select name="country_id" id="country_id" autocomplete="country" required="required"><option value="">Select country</option><option t-foreach="countries" t-as="country" t-att-value="country.id" t-att-selected="str(country.id) == str(country_id or '')" t-out="country.name"/></select></div>
-                            <div class="lt-field"><label for="login">Business Email <b>*</b></label><input type="email" name="login" t-att-value="login" id="login" placeholder="name@company.com" maxlength="254" autocomplete="email" autocapitalize="off" required="required" aria-describedby="login_error"/><small class="lt-field-error" id="login_error" aria-live="polite" t-out="login_error or ''"/></div>
+                            <div class="lt-field"><label for="login">Business Email <b>*</b></label><input type="email" name="login" t-att-value="login" id="login" placeholder="name@company.com" maxlength="254" pattern="[^@\s]+@[^@\s]+\.[^@\s]+" autocomplete="email" autocapitalize="off" required="required" aria-describedby="login_error"/><small class="lt-field-error" id="login_error" aria-live="polite" t-out="login_error or ''"/></div>
                             <t t-call="b2b_website.registration_phone"><t t-set="phone_field" t-value="'company_phone'"/><t t-set="phone_label" t-valuef.translate="Company Phone"/><t t-set="phone_value" t-value="company_phone"/><t t-set="phone_country" t-value="company_phone_country"/><t t-set="phone_country_defaulted" t-value="company_phone_country_defaulted"/></t>
                             <t t-call="b2b_website.registration_phone"><t t-set="phone_field" t-value="'mobile'"/><t t-set="phone_label" t-valuef.translate="Mobile / WhatsApp"/><t t-set="phone_value" t-value="mobile"/><t t-set="phone_country" t-value="mobile_country"/><t t-set="phone_country_defaulted" t-value="mobile_country_defaulted"/></t>
                             <div class="lt-field"><label for="customer_type_id">Business Type <b>*</b></label><select name="customer_type_id" id="customer_type_id" required="required"><option value="">Select business type</option><option t-foreach="customer_types" t-as="customer_type" t-att-value="customer_type.id" t-att-selected="str(customer_type.id) == str(customer_type_id or '')" t-out="customer_type.name"/></select></div>
@@ -286,8 +292,8 @@
                     <section class="lt-registration-security">
                         <h2>Account Security</h2>
                         <div class="lt-registration-grid">
-                            <div class="lt-field o_caps_lock_warning"><label for="password">Password <b>*</b></label><div class="input-group lt-password-field"><input type="password" name="password" id="password" placeholder="••••••••••••" required="required" autocomplete="new-password" maxlength="4096"/><button type="button" class="o_show_password" aria-label="Show password"><i class="fa fa-eye"/></button></div></div>
-                            <div class="lt-field"><label for="confirm_password">Confirm Password <b>*</b></label><div class="input-group lt-password-field"><input type="password" name="confirm_password" id="confirm_password" placeholder="••••••••••••" required="required" autocomplete="new-password" maxlength="4096"/><button type="button" class="o_show_password" aria-label="Show password"><i class="fa fa-eye"/></button></div></div>
+                            <div class="lt-field o_caps_lock_warning"><label for="password">Password <b>*</b></label><div class="input-group lt-password-field"><input type="password" name="password" id="password" placeholder="••••••••••••" required="required" autocomplete="new-password" maxlength="4096" t-att-minlength="b2b_password_policy['minlength']" t-att-data-lt-password-policy="b2b_password_policy['minlength']" t-att-data-lt-letter-number="'1' if b2b_password_policy['letter_number'] else '0'" t-att-data-lt-password-message="b2b_password_policy['message']" aria-describedby="password_hint password_error"/><button type="button" class="o_show_password" aria-label="Show password"><i class="fa fa-eye"/></button></div><small id="password_hint" class="lt-password-hint" t-out="b2b_password_policy['message']"/><small id="password_error" class="lt-field-error lt-password-error" aria-live="polite" t-out="password_error"/></div>
+                            <div class="lt-field"><label for="confirm_password">Confirm Password <b>*</b></label><div class="input-group lt-password-field"><input type="password" name="confirm_password" id="confirm_password" placeholder="••••••••••••" required="required" autocomplete="new-password" maxlength="4096" data-lt-password-confirm="password" aria-describedby="confirm_password_error"/><button type="button" class="o_show_password" aria-label="Show password"><i class="fa fa-eye"/></button></div><small id="confirm_password_error" class="lt-field-error lt-password-error" aria-live="polite" t-out="confirm_password_error"/></div>
                         </div>
                     </section>
                     <div class="lt-registration-actions">
@@ -311,6 +317,41 @@
     <template id="reset_password_figma" inherit_id="auth_signup.reset_password" name="Partner Hub Password Reset">
         <xpath expr="//form" position="attributes"><attribute name="class" add="lt-login-card" separator=" "/></xpath>
         <xpath expr="//form" position="before"><div class="lt-login-heading"><span class="lt-kicker">POWER &amp; GRACE PARTNER HUB</span><h1>Reset your password</h1><p>We will send recovery instructions to your registered email.</p></div></xpath>
+        <xpath expr="//p[@t-if='error']" position="attributes"><attribute name="t-if">error and not password_error and not confirm_password_error</attribute></xpath>
+    </template>
+
+    <template id="password_policy_fields" inherit_id="auth_signup.fields" name="Partner Hub Shared Password Rules">
+        <xpath expr="//input[@name='password']" position="attributes">
+            <attribute name="autocomplete">new-password</attribute>
+            <attribute name="maxlength">4096</attribute>
+            <attribute name="t-att-minlength">b2b_password_policy['minlength']</attribute>
+            <attribute name="t-att-data-lt-password-policy">b2b_password_policy['minlength']</attribute>
+            <attribute name="t-att-data-lt-letter-number">'1' if b2b_password_policy['letter_number'] else '0'</attribute>
+            <attribute name="t-att-data-lt-password-message">b2b_password_policy['message']</attribute>
+            <attribute name="aria-describedby">password_hint password_error</attribute>
+        </xpath>
+        <xpath expr="//div[hasclass('field-password')]/div" position="after">
+            <small id="password_hint" class="lt-password-hint" t-out="b2b_password_policy['message']"/>
+            <small id="password_error" class="lt-field-error lt-password-error" aria-live="polite" t-out="password_error"/>
+        </xpath>
+        <xpath expr="//input[@name='confirm_password']" position="attributes">
+            <attribute name="autocomplete">new-password</attribute>
+            <attribute name="maxlength">4096</attribute>
+            <attribute name="data-lt-password-confirm">password</attribute>
+            <attribute name="aria-describedby">confirm_password_error</attribute>
+        </xpath>
+        <xpath expr="//div[hasclass('field-confirm_password')]/div" position="after">
+            <small id="confirm_password_error" class="lt-field-error lt-password-error" aria-live="polite" t-out="confirm_password_error"/>
+        </xpath>
+    </template>
+
+    <template id="registration_resend_form" name="Partner Registration Verification Recovery">
+        <form t-if="email" action="/web/signup/resend" method="post" class="lt-resend-form" data-captcha="signup" t-att-data-lt-resend-delay="str(retry_after or 0)">
+            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+            <input type="hidden" name="email" t-att-value="email"/>
+            <button type="submit" class="lt-btn lt-btn--outline" t-att-disabled="(retry_after or 0) &gt; 0">Resend Verification Email</button>
+            <small class="lt-resend-timer" data-lt-resend-timer="" role="status" aria-live="polite" t-att-hidden="not retry_after"><t t-if="retry_after">Please wait before requesting another verification email.</t></small>
+        </form>
     </template>
 
     <template id="registration_status" name="Partner Registration Status">
@@ -319,8 +360,9 @@
                 <span t-att-class="'lt-registration-result__icon ' + ('is-success' if status == 'verified' else '')"><i t-att-class="'fa ' + ('fa-check' if status == 'verified' else 'fa-envelope-o')"/></span>
                 <span class="lt-kicker">POWER &amp; GRACE PARTNER HUB</span>
                 <t t-if="status == 'verified'"><h1>Email verified</h1><p>Your account is active and your application is ready for partner review. You can sign in now to follow its status.</p><a class="lt-btn lt-btn--blue" href="/web/login?redirect=/my">Sign in</a></t>
-                <t t-elif="status == 'expired'"><h1>Verification link expired</h1><p>Request a new link to continue your registration.</p><form action="/web/signup/resend" method="post" class="lt-resend-form"><input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/><input type="hidden" name="email" t-att-value="email"/><button type="submit" class="lt-btn lt-btn--blue">Send a new link</button></form></t>
-                <t t-elif="status == 'resent'"><h1>Check your email</h1><p t-out="message"/><a class="lt-auth-text-link" href="/web/login">Return to sign in</a></t>
+                <t t-elif="status == 'expired'"><h1>Verification link expired</h1><p>Request a new link to continue your registration.</p><t t-call="b2b_website.registration_resend_form"/></t>
+                <t t-elif="status in ('resent', 'resend_wait', 'resend_error')"><h1><t t-if="status == 'resend_error'">Please try again</t><t t-elif="status == 'resend_wait'">Please wait before resending</t><t t-else="">Check your email</t></h1><p t-out="message"/><p t-if="status == 'resent'">Check your inbox and spam folder. Use the link in the latest verification email.</p><t t-call="b2b_website.registration_resend_form"/><a class="lt-auth-text-link" href="/web/login">Sign in</a><a t-if="status == 'resend_error'" class="lt-auth-text-link" href="/contact">Contact support</a></t>
+                <t t-elif="status == 'busy'"><h1>Verification in progress</h1><p>A verification request is being processed. Please try the link again in a few seconds.</p><a class="lt-btn lt-btn--outline" t-att-href="retry_url">Try again</a></t>
                 <t t-else=""><h1>Verification link unavailable</h1><p>This link is invalid or has already been used. If your email was already verified, sign in to continue.</p><a class="lt-btn lt-btn--blue" href="/web/login">Sign in</a></t>
             </section>
         </t>

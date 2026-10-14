@@ -1,0 +1,46 @@
+<odoo>
+    <record id="settings_third_party_provider" model="ir.ui.view">
+        <field name="name">partner.hub.ai.third.party.provider</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="ai_app.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//block[@name='ai_providers']" position="inside">
+                <setting id="b2b_ai_third_party_provider" string="Third-party AI (OpenAI-compatible)"
+                    help="Use your own endpoint for Partner Hub customer conversations. Other native Odoo AI features are unchanged."
+                    groups="base.group_system">
+                    <field name="b2b_ai_third_party_enabled"/>
+                    <div invisible="not b2b_ai_third_party_enabled">
+                        <group>
+                            <field name="b2b_ai_third_party_url" placeholder="https://api.example.com/v1"/>
+                            <field name="b2b_ai_third_party_key" password="True" placeholder="Provider API key"/>
+                            <field name="b2b_ai_third_party_model" placeholder="Exact model ID from your provider"/>
+                            <field name="b2b_ai_third_party_format"/>
+                        </group>
+                        <p class="text-muted">Enter the API base URL, including /v1 if required, but not /chat/completions. Requires Chat Completions with JSON output. API keys stay server-side. Saving does not call the provider.</p>
+                        <p class="text-muted">Product and FAQ lookup retain existing permissions. Document indexing and vector search still require the native OpenAI embedding key. Do not replace existing vectors with a different embedding model.</p>
+                        <button name="action_b2b_ai_test_provider" type="object" string="Test Connection" class="btn-link"
+                            confirm="Send a small test prompt to this endpoint using the entered key? This may incur a small charge. No customer or product data will be sent."/>
+                    </div>
+                </setting>
+                <setting id="b2b_ai_embedding_provider" string="Third-party Embeddings — Configuration"
+                    help="Save embedding settings for compatibility testing. This does not activate a new index provider."
+                    groups="base.group_system">
+                    <field name="b2b_ai_embedding_configured"/>
+                    <div invisible="not b2b_ai_embedding_configured">
+                        <group>
+                            <field name="b2b_ai_embedding_url" placeholder="https://api.example.com/v1"/>
+                            <field name="b2b_ai_embedding_model" placeholder="Exact embedding model ID"/>
+                            <field name="b2b_ai_embedding_reuse_chat_key"/>
+                            <field name="b2b_ai_embedding_key" password="True" placeholder="Embedding provider API key"
+                                invisible="b2b_ai_embedding_reuse_chat_key"/>
+                            <field name="b2b_ai_embedding_dimensions"/>
+                            <field name="b2b_ai_embedding_send_dimensions"/>
+                        </group>
+                        <p class="text-muted">Use the API base URL without /embeddings. The provider must support OpenAI-compatible embeddings with 1536-dimensional output. Reuse the chat key only if it is authorized for this embedding endpoint.</p>
+                        <div class="alert alert-info" role="status">Pending compatibility testing. Saving sends no API requests and does not switch document indexing or query embeddings. Existing documents are not reindexed. Provider activation and any required reindexing will be handled after testing.</div>
+                    </div>
+                </setting>
+            </xpath>
+        </field>
+    </record>
+</odoo>

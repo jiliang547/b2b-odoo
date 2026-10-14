@@ -6,6 +6,14 @@
         <field name="inherit_id" ref="b2b_core.res_config_settings_view_form_b2b"/>
         <field name="arch" type="xml">
             <block id="b2b_partner_hub_settings" position="inside">
+                <setting string="Manual freight" help="No automatic freight line at checkout. Add the freight product to the quotation before releasing payment, or use the existing change-request workflow after payment.">
+                    <field name="b2b_manual_freight"/>
+                    <div class="content-group" invisible="not b2b_manual_freight">
+                        <label for="b2b_freight_product_id"/>
+                        <field name="b2b_freight_product_id" options="{'no_create': True}"/>
+                        <div class="text-muted">Use a shared service product with a verified ERP material code. Freight is excluded from the FOB / EXW goods threshold.</div>
+                    </div>
+                </setting>
                 <setting string="Partner Hub branding" help="The selected website logo is used in the Partner Hub header and footer.">
                     <field name="b2b_website_logo" widget="image" class="oe_avatar"/>
                 </setting>
@@ -16,8 +24,8 @@
                         <div class="row mt8"><label class="col-lg-3" for="b2b_social_linkedin"/><field name="b2b_social_linkedin" placeholder="https://www.linkedin.com/company/yourcompany"/></div>
                     </div>
                 </setting>
-                <setting string="Partner Hub Helpdesk team" help="New repair and replacement requests are assigned to this team.">
-                    <field name="b2b_helpdesk_team_id" options="{'no_create': True}"/>
+                <setting string="Partner Hub service routing" help="Repair and replacement requests follow the original order's selling company. A Partner Support team is created automatically for each seller when needed.">
+                    <div class="text-muted">Manage requests in Helpdesk or B2B Management. Select the companies you are responsible for in the company selector.</div>
                 </setting>
             </block>
         </field>

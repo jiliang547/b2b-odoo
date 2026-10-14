@@ -5,8 +5,12 @@ import { _t, translationIsReady } from "@web/core/l10n/translation";
 import {rpc} from "@web/core/network/rpc";
 import {registry} from "@web/core/registry";
 import {Interaction} from "@web/public/interaction";
+import { initializePasswordValidation } from "./password_validation";
+import { initializeVerificationResend } from "./verification_resend";
 
+let cartRefreshSequence = 0;
 function synchronizeCartQuantity(quantity) {
+    cartRefreshSequence++;
     const cartQuantity = Math.max(0, Number(quantity) || 0);
     try {
         window.sessionStorage.setItem("website_sale_cart_quantity", String(cartQuantity));
@@ -25,8 +29,10 @@ function synchronizeCartQuantity(quantity) {
 }
 
 async function initializeCartQuantity() {
+    const sequence = ++cartRefreshSequence;
     try {
-        synchronizeCartQuantity(await rpc("/shop/cart/quantity"));
+        const quantity = await rpc("/shop/cart/quantity");
+        if (sequence === cartRefreshSequence) synchronizeCartQuantity(quantity);
     } catch (_error) {
         // Keep the server-rendered Odoo quantity if the refresh request fails.
     }
@@ -288,7 +294,7 @@ function initializeVariantPickers() {
                     add_qty: quantity,
                     uom_id: Number(form?.elements.uom_id?.value || 0) || null,
                 });
-                if (currentRequest !== requestNumber) {
+                if (!picker.isConnected || currentRequest !== requestNumber) {
                     return;
                 }
                 const available = Boolean(info.is_combination_possible && info.product_id);
@@ -581,7 +587,14 @@ function initializeRegistrationContacts() {
     };
     const email = form.querySelector("#login");
     const validateEmail = () => {
-        const invalid = Boolean(email.value.trim()) && email.validity.typeMismatch;
+        const value = email.value.trim();
+        const domain = value.slice(value.lastIndexOf("@") + 1).toLowerCase();
+        const labels = domain.split(".");
+        const validDomain = labels.length >= 2
+            && labels.every((label) => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i.test(label))
+            && (/^[a-z]{2,63}$/i.test(labels.at(-1)) || labels.at(-1).startsWith("xn--"));
+        const invalid = Boolean(value)
+            && (email.validity.typeMismatch || email.validity.patternMismatch || !validDomain);
         show(
             email,
             invalid
@@ -762,6 +775,8 @@ function initializeRegistrationContacts() {
 }
 
 function initializeLocalizedValidationMessages() {
+    if (initializeLocalizedValidationMessages.started) return;
+    initializeLocalizedValidationMessages.started = true;
     const fieldTypes = [HTMLInputElement, HTMLSelectElement, HTMLTextAreaElement];
     const isFormField = (field) => fieldTypes.some((fieldType) => field instanceof fieldType);
     const clearManagedMessage = (field) => {
@@ -780,6 +795,7 @@ function initializeLocalizedValidationMessages() {
             return;
         }
         if (field.dataset.ltContactValidity) return;
+        if (field.hasAttribute("data-lt-password-policy") || field.hasAttribute("data-lt-password-confirm")) return;
 
         field.setCustomValidity("");
         if (field.validity.valid) {
@@ -815,8 +831,14 @@ function initializeLocalizedValidationMessages() {
     }, true);
 }
 
-function initializePartnerHub() {
+const initializedPages = new WeakSet();
+export function initializePartnerHub() {
+    const page = document.querySelector("#wrapwrap > main") || document.body;
+    if (initializedPages.has(page)) return;
+    initializedPages.add(page);
     initializeLocalizedValidationMessages();
+    initializePasswordValidation();
+    initializeVerificationResend();
     initializeRegistrationContacts();
     initializeNavigation();
     initializeFilters();
@@ -931,9 +953,12 @@ function initializeSubmissionForms() {
             });
         });
     });
-    window.addEventListener("pageshow", () => {
-        forms.forEach(resetSubmissionForm);
-    });
+    if (!initializeSubmissionForms.started) {
+        initializeSubmissionForms.started = true;
+        window.addEventListener("pageshow", () => {
+            document.querySelectorAll("form[data-lt-submit-once]").forEach(resetSubmissionForm);
+        });
+    }
 }
 
 function initializePaymentStatus() {
@@ -1007,12 +1032,11 @@ function initializePaymentStatus() {
 }
 
 function initializeAccountMenus() {
-    const menus = [...document.querySelectorAll("details.lt-account-menu, details.lt-locale-menu")];
-    if (!menus.length) {
-        return;
-    }
+    if (initializeAccountMenus.started) return;
+    initializeAccountMenus.started = true;
+    const menus = () => [...document.querySelectorAll("details.lt-account-menu, details.lt-locale-menu")];
     document.addEventListener("pointerdown", (event) => {
-        menus.forEach((menu) => {
+        menus().forEach((menu) => {
             if (menu.open && !menu.contains(event.target)) {
                 menu.open = false;
             }
@@ -1022,7 +1046,7 @@ function initializeAccountMenus() {
         if (event.key !== "Escape") {
             return;
         }
-        menus.forEach((menu) => {
+        menus().forEach((menu) => {
             if (menu.open) {
                 menu.open = false;
                 menu.querySelector("summary")?.focus();
@@ -1052,11 +1076,16 @@ function initializeCompanyOnboarding() {
     dialog.querySelectorAll("[data-lt-company-onboarding-close]").forEach(
         (button) => button.addEventListener("click", close)
     );
-    document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape" && !dialog.hidden) {
-            close();
-        }
-    });
+    if (!initializeCompanyOnboarding.started) {
+        initializeCompanyOnboarding.started = true;
+        document.addEventListener("keydown", (event) => {
+            const current = document.querySelector("[data-lt-company-onboarding]");
+            if (event.key === "Escape" && current && !current.hidden) {
+                current.hidden = true;
+                document.body.classList.remove("lt-has-company-onboarding-dialog");
+            }
+        });
+    }
     dialog.hidden = false;
     document.body.classList.add("lt-has-company-onboarding-dialog");
     dialog.querySelector("a, button:not(.lt-company-onboarding-dialog__backdrop)")?.focus();

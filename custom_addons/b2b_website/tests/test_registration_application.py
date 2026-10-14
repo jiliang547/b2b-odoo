@@ -1,4 +1,5 @@
 from datetime import timedelta
+from html import unescape
 import re
 from unittest.mock import patch
 from uuid import uuid4
@@ -6,6 +7,7 @@ from uuid import uuid4
 from odoo import http
 from odoo.addons.mail.models.mail_template import MailTemplate
 from odoo.addons.mail.tests.common import mail_new_test_user
+from odoo.addons.base.models.ir_mail_server import MailDeliveryException
 from odoo.exceptions import AccessError, UserError, ValidationError
 from odoo.fields import Datetime
 from odoo.tests import HttpCase, TransactionCase, tagged
@@ -44,6 +46,7 @@ class TestB2BRegistrationApplication(TransactionCase):
         user = mail_new_test_user(
             self.env,
             login="registration-%s@example.test" % suffix,
+            password="Portal-Test-2026!",
             groups="base.group_portal",
             partner_id=partner.id,
         )
@@ -113,7 +116,7 @@ class TestB2BRegistrationApplication(TransactionCase):
         ).action_approve()
 
         application.invalidate_recordset()
-        company = application.company_id
+        company = application.resolved_partner_id
         self.assertEqual(application.state, "approved")
         self.assertTrue(company.is_company)
         self.assertTrue(company.b2b_approved)
@@ -136,7 +139,7 @@ class TestB2BRegistrationApplication(TransactionCase):
             "existing",
             state="pending",
             company_resolution="existing",
-            company_id=existing.id,
+            resolved_partner_id=existing.id,
         )
         application.user_id.active = True
 
@@ -151,7 +154,42 @@ class TestB2BRegistrationApplication(TransactionCase):
         self.assertEqual(application.partner_id.parent_id, existing)
         self.assertTrue(existing.b2b_approved)
 
+    def test_existing_customer_review_activity_and_chatter(self):
+        customer = self.env['res.partner'].create({'name': 'Mail customer', 'is_company': True})
+        application = self._application('mail-existing', state='pending',
+            company_resolution='existing', resolved_partner_id=customer.id)
+        application.activity_schedule('mail.mail_activity_data_todo', user_id=self.manager.id)
+        application.with_user(self.manager).with_context(b2b_skip_registration_email=True).action_approve()
+        self.assertEqual(application.state, 'approved')
+        self.assertEqual(application.partner_id.parent_id, customer)
+        self.assertFalse(application.activity_ids)
+        message = application.message_post(body='Review finished', subtype_xmlid='mail.mt_note')
+        self.assertTrue(message)
+        self.assertEqual(application._mail_get_companies()[application.id], self.website.company_id)
+
+    def test_rejection_with_existing_customer_and_activity(self):
+        customer = self.env['res.partner'].create({'name': 'Rejected customer', 'is_company': True})
+        application = self._application('mail-reject', state='pending',
+            company_resolution='existing', resolved_partner_id=customer.id, rejection_reason='Review required')
+        application.activity_schedule('mail.mail_activity_data_todo', user_id=self.manager.id)
+        application.with_user(self.manager).with_context(b2b_skip_registration_email=True).action_reject()
+        self.assertEqual(application.state, 'rejected')
+        self.assertFalse(application.activity_ids)
+        self.assertFalse(application.partner_id.parent_id)
+
+    def test_registration_mail_company_is_never_customer_partner(self):
+        application = self._application('mail-routing')
+        self.assertEqual(application._mail_get_companies()[application.id], self.website.company_id)
+        customer = self.env['res.partner'].create({'name': 'Routing customer', 'is_company': True})
+        application.resolved_partner_id = customer
+        if 'b2b_selling_company_id' in customer._fields:
+            seller = self.env['res.company'].create({'name': 'Registration seller'})
+            customer.b2b_selling_company_id = seller
+            self.assertEqual(application._mail_get_companies()[application.id], seller)
+        self.assertEqual(application._mail_get_companies()[application.id]._name, 'res.company')
+
     def test_operator_cannot_approve_registration(self):
+        self.assertNotIn("company_id", self.env["b2b.registration.application"]._fields)
         application = self._application(
             "permission", state="pending", company_resolution="create"
         )
@@ -195,6 +233,39 @@ class TestB2BRegistrationApplication(TransactionCase):
         ).action_send_verification_email()
         self.assertNotEqual(application.verification_token, first_token)
 
+    def test_verification_mail_failure_preserves_link_and_cooldown(self):
+        application = self._application("delivery-failure")
+        token = application._new_verification_token()
+        application.verification_sent_at = Datetime.now() - timedelta(seconds=61)
+        sent_at = application.verification_sent_at
+        expires_at = application.verification_expires_at
+        with patch.object(MailTemplate, "send_mail", side_effect=MailDeliveryException("SMTP unavailable")):
+            with self.assertRaises(MailDeliveryException):
+                application.action_send_verification_email()
+        application.invalidate_recordset()
+        self.assertEqual(application.verification_token, token)
+        self.assertEqual(application.verification_sent_at, sent_at)
+        self.assertEqual(application.verification_expires_at, expires_at)
+        self.assertFalse(application.user_id.with_context(active_test=False).active)
+
+    def test_verification_busy_lock_does_not_send_or_activate(self):
+        application = self._application("busy")
+        token = application._new_verification_token()
+        with patch.object(self.env.registry["b2b.registration.application"], "try_lock_for_update",
+                          return_value=self.env["b2b.registration.application"]):
+            with self.assertRaisesRegex(UserError, "already being processed"):
+                application.action_send_verification_email()
+            _record, status = self.env["b2b.registration.application"].verify_email_token(token)
+        self.assertEqual(status, "busy")
+        self.assertFalse(application.user_id.with_context(active_test=False).active)
+
+    def test_resend_never_reactivates_a_verified_disabled_account(self):
+        application = self._application("verified-disabled", state="pending", email_verified_at=Datetime.now())
+        with self.assertRaises(UserError):
+            application.action_send_verification_email()
+        self.assertFalse(application.user_id.with_context(active_test=False).active)
+        self.assertEqual(application.state, "pending")
+
     def test_rejection_requires_reason_and_can_return_to_review(self):
         application = self._application("reject", state="pending")
         application.user_id.active = True
@@ -231,7 +302,7 @@ class TestB2BRegistrationApplication(TransactionCase):
             b2b_skip_registration_email=True
         ).action_approve()
 
-        effective = application.company_id._b2b_get_effective_pricelist(
+        effective = application.resolved_partner_id._b2b_get_effective_pricelist(
             self.website, currency
         )
         self.assertTrue(effective)
@@ -275,6 +346,7 @@ class TestB2BAuthTemplateHttp(HttpCase):
         self.assertIn('data-country-name="United States"', signup.text)
         self.assertIn('class="lt-phone-number"', signup.text)
         self.assertIn('id="login_error"', signup.text)
+        self.assertIn(r'pattern="[^@\s]+@[^@\s]+\.[^@\s]+"', signup.text)
 
         login = self.url_open("/web/login")
         self.assertEqual(login.status_code, 200)
@@ -458,13 +530,13 @@ class TestB2BRegistrationHttpFlow(HttpCase):
         ).action_approve()
 
         self.assertEqual(application.state, "approved")
-        self.assertEqual(application.partner_id.parent_id, application.company_id)
-        self.assertTrue(application.company_id.b2b_approved)
-        self.assertEqual(application.company_id.b2b_customer_type_id, self.customer_type)
+        self.assertEqual(application.partner_id.parent_id, application.resolved_partner_id)
+        self.assertTrue(application.resolved_partner_id.b2b_approved)
+        self.assertEqual(application.resolved_partner_id.b2b_customer_type_id, self.customer_type)
 
     def test_invalid_contact_details_are_rejected_and_inputs_preserved(self):
         self.authenticate(None, None)
-        for field, value in (("login", "not-an-email"),
+        for field, value in (("login", "not-an-email"), ("login", "jiliang@ccc"),
                              ("company_website", "abcdef"), ("company_website", "name@company.com"),
                              ("mobile", "123abc"), ("company_phone", "123")):
             with self.subTest(field=field, value=value):
@@ -479,7 +551,10 @@ class TestB2BRegistrationHttpFlow(HttpCase):
                         "Please complete all required registration fields",
                         response.text,
                     )
-                self.assertFalse(self.env["b2b.registration.application"].search([("business_email", "=", email)]))
+                submitted_email = value if field == "login" else email
+                self.assertFalse(self.env["b2b.registration.application"].search([
+                    ("business_email", "=", submitted_email),
+                ]))
 
     def test_selected_phone_country_overrides_company_country(self):
         self.authenticate(None, None)
@@ -548,13 +623,166 @@ class TestB2BRegistrationHttpFlow(HttpCase):
         response = self._submit(self._payload(email))
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn("An account already uses this email", response.text)
+        self.assertIn("This email is already registered", response.text)
+        self.assertIn("Continue your registration", response.text)
+        self.assertIn("Resend Verification Email", response.text)
         self.assertEqual(
             self.env["res.users"].sudo().with_context(active_test=False).search_count([
                 ("login", "=", email),
             ]),
             1,
         )
+
+    def _unverified_application(self):
+        email = f"resend-http-{uuid4().hex}@example.test"
+        response = self._submit(self._payload(email))
+        self.assertIn("Check your email", response.text)
+        return self.env["b2b.registration.application"].search([("business_email", "=", email)])
+
+    def _resend(self, email, failure=None):
+        response = self.url_open("/web/signup")
+        token = re.search(r'name="csrf_token" value="([^"]+)"', response.text).group(1)
+        with patch.object(self.env.registry["ir.http"], "_verify_request_recaptcha_token", return_value=None), \
+             patch.object(MailTemplate, "send_mail", autospec=True, return_value=1, side_effect=failure) as send:
+            result = self.url_open("/web/signup/resend", data={"email": email, "csrf_token": token})
+            return result, send.call_count
+
+    def test_duplicate_unverified_registration_does_not_send_or_overwrite(self):
+        self.authenticate(None, None)
+        application = self._unverified_application()
+        original_token = application.verification_token
+        count = self.env["b2b.registration.application"].search_count([])
+        values = self._payload(application.business_email.upper(), company_name="Do not overwrite",
+            password="Changed-Password-2026!", confirm_password="Changed-Password-2026!")
+        with patch.object(self.env.registry["ir.http"], "_verify_request_recaptcha_token", return_value=None), \
+             patch.object(MailTemplate, "send_mail", autospec=True) as send:
+            response = self.url_open("/web/signup", data=values)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Continue your registration", response.text)
+        self.assertIn("Resend Verification Email", response.text)
+        self.assertNotIn("Changed-Password-2026!", response.text)
+        self.assertFalse(send.called)
+        application.invalidate_recordset()
+        self.assertEqual(application.verification_token, original_token)
+        self.assertEqual(application.company_name, "HTTP Closure Company")
+        self.assertEqual(self.env["b2b.registration.application"].search_count([]), count)
+        self.assertFalse(application.user_id.with_context(active_test=False).active)
+        info = application.user_id.with_user(application.user_id)._check_credentials(
+            {"type": "password", "password": "Registration-Test-2026!"}, {"interactive": True})
+        self.assertEqual(info["uid"], application.user_id.id)
+
+    def test_resend_cooldown_is_truthful_and_does_not_send(self):
+        self.authenticate(None, None)
+        application = self._unverified_application()
+        old_token = application.verification_token
+        response, sent = self._resend(application.business_email)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Please wait before resending", response.text)
+        self.assertRegex(response.text, r'data-lt-resend-delay="[1-9][0-9]?"')
+        self.assertNotIn("a new verification link has been sent", response.text)
+        self.assertEqual(sent, 0)
+        application.invalidate_recordset()
+        self.assertEqual(application.verification_token, old_token)
+
+    def test_resend_verify_and_review_complete_one_application(self):
+        self.authenticate(None, None)
+        application = self._unverified_application()
+        old_token = application.verification_token
+        application.verification_sent_at = Datetime.now() - timedelta(seconds=61)
+        response, sent = self._resend(application.business_email.upper())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Check your email", response.text)
+        self.assertIn('data-lt-resend-delay="60"', response.text)
+        self.assertEqual(sent, 1)
+        application.invalidate_recordset()
+        self.assertNotEqual(application.verification_token, old_token)
+        self.assertFalse(application.user_id.with_context(active_test=False).active)
+        old = self.url_open("/web/signup/verify?token=%s" % old_token)
+        self.assertIn("Verification link unavailable", old.text)
+        new_token = application.verification_token
+        verification = self.url_open("/web/signup/verify?token=%s" % new_token)
+        self.assertIn("Email verified", verification.text)
+        application.invalidate_recordset()
+        self.assertEqual(application.state, "pending")
+        self.assertTrue(application.user_id.with_context(active_test=False).active)
+        self.assertTrue(application.activity_ids)
+        replay = self.url_open("/web/signup/verify?token=%s" % new_token)
+        self.assertIn("Verification link unavailable", replay.text)
+
+    def test_verified_disabled_accounts_are_not_reactivated_by_resend(self):
+        self.authenticate(None, None)
+        application = self._unverified_application()
+        for state in ("pending", "approved", "rejected"):
+            application.write({"state": state, "email_verified_at": Datetime.now()})
+            response, sent = self._resend(application.business_email)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(sent, 0)
+            application.invalidate_recordset()
+            self.assertEqual(application.state, state)
+            self.assertFalse(application.user_id.with_context(active_test=False).active)
+
+    def test_resend_send_failure_keeps_link_and_offers_retry(self):
+        self.authenticate(None, None)
+        application = self._unverified_application()
+        old_token = application.verification_token
+        application.verification_sent_at = Datetime.now() - timedelta(seconds=61)
+        response, sent = self._resend(application.business_email, MailDeliveryException("SMTP unavailable"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(sent, 1)
+        self.assertIn("We couldn't send your verification email", unescape(response.text))
+        self.assertIn("Contact support", response.text)
+        self.assertIn('data-lt-resend-delay="0"', response.text)
+        self.assertNotIn("Oops! Something went wrong", response.text)
+        application.invalidate_recordset()
+        self.assertEqual(application.verification_token, old_token)
+
+    def test_resend_human_validation_failure_stays_on_recovery_page(self):
+        self.authenticate(None, None)
+        application = self._unverified_application()
+        csrf = re.search(r'name="csrf_token" value="([^"]+)"', self.url_open("/web/signup").text).group(1)
+        with patch.object(self.env.registry["ir.http"], "_verify_request_recaptcha_token",
+                          side_effect=ValidationError("The CloudFlare human validation failed.")), \
+             patch.object(MailTemplate, "send_mail", autospec=True) as send:
+            response = self.url_open("/web/signup/resend", data={"email": application.business_email, "csrf_token": csrf})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Human verification could not be completed", response.text)
+        self.assertIn("Resend Verification Email", response.text)
+        self.assertFalse(send.called)
+        self.assertNotIn("The CloudFlare human validation failed", response.text)
+
+    def test_ordinary_signup_and_login_have_no_permanent_resend_entry(self):
+        self.authenticate(None, None)
+        for path in ("/web/signup", "/web/login"):
+            response = self.url_open(path)
+            self.assertEqual(response.status_code, 200)
+            self.assertNotIn("Resend Verification Email", response.text)
+            self.assertNotIn('action="/web/signup/resend"', response.text)
+
+    def test_first_verification_delivery_failure_does_not_strand_an_account(self):
+        self.authenticate(None, None)
+        email = f"failed-first-mail-{uuid4().hex}@example.test"
+        with patch.object(self.env.registry["ir.http"], "_verify_request_recaptcha_token", return_value=None), \
+             patch.object(MailTemplate, "send_mail", autospec=True, side_effect=MailDeliveryException("SMTP unavailable")):
+            response = self.url_open("/web/signup", data=self._payload(email))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("We couldn't send your verification email", unescape(response.text))
+        self.assertFalse(self.env["res.users"].with_context(active_test=False).search([("login", "=", email)]))
+
+    def test_expired_link_can_be_resent_and_internal_account_cannot(self):
+        self.authenticate(None, None)
+        application = self._unverified_application()
+        application.verification_expires_at = Datetime.now() - timedelta(seconds=1)
+        application.verification_sent_at = Datetime.now() - timedelta(seconds=61)
+        expired = self.url_open("/web/signup/verify?token=%s" % application.verification_token)
+        self.assertIn("Verification link expired", expired.text)
+        self.assertIn("Resend Verification Email", expired.text)
+        response, sent = self._resend(application.business_email)
+        self.assertEqual(sent, 1)
+        self.assertIn("Check your email", response.text)
+        internal = mail_new_test_user(self.env, login=f"resend-staff-{uuid4().hex}@example.test")
+        response, sent = self._resend(internal.login)
+        self.assertEqual(sent, 0)
+        self.assertEqual(response.status_code, 200)
 
     def test_turnstile_rejection_stops_registration_before_account_creation(self):
         self.authenticate(None, None)

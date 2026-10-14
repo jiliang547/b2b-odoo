@@ -11,7 +11,18 @@ from types import SimpleNamespace
 from unittest.mock import patch, PropertyMock
 from uuid import uuid4
 from werkzeug.datastructures import FileStorage
-from odoo.addons.b2b_website.controllers.collection import CollectionPortal
+from PIL import Image
+from lxml import html
+from odoo.tools.pdf import PdfWriter
+from odoo.addons.b2b_website.controllers.collection import CollectionPortal, validate_payment_proof
+from odoo.addons.b2b_website.controllers.collection_payment import CollectionSalePortal
+from odoo.addons.sale.controllers.portal import CustomerPortal as NativeSalePortal
+
+
+def valid_png():
+    stream = BytesIO()
+    Image.new('RGB', (2, 2), 'white').save(stream, format='PNG')
+    return stream.getvalue()
 
 
 class B2BCollectionCommon(AccountTestInvoicingCommon):
@@ -32,7 +43,7 @@ class B2BCollectionCommon(AccountTestInvoicingCommon):
         cls.website.b2b_default_account_brand_id = cls.brand
         cls.finance = mail_new_test_user(cls.env, login='collection-finance', groups='b2b_website.group_b2b_finance', company_id=cls.env.company.id, company_ids=[Command.set(cls.env.company.ids)])
         cls.operator = mail_new_test_user(cls.env, login='collection-operator', groups='b2b_core.group_b2b_operator')
-        cls.portal_user = mail_new_test_user(cls.env, login='collection-portal', groups='base.group_portal', partner_id=cls.env['res.partner'].create({'name': 'Collection Contact', 'parent_id': cls.customer.id}).id)
+        cls.portal_user = mail_new_test_user(cls.env, login='collection-portal', password='Portal-Test-2026!', groups='base.group_portal', partner_id=cls.env['res.partner'].create({'name': 'Collection Contact', 'parent_id': cls.customer.id}).id)
 
     def _order(self, policy='a'):
         self.customer.b2b_collection_policy_id = self.env.ref('b2b_website.collection_policy_' + policy)
@@ -47,9 +58,268 @@ class B2BCollectionCommon(AccountTestInvoicingCommon):
         receipt = self.env['b2b.bank.receipt'].create({'order_id': order.id, 'declared_amount': amount, 'transfer_reference': 'UAT-%s' % payment.id, 'payment_id': payment.id, 'allocated_amount': amount})
         return receipt
 
+    def _online_transaction(self, order, amount, state='pending', provider_code='demo', reference=None):
+        if provider_code == 'demo':
+            method = self.env.ref('payment.payment_method_card')
+            provider = self.env.ref('payment.payment_provider_demo').sudo().copy({
+                'name': 'Collection Demo %s' % uuid4().hex,
+                'company_id': self.env.company.id,
+                'journal_id': self.journal.id,
+                'payment_method_ids': [Command.set(method.ids)],
+            })
+            # The base module ships the disabled Demo provider placeholder,
+            # while its provider module is deliberately optional. Build the
+            # minimum accounting fixture here without making production depend
+            # on payment_demo merely to run this regression test.
+            self.env.cr.execute(
+                "UPDATE payment_provider SET code = 'demo', state = 'test' WHERE id = %s",
+                [provider.id],
+            )
+            provider.invalidate_recordset(['code', 'state'])
+            manual_method = self.env['account.payment.method'].search([
+                ('code', '=', 'manual'), ('payment_type', '=', 'inbound'),
+            ], limit=1)
+            # With payment_demo installed Odoo already creates this line.
+            # Reuse it; the optional-provider fallback must not duplicate it.
+            method_line = self.env['account.payment.method.line'].search([
+                ('payment_provider_id', '=', provider.id),
+                ('journal_id', '=', self.journal.id),
+            ], limit=1)
+            if method_line:
+                method_line.payment_account_id = self.company_data['default_account_assets']
+            else:
+                self.env['account.payment.method.line'].create({
+                    'name': provider.name,
+                    'payment_method_id': manual_method.id,
+                    'journal_id': self.journal.id,
+                    'payment_provider_id': provider.id,
+                    'payment_account_id': self.company_data['default_account_assets'].id,
+                })
+        else:
+            provider = self.env.ref('payment.payment_provider_transfer').sudo().copy({'company_id': self.env.company.id})
+            method = self.env.ref('payment_custom.payment_method_wire_transfer')
+        return self.env['payment.transaction'].create({
+            'provider_id': provider.id,
+            'payment_method_id': method.id,
+            'reference': reference or 'COLLECTION-%s-%s' % (provider_code.upper(), order.id),
+            'amount': amount,
+            'currency_id': order.currency_id.id,
+            'partner_id': order.partner_id.id,
+            'operation': 'online_direct',
+            'state': state,
+            'sale_order_ids': [Command.set(order.ids)],
+        })
+
 
 @tagged('post_install', '-at_install')
 class TestB2BCollection(B2BCollectionCommon):
+    def test_payment_notifications_do_not_render_pdf(self):
+        order = self._order()
+        report = self.env.ref('sale.action_report_saleorder')
+        for xmlid in ('sale.mail_template_sale_confirmation', 'sale.mail_template_sale_payment_executed'):
+            template = self.env.ref(xmlid)
+            self.assertNotIn(report, template.report_template_ids)
+            with patch.object(type(self.env['ir.actions.report']), '_render_qweb_pdf',
+                              side_effect=AssertionError('Payment notification must not render PDF')):
+                values = template._generate_template(order.ids, ['body_html', 'subject', 'report_template_ids'])
+            self.assertTrue(values[order.id]['body_html'])
+            self.assertFalse(values[order.id].get('attachments'))
+        self.assertIn(report, self.env.ref('sale.email_template_edi_sale').report_template_ids)
+        self.assertTrue(self.env.ref('sale.email_template_proforma').report_template_ids)
+        self.assertTrue(self.env.ref('b2b_website.action_report_collection_pi'))
+
+    def test_upgrade_cleanup_skips_inactive_chinese(self):
+        self.assertFalse(self.env.ref('base.lang_zh_CN').active)
+        order = self._order()
+        order.order_line.name = '运费'
+        self.env['website']._b2b_apply_export_language()
+        self.assertEqual(order.order_line.name, '运费')
+
+    def test_bank_then_online_confirms_without_pdf(self):
+        order = self._order('b30')
+        threshold = order.currency_id.round(order.amount_total * order.b2b_production_percent / 100)
+        self._receipt(order, threshold - 5).action_confirm_receipt()
+        self.assertEqual(order.state, 'sent')
+        tx = self._online_transaction(order, 5, state='done')
+        with patch.object(type(self.env['ir.actions.report']), '_render_qweb_pdf',
+                          side_effect=AssertionError('Payment must not require PDF')):
+            tx._post_process()
+        self.assertTrue(tx.is_post_processed)
+        self.assertEqual(order.state, 'sale')
+        self.assertAlmostEqual(order.amount_paid, threshold)
+
+    def _sample_order(self):
+        sample = self.env['b2b.sample.request'].create({
+            'website_id': self.website.id,
+            'partner_id': self.customer.id,
+            'contact_id': self.portal_user.partner_id.id,
+            'contact_name': self.portal_user.name,
+            'company_name': self.customer.name,
+            'email': 'sample-payment@example.test',
+            'phone': '+1 555 0101',
+            'shipping_address': '1 Sample Payment Street',
+            'reason': 'Payment workflow regression',
+            'line_ids': [Command.create({
+                'product_id': self.product.id,
+                'quantity': 1,
+                'uom_id': self.product.uom_id.id,
+            })],
+        })
+        sample.action_submit()
+        sample.action_approve()
+        return sample, sample.sale_order_id
+
+    def test_sample_pending_payment_blocks_duplicate_transaction(self):
+        _sample, order = self._sample_order()
+        pending = self._online_transaction(
+            order, order.amount_total, reference='SAMPLE-PENDING-%s' % order.id,
+        )
+        with self.assertRaisesRegex(ValidationError, 'Another payment is being processed'):
+            self._online_transaction(
+                order, order.amount_total, reference='SAMPLE-DUPLICATE-%s' % order.id,
+            )
+        self.assertEqual(pending.state, 'pending')
+
+    def test_completed_sample_payment_recovers_and_closes_legacy_demo_pending(self):
+        sample, order = self._sample_order()
+        pending = self._online_transaction(
+            order, order.amount_total, reference='SAMPLE-LEGACY-PENDING-%s' % order.id,
+        )
+        completed = self._online_transaction(
+            order, order.amount_total, state='done',
+            reference='SAMPLE-RECOVERY-%s' % order.id,
+        )
+
+        completed.with_user(self.portal_user).sudo()._post_process()
+
+        self.assertEqual(completed.state, 'done')
+        self.assertTrue(completed.is_post_processed)
+        self.assertEqual(pending.state, 'cancel')
+        self.assertEqual(order.state, 'sale')
+        self.assertEqual(sample.state, 'order_confirmed')
+
+    def test_bank_receipt_closes_pending_demo_transaction(self):
+        order = self._order()
+        pending = self._online_transaction(order, 100, reference='DEMO-BEFORE-BANK-%s' % order.id)
+        receipt = self._receipt(order, 100)
+        receipt.action_confirm_receipt()
+        self.assertEqual(pending.state, 'cancel')
+        self.assertEqual(receipt.state, 'confirmed')
+        self.assertEqual(order.b2b_balance, 0)
+
+    def test_bank_receipt_blocks_unresolved_real_provider(self):
+        order = self._order()
+        pending = self._online_transaction(order, 100, provider_code='custom', reference='REAL-BEFORE-BANK-%s' % order.id)
+        receipt = self._receipt(order, 100)
+        with self.assertRaisesRegex(UserError, 'still being processed'):
+            receipt.action_confirm_receipt()
+        self.assertEqual(pending.state, 'pending')
+        self.assertEqual(receipt.state, 'submitted')
+
+    def test_fully_paid_order_closes_legacy_demo_before_change(self):
+        order = self._order()
+        pending = self._online_transaction(order, 100, reference='LEGACY-DEMO-%s' % order.id)
+        self._online_transaction(order, 100, state='done', reference='PAID-ELSEWHERE-%s' % order.id)
+        order.action_confirm()
+        change = self.env['b2b.order.change.request'].create({
+            'order_id': order.id,
+            'requested_changes': 'Reduce the paid order after resolving the simulated transaction.',
+        })
+        change.action_start_review()
+        change.revision_order_id.order_line.price_unit = 80
+        change.action_send_proposal()
+        self.assertEqual(pending.state, 'cancel')
+        change.with_user(self.portal_user).action_customer_accept()
+        self.assertEqual(order.amount_total, 80)
+
+    def test_real_pending_payment_blocks_proposal_before_customer(self):
+        order = self._order()
+        pending = self._online_transaction(order, 100, provider_code='custom', reference='REAL-CHANGE-%s' % order.id)
+        self._online_transaction(order, 100, state='done', reference='PAID-WITH-PENDING-%s' % order.id)
+        order.action_confirm()
+        change = self.env['b2b.order.change.request'].create({
+            'order_id': order.id,
+            'requested_changes': 'This proposal must not reach the customer while payment is unresolved.',
+        })
+        change.action_start_review()
+        change.revision_order_id.order_line.price_unit = 80
+        with self.assertRaisesRegex(UserError, pending.reference):
+            change.action_send_proposal()
+        self.assertEqual(change.state, 'under_review')
+
+    def test_uat_payment_link_handles_quote_and_confirmed_order(self):
+        order = self._order('b20')
+        self._receipt(order, 5).action_confirm_receipt()
+        portal = CollectionSalePortal()
+        with patch.object(CollectionSalePortal, 'env', new_callable=PropertyMock, return_value=self.env), \
+                patch.object(portal, '_document_check_access', return_value=order), \
+                patch.object(NativeSalePortal, 'portal_order_page', return_value='page') as native:
+            CollectionSalePortal.portal_order_page.__wrapped__(portal, order.id, payment_amount='15')
+            self.assertIsNone(native.call_args.kwargs['payment_amount'])
+            self._receipt(order, 15).action_confirm_receipt()
+            self.assertEqual(order.state, 'sale')
+            order.order_line.price_unit = 120
+            CollectionSalePortal.portal_order_page.__wrapped__(portal, order.id, payment_amount='80')
+            self.assertEqual(native.call_args.kwargs['payment_amount'], 4)
+
+    def test_uat_quote_fingerprint_and_pending_edit_guard(self):
+        order = self._order('b20')
+        first = order._b2b_quote_token()
+        order.order_line.price_unit = 120
+        self.assertNotEqual(first, order._b2b_quote_token())
+        self._online_transaction(
+            order, 24, reference='UAT-PENDING-%s' % order.id,
+        )
+        with self.assertRaises(UserError), self.env.cr.savepoint():
+            order.order_line.price_unit = 130
+        self.assertEqual(order.amount_total, 120)
+
+    def test_full_amount_and_deposit_use_distinct_native_payment_amounts(self):
+        order = self._order('b20')
+        portal = CollectionSalePortal()
+        for down, amount in ((True, 20), (False, 100)):
+            with patch.object(NativeSalePortal, '_get_payment_values', return_value={}) as native:
+                values = portal._get_payment_values(order, is_down_payment=down)
+            self.assertEqual(native.call_args.kwargs['payment_amount'], amount)
+            self.assertEqual(values['b2b_quote_token'], order._b2b_quote_token())
+
+    def test_verified_partial_bank_receipt_full_payment_is_only_remaining_balance(self):
+        order = self._order('b20')
+        self._receipt(order, 5).action_confirm_receipt()
+        portal = CollectionSalePortal()
+        for down, amount in ((True, 15), (False, 95)):
+            with patch.object(NativeSalePortal, '_get_payment_values', return_value={}) as native:
+                portal._get_payment_values(order, is_down_payment=down, payment_amount=999)
+            self.assertEqual(native.call_args.kwargs['payment_amount'], amount)
+        with patch.object(NativeSalePortal, 'portal_order_page', return_value='page') as native, \
+                patch.object(portal, '_document_check_access', return_value=order):
+            CollectionSalePortal.portal_order_page.__wrapped__(portal, order.id,
+                payment_amount='999', amount_selection='full_amount')
+        self.assertIsNone(native.call_args.kwargs['payment_amount'])
+        self.assertEqual(native.call_args.kwargs['amount_selection'], 'full_amount')
+
+    def test_uat_proof_content_validation(self):
+        for content in (b'%PDF-1.7\n%%EOF', b'\x89PNG\r\n\x1a\n', b'\xff\xd8\xff', b'', b'x' * (8 * 1024 * 1024 + 1)):
+            with self.assertRaises(ValidationError):
+                validate_payment_proof(content)
+        self.assertEqual(validate_payment_proof(valid_png()), 'image/png')
+        stream = BytesIO()
+        writer = PdfWriter()
+        writer.add_blank_page(width=72, height=72)
+        writer.write(stream)
+        self.assertEqual(validate_payment_proof(stream.getvalue()), 'application/pdf')
+
+    def test_uat_reversed_receipt_is_not_effective(self):
+        order = self._order()
+        receipt = self._receipt(order, 100)
+        receipt.action_confirm_receipt()
+        self.assertEqual(receipt.effective_credit, 100)
+        receipt.payment_id.action_draft()
+        self.assertEqual(receipt.state, 'confirmed')
+        self.assertFalse(receipt.accounting_effective)
+        self.assertEqual(receipt.effective_credit, 0)
+        self.assertEqual(order._b2b_received_amount(), 0)
+
     def test_customer_terms_and_quote_status_preserve_payment_rules(self):
         order = self._order('b20')
         self.assertEqual(order._b2b_customer_terms_label(), '20% deposit, 80% before shipment')
@@ -205,13 +475,9 @@ class TestB2BCollection(B2BCollectionCommon):
 
     def test_online_deposit_refund_requires_actual_evidence(self):
         order = self._order('b30')
-        provider = self.env.ref('payment.payment_provider_demo').sudo().copy({'company_id': self.env.company.id})
-        payment = self.env['payment.transaction'].create({
-            'provider_id': provider.id, 'payment_method_id': self.env.ref('payment_demo.payment_method_demo').id,
-            'reference': 'COLLECTION-ONLINE-%s' % order.id, 'amount': 30,
-            'currency_id': order.currency_id.id, 'partner_id': self.customer.id,
-            'operation': 'online_direct', 'state': 'done', 'sale_order_ids': [Command.set(order.ids)],
-        })
+        payment = self._online_transaction(
+            order, 30, state='done', reference='COLLECTION-ONLINE-%s' % order.id,
+        )
         order.action_confirm()
         change = self.env['b2b.order.change.request'].create({'order_id': order.id, 'requested_changes': 'Reduce to 20.'})
         change.action_start_review()
@@ -225,7 +491,7 @@ class TestB2BCollection(B2BCollectionCommon):
         self.assertEqual(order._b2b_received_amount(), 30)
         self.assertFalse(order._b2b_can_ship())
         refund = self.env['payment.transaction'].create({
-            'provider_id': provider.id, 'payment_method_id': payment.payment_method_id.id,
+            'provider_id': payment.provider_id.id, 'payment_method_id': payment.payment_method_id.id,
             'reference': 'COLLECTION-REFUND-%s' % order.id, 'amount': -10,
             'currency_id': order.currency_id.id, 'partner_id': self.customer.id,
             'operation': 'refund', 'state': 'done', 'source_transaction_id': payment.id,
@@ -349,6 +615,54 @@ class TestB2BCollection(B2BCollectionCommon):
         self.assertEqual(order.b2b_net_received, 30)
         self.assertEqual(order.b2b_balance, 50)
 
+    def test_manual_freight_paid_revision_keeps_receipts_and_requests_only_required_topup(self):
+        for policy, paid, topup in (('b20', 20, 6), ('a', 100, 30)):
+            with self.subTest(policy=policy):
+                freight_product = self.env['product.product'].create({
+                    'name': 'Negotiated Freight', 'type': 'service', 'sale_ok': True,
+                    'taxes_id': [Command.clear()],
+                })
+                self.website.write({'b2b_manual_freight': True, 'b2b_freight_product_id': freight_product.id})
+                order = self._order(policy)
+                self._receipt(order, paid).action_confirm_receipt()
+                original_name = order.name
+                change = self.env['b2b.order.change.request'].create({
+                    'order_id': order.id, 'requested_changes': 'Add the agreed freight charge.',
+                })
+                change.action_start_review()
+                freight = self.env['sale.order.line'].create({
+                    'order_id': change.revision_order_id.id, 'product_id': freight_product.id,
+                    'product_uom_qty': 1, 'price_unit': 30, 'tax_ids': [Command.clear()],
+                })
+                self.assertTrue(freight.is_delivery)
+                change.action_send_proposal()
+                change.with_user(self.portal_user).action_customer_accept()
+                self.assertEqual(order.name, original_name)
+                self.assertEqual(order.amount_total, 130)
+                self.assertEqual(order.amount_delivery, 30)
+                self.assertEqual(order.b2b_net_received, paid)
+                self.assertEqual(order.b2b_payable_now, topup)
+                self.assertEqual(change.state, 'balance_due')
+                self.assertTrue(order.b2b_change_payment_hold)
+                self._receipt(order, topup).action_confirm_receipt()
+                self.assertEqual(change.state, 'completed')
+                self.assertFalse(order.b2b_change_payment_hold)
+
+    def test_manual_freight_is_in_pi_and_native_total_without_a_default_carrier(self):
+        freight_product = self.env['product.product'].create({
+            'name': 'Negotiated Freight', 'type': 'service', 'sale_ok': True,
+            'taxes_id': [Command.clear()],
+        })
+        self.website.write({'b2b_manual_freight': True, 'b2b_freight_product_id': freight_product.id})
+        order = self._order()
+        self.assertFalse(order.order_line.filtered('is_delivery'))
+        self.env['sale.order.line'].create({'order_id': order.id, 'product_id': freight_product.id,
+            'product_uom_qty': 1, 'price_unit': 30, 'tax_ids': [Command.clear()]})
+        self.assertFalse(order.carrier_id)
+        content, _ = self.env['ir.actions.report']._render_qweb_html('b2b_website.action_report_collection_pi', order.ids)
+        self.assertIn(b'Negotiated Freight', content)
+        self.assertIn(b'130.00', content)
+
     def test_bank_refund_uses_actual_excess_and_native_outbound_payment(self):
         order = self._order('b30')
         self._receipt(order, 30).action_confirm_receipt()
@@ -402,10 +716,18 @@ class TestB2BCollection(B2BCollectionCommon):
     def test_upload_controller_records_evidence_without_credit(self):
         order = self._order()
         portal = CollectionPortal()
-        upload = FileStorage(stream=BytesIO(b'%PDF-1.4\n% LOCAL TEST EVIDENCE'), filename='test-proof.pdf')
-        fake = SimpleNamespace(env=self.env(user=self.portal_user), httprequest=SimpleNamespace(files={'proof': upload}))
-        with patch.object(CollectionPortal, 'env', new_callable=PropertyMock, return_value=self.env), patch('odoo.addons.b2b_website.controllers.collection.request', fake), patch.object(portal, '_render', return_value='submitted'):
-            self.assertEqual(portal.upload_proof(order.id, amount='100', transfer_date=str(fields.Date.today()), reference='UPLOAD-UAT', submission_key=str(uuid4())).get_data(as_text=True), 'submitted')
+        upload = FileStorage(stream=BytesIO(valid_png()), filename='test-proof.png')
+        from werkzeug.utils import redirect
+        fake = SimpleNamespace(env=self.env(user=self.portal_user), session={}, redirect=redirect,
+                               httprequest=SimpleNamespace(files={'proof': upload}))
+        with patch.object(CollectionPortal, 'env', new_callable=PropertyMock, return_value=self.env), patch('odoo.addons.b2b_website.controllers.collection.request', fake), patch.object(portal, '_render', return_value='submitted') as render:
+            response = portal.upload_proof(order.id, amount='100', transfer_date=str(fields.Date.today()), reference='UPLOAD-UAT', submission_key=str(uuid4()))
+            self.assertEqual(response.status_code, 303)
+            self.assertEqual(response.location, '/my/orders/%s/collection' % order.id)
+            portal.collection(order.id)
+            self.assertTrue(render.call_args.kwargs['submitted'])
+            portal.collection(order.id)
+            self.assertFalse(render.call_args.kwargs['submitted'])
         self.assertEqual(len(order.b2b_receipt_ids), 1)
         self.assertEqual(order.b2b_receipt_ids.state, 'submitted')
         self.assertTrue(order.b2b_receipt_ids.attachment_ids)
@@ -495,24 +817,78 @@ class TestB2BCollection(B2BCollectionCommon):
 
     def test_authorized_online_payment_not_received(self):
         order = self._order()
-        provider = self.env.ref('payment.payment_provider_demo').sudo().copy({'company_id': self.env.company.id})
-        self.env['payment.transaction'].create({'provider_id': provider.id, 'payment_method_id': self.env.ref('payment_demo.payment_method_demo').id, 'reference': 'COLLECTION-AUTH-%s' % order.id, 'amount': 100, 'currency_id': order.currency_id.id, 'partner_id': self.customer.id, 'operation': 'online_direct', 'state': 'authorized', 'sale_order_ids': [Command.set(order.ids)]})
+        transaction = self._online_transaction(
+            order, 100, reference='COLLECTION-AUTH-%s' % order.id,
+        )
+        # Authorization support belongs to each optional provider module. This
+        # accounting test only needs the native state semantics, so create the
+        # fixture as pending and move it to authorized without pretending the
+        # optional Demo provider supports capture in a minimal test database.
+        self.env.cr.execute(
+            "UPDATE payment_transaction SET state = 'authorized' WHERE id = %s",
+            [transaction.id],
+        )
+        transaction.invalidate_recordset(['state'])
         self.assertEqual(order.b2b_net_received, 0)
         self.assertFalse(order._is_confirmation_amount_reached())
 
 
 @tagged('post_install', '-at_install')
 class TestB2BCollectionHttp(B2BCollectionCommon, HttpCase):
+    def test_collection_payment_copy_and_pending_review_guards(self):
+        order = self._order('b20')
+        self.authenticate(self.portal_user.login, 'Portal-Test-2026!')
+        response = self.url_open('/my/orders/%s/collection' % order.id)
+        self.assertEqual(response.status_code, 200)
+        page = html.fromstring(response.text)
+        online = page.xpath("//a[normalize-space(.)='Pay by PayPal']")
+        self.assertEqual(len(online), 1)
+        self.assertIn('/my/orders/%s' % order.id, online[0].get('href'))
+        self.assertIn('payment_amount=', online[0].get('href'))
+        card = page.xpath("//section[contains(@class, 'lt-bank-transfer-payment')]")[0]
+        self.assertEqual(card.xpath('./header/h2')[0].text_content().strip(), 'Pay by Bank Transfer')
+        form = card.xpath('.//form')[0]
+        self.assertEqual(form.get('action'), '/my/orders/%s/collection/proof' % order.id)
+        self.assertEqual(form.get('enctype'), 'multipart/form-data')
+        self.assertEqual(form.get('method'), 'post')
+        self.assertTrue(form.xpath("./input[@name='csrf_token']"))
+        self.assertTrue(form.xpath("./input[@name='submission_key']"))
+        self.assertIsNotNone(form.xpath(".//input[@name='proof']")[0].get('required'))
+        self.assertEqual(form.xpath('./button')[0].text_content().strip(), 'Submit Payment Proof')
+        order.write({'b2b_checkout_mode': 'review', 'b2b_review_state': 'pending'})
+        response = self.url_open('/my/orders/%s/collection' % order.id)
+        self.assertEqual(response.status_code, 200)
+        page = html.fromstring(response.text)
+        banner = page.xpath("//div[contains(@class, 'lt-awaiting-final-quote')]")[0]
+        self.assertEqual(banner.text_content().strip(), 'Awaiting Final Quote')
+        self.assertFalse(banner.xpath('./p | ./small | .//a'))
+        self.assertFalse(page.xpath("//a[normalize-space(.)='Pay by PayPal'] | //section[contains(@class, 'lt-bank-transfer-payment')]"))
+
+    def test_pending_order_banner_keeps_only_title_and_short_submission_toast(self):
+        order = self._order('b20')
+        order.write({'b2b_checkout_mode': 'review', 'b2b_review_state': 'pending'})
+        self.authenticate(self.portal_user.login, 'Portal-Test-2026!')
+        response = self.url_open('/my/orders/%s?review_submitted=1' % order.id)
+        self.assertEqual(response.status_code, 200)
+        page = html.fromstring(response.text)
+        banner = page.xpath("//div[contains(@class, 'lt-awaiting-final-quote')]")[0]
+        self.assertEqual(banner.text_content().strip(), 'Awaiting Final Quote')
+        self.assertFalse(banner.xpath('./p | ./small | .//a'))
+        toast = page.xpath("//div[@data-lt-toast-type='success']")[0]
+        self.assertEqual(toast.text_content().strip(), 'Order submitted.')
+        self.assertFalse(page.xpath("//a[@id='o_sale_portal_paynow']"))
+        self.assertTrue(page.xpath("//*[@id='sale_order_communication']"))
+
     def test_authenticated_multipart_upload_and_repeat_submission(self):
         """Exercise the real HTTP/CSRF/file parser, not a mocked request."""
         order = self._order()
-        self.authenticate(self.portal_user.login, self.portal_user.login)
+        self.authenticate(self.portal_user.login, 'Portal-Test-2026!')
         page = self.url_open('/my/orders/%s/collection' % order.id)
         self.assertEqual(page.status_code, 200)
         payload = {name: re.search(r'name="%s" value="([^"]+)"' % name, page.text).group(1)
                    for name in ('csrf_token', 'submission_key')}
         payload.update(amount='100', transfer_date=str(fields.Date.today()), reference='HTTP-UPLOAD-UAT')
-        png = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1cAAAAASUVORK5CYII=')
+        png = valid_png()
         url = '/my/orders/%s/collection/proof' % order.id
         response = self.url_open(url, data=payload, files={'proof': ('receipt.png', png, 'image/png')})
         self.assertEqual(response.status_code, 200)

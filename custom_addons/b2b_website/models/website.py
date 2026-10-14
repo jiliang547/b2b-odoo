@@ -119,6 +119,8 @@ class Website(models.Model):
         ]):
             if not any("\u3400" <= char <= "\u9fff" for char in line.name):
                 continue
+            if not self.env.ref("base.lang_zh_CN").active:
+                continue
             if line.name == line.with_context(lang="zh_CN")._get_sale_order_line_multiline_description_sale():
                 english_name = line.with_context(lang="en_US")._get_sale_order_line_multiline_description_sale()
                 if english_name != line.name:

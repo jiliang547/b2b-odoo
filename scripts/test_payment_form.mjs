@@ -12,6 +12,7 @@ const implementation = readFileSync(new URL('../custom_addons/b2b_website/static
 const events = () => ({ preventDefault() {}, stopPropagation() {} });
 let calls = 0;
 class PaymentForm {
+    _prepareTransactionRouteParams() { return {amount: 20, access_token: 'native-access'}; }
     async submitForm() { calls++; this.submittedFlow = this.flow; if (this.failSubmit) throw Error('transaction failed'); }
     async _expandInlineForm() { if (this.gate) await this.gate; if (this.failInit) throw Error('provider failed'); this.flow = this.providerFlow; }
     _disableButton() { this.disabled = true; }
@@ -30,6 +31,7 @@ vm.runInContext(implementation.replace(/^import .*;\r?$/gm, ''), context);
 function form(flow = 'direct') {
     const instance = new PaymentForm();
     instance.providerFlow = flow;
+    instance.paymentContext = {};
     instance.flow = 'redirect'; // Reproduce stale initial context.
     instance.radio = {};
     instance.el = {
@@ -78,4 +80,10 @@ const callsBeforeRelease = calls;
 release();
 await first;
 assert.equal(calls, callsBeforeRelease + 1);
-console.log('PASS: 7 payment patch scenarios (provider flow x3, failure/retry x2, no selection, duplicate submit)');
+const quote = form();
+assert.equal(quote._prepareTransactionRouteParams().b2b_quote_token, undefined);
+quote.paymentContext.b2bQuoteToken = 'current-quote-fingerprint';
+assert.equal(quote._prepareTransactionRouteParams().b2b_quote_token, 'current-quote-fingerprint');
+assert.equal(quote._prepareTransactionRouteParams().access_token, 'native-access');
+assert.equal(quote._prepareTransactionRouteParams().amount, 20);
+console.log('PASS: 9 payment patch scenarios (provider flow x3, failure/retry x2, no selection, duplicate submit, quote token absent/present)');

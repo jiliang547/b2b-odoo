@@ -10,6 +10,61 @@ from .collection_policy import check_manager
 class SaleOrder(models.Model):
     _inherit = 'sale.order'
 
+    def _b2b_quote_token(self):
+        self.ensure_one()
+        values = self.env['b2b.order.change.request']._snapshot_order(self)
+        values.update(company=self.company_id.id, customer=self.partner_id.id,
+                      currency_id=self.currency_id.id, terms=self.payment_term_id.id,
+                      production=self.b2b_production_percent, shipment=self.b2b_shipment_percent)
+        return hashlib.sha256(json.dumps(values, sort_keys=True).encode()).hexdigest()
+
+    def _b2b_unresolved_online_payments(self):
+        """Return online transactions that can still capture or settle funds."""
+        self.ensure_one()
+        return self.sudo().transaction_ids.filtered(
+            lambda tx: tx.operation not in ('refund', 'validation')
+            and tx.state in ('pending', 'authorized')
+        )
+
+    def _b2b_resolve_safe_demo_payment_conflicts(self):
+        """Cancel only simulated transactions when another payment path won.
+
+        Demo transactions never move real money, so leaving one pending after a
+        verified bank receipt only creates a false commercial-edit lock. Real
+        providers remain fail-closed until their provider status is resolved.
+        """
+        for order in self:
+            demo_transactions = order._b2b_unresolved_online_payments().filtered(
+                lambda tx: tx.provider_code == 'demo'
+            )
+            if not demo_transactions:
+                continue
+            references = ', '.join(demo_transactions.mapped('reference'))
+            demo_transactions._set_canceled(state_message=_(
+                'Canceled because the order was completed through another verified payment method.'
+            ))
+            order.message_post(body=_(
+                'Pending Demo payment %(references)s was canceled because another verified payment method was used.',
+                references=references,
+            ))
+
+    def _b2b_check_unresolved_online_payments(self):
+        for order in self:
+            pending = order._b2b_unresolved_online_payments()
+            if pending:
+                raise UserError(_(
+                    'Online payment %(references)s is still being processed. '
+                    'Open the order payment transactions and resolve it before continuing.',
+                    references=', '.join(pending.mapped('reference')),
+                ))
+
+    def _b2b_check_commercial_edit(self):
+        for order in self.filtered(lambda o: o.b2b_collection_active and not o.b2b_is_change_revision):
+            order._b2b_lock_collection()
+            if order.currency_id.compare_amounts(order.b2b_balance, 0) <= 0:
+                order._b2b_resolve_safe_demo_payment_conflicts()
+            order._b2b_check_unresolved_online_payments()
+
     b2b_collection_active = fields.Boolean(copy=False, readonly=True)
     b2b_collection_policy_id = fields.Many2one('b2b.collection.policy', string='Production / Shipment Collection Conditions', copy=True, tracking=True)
     b2b_payment_configuration_warning = fields.Text(compute='_compute_b2b_payment_configuration_warning')
@@ -49,7 +104,27 @@ class SaleOrder(models.Model):
     b2b_production_allowed = fields.Boolean(compute='_compute_collection_summary')
     b2b_shipment_allowed = fields.Boolean(compute='_compute_collection_summary')
     b2b_collection_status = fields.Char(compute='_compute_collection_summary')
+    b2b_unresolved_payment_count = fields.Integer(compute='_compute_b2b_unresolved_payment_count')
     b2b_balance_payment_requested = fields.Boolean(readonly=True, copy=False, tracking=True)
+
+    @api.depends('transaction_ids.state', 'transaction_ids.operation')
+    def _compute_b2b_unresolved_payment_count(self):
+        for order in self:
+            order.b2b_unresolved_payment_count = len(order._b2b_unresolved_online_payments())
+
+    def action_b2b_open_unresolved_payments(self):
+        self.ensure_one()
+        if not (self.env.is_superuser()
+                or self.env.user.has_group('b2b_core.group_b2b_manager')
+                or self.env.user.has_group('b2b_website.group_b2b_finance')):
+            raise AccessError(_('Only an authorized manager or finance user can review payment transactions.'))
+        transactions = self._b2b_unresolved_online_payments()
+        action = self.env['ir.actions.actions']._for_xml_id('payment.action_payment_transaction')
+        action['domain'] = [('id', 'in', transactions.ids)]
+        action['context'] = {'create': False}
+        if len(transactions) == 1:
+            action.update(res_id=transactions.id, view_mode='form', views=[(False, 'form')])
+        return action
 
     def _b2b_customer_terms_label(self):
         """Customer wording derived from the immutable order thresholds."""
@@ -107,7 +182,8 @@ class SaleOrder(models.Model):
             label = _('Balance Outstanding')
         # sudo is limited to an aggregate, after the portal authorizes the order.
         pending = bool(self.sudo().b2b_receipt_ids.filtered(lambda r: r.state == 'submitted'))
-        return {'label': label, 'pending': pending, 'requested': (
+        online_pending = bool(self._b2b_unresolved_online_payments())
+        return {'label': label, 'pending': pending, 'online_pending': online_pending, 'requested': (
             self.b2b_balance_payment_requested and self.state == 'sale'
             and compare(balance, 0) > 0 and self.b2b_review_state != 'pending'
             and not self.b2b_change_payment_hold)}
@@ -217,7 +293,7 @@ class SaleOrder(models.Model):
             _('Beneficiary: %s', account.acc_holder_name or journal.company_id.name),
             _('%(currency)s Account No.: %(account)s', currency=currency.name, account=account.acc_number),
             _('SWIFT/BIC: %s', bank.bic or '') if bank else '',
-            _('Beneficiary Address: %s', company_address.replace('\n', ', ')) if company_address else '',
+            _('Beneficiary Address: %s', ', '.join(line.strip() for line in company_address.splitlines() if line.strip())) if company_address else '',
             _('Bank Name: %s', bank.name or '') if bank else '',
             _('Bank Address: %s', bank_address) if bank_address else '',
             _('Clearing Number: %s', account.clearing_number) if account.clearing_number else '',
@@ -236,7 +312,9 @@ class SaleOrder(models.Model):
     def _b2b_start_collection(self):
         if self._b2b_loading_native_demo():
             return
-        for order in self.filtered(lambda o: o.website_id and o.state in ('draft', 'sent') and not o.b2b_is_change_revision and not o.b2b_collection_active):
+        for order in self.filtered(lambda o: o.website_id and o.state in ('draft', 'sent')
+                                   and not o.b2b_is_change_revision and not o.b2b_sample_request_id
+                                   and not o.b2b_collection_active):
             order._b2b_lock_collection()
             if not order.b2b_collection_active:
                 super(SaleOrder, order).write(order._b2b_collection_defaults())
@@ -255,6 +333,8 @@ class SaleOrder(models.Model):
         return True
 
     def write(self, vals):
+        if set(vals) & {'order_line', 'currency_id', 'pricelist_id', 'partner_id', 'payment_term_id', 'fiscal_position_id'}:
+            self._b2b_check_commercial_edit()
         if 'b2b_balance_payment_requested' in vals and not self.env.is_superuser():
             raise AccessError(_('Use Request Balance Payment to notify the customer.'))
         protected = {'b2b_collection_active', 'b2b_collection_category', 'b2b_production_percent', 'b2b_shipment_percent', 'b2b_block_overdue', 'b2b_brand_logo', 'b2b_bank_instructions', 'b2b_pi_bank_instructions'}
@@ -307,7 +387,7 @@ class SaleOrder(models.Model):
         transactions = self.transaction_ids.filtered(lambda t: t.state == 'done' and t.operation != 'validation')
         refunds = transactions.child_transaction_ids.filtered(lambda t: t.state == 'done' and t.operation == 'refund') - transactions
         amount = sum(transactions.mapped('amount')) - sum(abs(t.amount) for t in refunds)
-        for receipt in self.b2b_receipt_ids.filtered(lambda r: r.state == 'confirmed' and r.payment_id.state in ('in_process', 'paid')):
+        for receipt in self.b2b_receipt_ids.filtered('accounting_effective'):
             # A native transaction payment is already counted above.
             if receipt.payment_id not in transactions.mapped('payment_id'):
                 amount += receipt.order_amount
@@ -321,7 +401,7 @@ class SaleOrder(models.Model):
                 amount -= payment.currency_id._convert(payment.amount, self.currency_id, payment.company_id, payment.date)
         return self.currency_id.round(amount)
 
-    @api.depends('b2b_collection_active', 'transaction_ids.state', 'transaction_ids.amount', 'transaction_ids.child_transaction_ids.state', 'transaction_ids.child_transaction_ids.amount', 'b2b_receipt_ids.state', 'b2b_receipt_ids.order_amount', 'b2b_receipt_ids.payment_id.state', 'b2b_change_request_ids.state', 'b2b_change_request_ids.delta_amount', 'b2b_change_request_ids.refund_amount', 'b2b_change_request_ids.refund_transaction_id', 'b2b_change_request_ids.refund_payment_id.state')
+    @api.depends('b2b_collection_active', 'transaction_ids.state', 'transaction_ids.amount', 'transaction_ids.child_transaction_ids.state', 'transaction_ids.child_transaction_ids.amount', 'b2b_receipt_ids.state', 'b2b_receipt_ids.order_amount', 'b2b_receipt_ids.payment_id.state', 'b2b_receipt_ids.payment_id.move_id.state', 'b2b_change_request_ids.state', 'b2b_change_request_ids.delta_amount', 'b2b_change_request_ids.refund_amount', 'b2b_change_request_ids.refund_transaction_id', 'b2b_change_request_ids.refund_payment_id.state')
     def _compute_amount_paid(self):
         super()._compute_amount_paid()
         for order in self.filtered('b2b_collection_active'):

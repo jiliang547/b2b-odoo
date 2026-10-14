@@ -1,12 +1,13 @@
 import logging
 import re
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 import werkzeug
 
 from odoo import _, fields, http, tools
 from odoo.addons.auth_signup.controllers.main import AuthSignupHome
 from odoo.addons.auth_signup.models.res_users import SignupError
+from odoo.addons.base.models.ir_mail_server import MailDeliveryException
 from odoo.addons.phone_validation.tools import phone_validation
 from odoo.exceptions import UserError, ValidationError
 from odoo.http import request
@@ -17,6 +18,43 @@ _logger = logging.getLogger(__name__)
 
 
 class PartnerHubAuth(AuthSignupHome):
+    def get_auth_signup_qcontext(self):
+        qcontext = super().get_auth_signup_qcontext()
+        portal = True
+        if qcontext.get("token") and not qcontext.get("invalid_token"):
+            try:
+                partner = request.env["res.partner"].sudo()._signup_retrieve_partner(
+                    qcontext["token"], check_validity=True, raise_exception=True
+                )
+                existing_user = partner.with_context(active_test=False).user_ids[:1]
+                portal = not existing_user or existing_user._is_portal()
+            except UserError:
+                # A token can expire between the native context check and this
+                # lookup. Keep the normal branded invalid-link response.
+                qcontext.update(error=_("Invalid signup token"), invalid_token=True)
+        qcontext.update({
+            "b2b_password_policy": request.env["res.users"]._b2b_password_policy(portal=portal),
+            "password_error": "",
+            "confirm_password_error": "",
+            "registration_exists": False,
+        })
+        return qcontext
+
+    def _prepare_signup_values(self, qcontext):
+        if qcontext.get("password") != qcontext.get("confirm_password"):
+            qcontext["confirm_password_error"] = _("Passwords do not match; please retype them.")
+        values = super()._prepare_signup_values(qcontext)
+        policy = qcontext.get("b2b_password_policy") or request.env["res.users"]._b2b_password_policy()
+        try:
+            if policy["letter_number"]:
+                request.env["res.users"]._b2b_check_portal_password(values.get("password"))
+            else:
+                request.env["res.users"]._check_password_policy([values.get("password")])
+        except UserError as error:
+            qcontext["password_error"] = error.args[0]
+            raise
+        return values
+
     @staticmethod
     def _human_validation_error():
         return _(
@@ -85,7 +123,7 @@ class PartnerHubAuth(AuthSignupHome):
         values = self._prepare_signup_values(qcontext)
         full_name = (qcontext.get("name") or "").strip()[:160]
         raw_login = (qcontext.get("login") or "").strip()
-        login = email_normalize(raw_login)
+        login = self._registration_email(raw_login)
         if raw_login and not login:
             qcontext["login_error"] = _(
                 "Please enter a valid business email address, such as name@company.com."
@@ -136,6 +174,34 @@ class PartnerHubAuth(AuthSignupHome):
             "terms_version": qcontext["terms_version"],
         }
         return values, application_values
+
+    @staticmethod
+    def _registration_email(value):
+        """Return a normalized login only when it has a public-style domain."""
+        normalized = email_normalize((value or "").strip())
+        if not normalized or len(normalized) > 254 or "@" not in normalized:
+            return False
+        try:
+            domain = normalized.rsplit("@", 1)[1].encode("idna").decode("ascii")
+        except (UnicodeError, ValueError):
+            return False
+        labels = domain.split(".")
+        valid = (
+            len(domain) <= 253
+            and len(labels) >= 2
+            and all(
+                re.fullmatch(
+                    r"[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?",
+                    label,
+                )
+                for label in labels
+            )
+            and (
+                re.fullmatch(r"[a-zA-Z]{2,63}", labels[-1])
+                or labels[-1].startswith("xn--")
+            )
+        )
+        return normalized if valid else False
 
     @staticmethod
     def _registration_website(value):
@@ -266,16 +332,26 @@ class PartnerHubAuth(AuthSignupHome):
                 })
                 qcontext.pop("password", None)
                 qcontext.pop("confirm_password", None)
+            except MailDeliveryException:
+                _logger.info("Partner registration verification email could not be sent")
+                qcontext["error"] = _(
+                    "We couldn't send your verification email. Please try again or contact support."
+                )
             except (UserError, ValidationError) as error:
                 if qcontext.pop("human_validation_failed", False):
                     qcontext["error"] = self._human_validation_error()
-                elif not qcontext.get("login_error"):
+                elif not any(qcontext.get(key) for key in (
+                    "login_error", "password_error", "confirm_password_error"
+                )):
                     qcontext["error"] = error.args[0]
             except (SignupError, AssertionError, ValueError) as error:
                 if self._account_exists(qcontext.get("login")):
-                    qcontext["error"] = _(
-                        "An account already uses this email. Sign in, reset the password, or resend verification."
-                    )
+                    qcontext.update({
+                        "registration_exists": True,
+                        "signup_email": self._registration_email(qcontext.get("login")),
+                    })
+                    qcontext.pop("password", None)
+                    qcontext.pop("confirm_password", None)
                 else:
                     _logger.warning("Partner registration failed: %s", error)
                     qcontext["error"] = _("Could not create a new account.")
@@ -308,10 +384,11 @@ class PartnerHubAuth(AuthSignupHome):
     def verify_registration_email(self, token=None, **kwargs):
         token = (token or "")[:128]
         application, status = request.env["b2b.registration.application"].sudo().verify_email_token(token)
-        return request.render("b2b_website.registration_status", {
+        return self._render_auth_template("b2b_website.registration_status", {
             "status": status,
             "application": application,
             "email": application.business_email if application else "",
+            "retry_url": "/web/signup/verify?token=%s" % quote(token),
             "no_index": True,
         })
 
@@ -325,24 +402,50 @@ class PartnerHubAuth(AuthSignupHome):
         sitemap=False,
     )
     def resend_registration_email(self, email=None, **kwargs):
-        normalized = email_normalize((email or "").strip())
-        message = _("If this email has an unverified registration, a new verification link has been sent.")
-        if normalized:
-            application = request.env["b2b.registration.application"].sudo().search([
-                ("business_email", "=", normalized),
-                ("state", "in", ("awaiting_email", "expired")),
-            ], order="create_date desc", limit=1)
-            if application:
-                try:
-                    application.action_send_verification_email()
-                except UserError:
-                    pass
-        return request.render("b2b_website.registration_status", {
-            "status": "resent",
-            "message": message,
+        normalized = self._registration_email(email)
+        # Keep the public result generic; don't expose review/disabled-account
+        # status or send activation links to verified/internal accounts.
+        values = {
+            "status": "resent", "retry_after": 60,
+            "message": _(
+                "If this email has an unverified registration, a new verification link has been sent. "
+                "If you've already verified your email, you can sign in."
+            ),
             "email": normalized or "",
             "no_index": True,
-        })
+        }
+        if not normalized:
+            values.update(status="resend_error", retry_after=0,
+                message=_("Please enter a valid email address and try again."))
+            return self._render_auth_template("b2b_website.registration_status", values)
+        try:
+            request.env["ir.http"]._verify_request_recaptcha_token("signup")
+        except (UserError, ValidationError):
+            values.update(status="resend_error", retry_after=0, message=self._human_validation_error())
+            return self._render_auth_template("b2b_website.registration_status", values)
+        application = request.env["b2b.registration.application"].sudo().search([
+            ("business_email", "=", normalized),
+            ("state", "in", ("awaiting_email", "expired")),
+            ("email_verified_at", "=", False),
+        ], order="create_date desc", limit=1)
+        if application:
+            try:
+                application.action_send_verification_email()
+            except MailDeliveryException:
+                _logger.info("Partner registration verification email could not be resent")
+                values.update(status="resend_error", retry_after=0, message=_(
+                    "We couldn't send your verification email. Please try again or contact support."
+                ))
+            except UserError:
+                application.invalidate_recordset()
+                retry_after = application._verification_retry_after()
+                if retry_after:
+                    values.update(status="resend_wait", retry_after=retry_after,
+                        message=_("A verification email was recently requested. Check your inbox and spam folder, or wait before requesting another email."))
+                elif application.state in ("awaiting_email", "expired"):
+                    values.update(status="resend_error", retry_after=0,
+                        message=_("We couldn't process your verification request. Please try again shortly or contact support."))
+        return self._render_auth_template("b2b_website.registration_status", values)
 
     @http.route("/register", type="http", auth="public", website=True, sitemap=False)
     def registration_alias(self, **kwargs):

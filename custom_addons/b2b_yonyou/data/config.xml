@@ -1,0 +1,7 @@
+<odoo noupdate="1">
+    <record id="connection" model="b2b.yonyou.connection"><field name="name">Yonyou C4 — Test 999</field></record>
+    <record id="order_sequence" model="ir.sequence">
+        <field name="name">Partner Hub ERP Order</field><field name="code">b2b.yonyou.order</field>
+        <field name="prefix">%(year)s-</field><field name="padding">6</field><field name="company_id" eval="False"/>
+    </record>
+</odoo>

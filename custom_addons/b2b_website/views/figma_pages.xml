@@ -26,7 +26,7 @@
                             <i class="fa fa-search" aria-hidden="true"/><input id="lt-header-search" type="search" name="search" placeholder="Search products…"/><kbd>⌘K</kbd>
                         </form>
                         <t t-if="not request.env.user._is_public()">
-                            <t t-set="lt_unread_inquiry_count" t-value="request.env['b2b.contact.request'].get_portal_unread_message_count()"/>
+                            <t t-set="lt_unread_inquiry_count" t-value="request.env['b2b.message.thread'].get_portal_unread_message_count()"/>
                             <a class="lt-icon-link lt-notification-link" href="/my/inquiries" t-attf-aria-label="Messages, #{lt_unread_inquiry_count} unread" title="Messages">
                                 <i class="fa fa-bell-o" aria-hidden="true"/>
                                 <sup t-if="lt_unread_inquiry_count" class="lt-notification-count" t-out="'9+' if lt_unread_inquiry_count &gt; 9 else lt_unread_inquiry_count"/>
