@@ -27,6 +27,11 @@ class ResConfigSettings(models.TransientModel):
         related="website_id.social_linkedin",
         readonly=False,
     )
+    b2b_social_youtube = fields.Char(
+        string="YouTube URL",
+        related="website_id.social_youtube",
+        readonly=False,
+    )
 
     b2b_helpdesk_team_id = fields.Many2one(
         "helpdesk.team",

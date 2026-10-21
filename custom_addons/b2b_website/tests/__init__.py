@@ -15,3 +15,6 @@ from . import test_checkout_delivery_terms
 from . import test_checkout_payment_actions
 from . import test_manual_freight
 from . import test_checkout_recovery
+from . import test_saved_order
+from . import test_homepage_design
+from . import test_site_theme

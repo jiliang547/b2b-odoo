@@ -17,11 +17,12 @@
                 <setting string="Partner Hub branding" help="The selected website logo is used in the Partner Hub header and footer.">
                     <field name="b2b_website_logo" widget="image" class="oe_avatar"/>
                 </setting>
-                <setting string="Partner Hub social links" help="Full public profile URLs used by the TikTok, Facebook and LinkedIn footer icons.">
+                <setting string="Partner Hub social links" help="Full public profile URLs used by the TikTok, Facebook, LinkedIn and YouTube footer icons.">
                     <div class="content-group">
                         <div class="row mt8"><label class="col-lg-3" for="b2b_social_tiktok"/><field name="b2b_social_tiktok" placeholder="https://www.tiktok.com/@youraccount"/></div>
                         <div class="row mt8"><label class="col-lg-3" for="b2b_social_facebook"/><field name="b2b_social_facebook" placeholder="https://www.facebook.com/yourpage"/></div>
                         <div class="row mt8"><label class="col-lg-3" for="b2b_social_linkedin"/><field name="b2b_social_linkedin" placeholder="https://www.linkedin.com/company/yourcompany"/></div>
+                        <div class="row mt8"><label class="col-lg-3" for="b2b_social_youtube"/><field name="b2b_social_youtube" placeholder="https://www.youtube.com/@yourchannel"/></div>
                     </div>
                 </setting>
                 <setting string="Partner Hub service routing" help="Repair and replacement requests follow the original order's selling company. A Partner Support team is created automatically for each seller when needed.">

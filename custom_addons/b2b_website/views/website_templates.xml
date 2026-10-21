@@ -2,7 +2,16 @@
 <odoo>
     <template id="partner_footer" name="Partner Hub Footer">
         <footer class="lt-footer"><div class="container lt-footer__grid">
-            <div class="lt-footer__about"><a class="lt-brand lt-brand--footer" href="/"><span class="lt-brand__mark" aria-hidden="true"><img t-att-src="'/web/image/website/%s/logo' % request.website.id" alt=""/></span><span><strong>POWER &amp; GRACE</strong><small>PARTNER HUB</small></span></a><p>Global B2B supply portal for professional audio and electronics. Partner pricing, sample evaluation, repair service, and up to 5-year warranty.</p><div class="lt-footer__social" aria-label="Social media"><a t-if="request.website.social_tiktok" href="/website/social/tiktok" target="_blank" rel="noopener noreferrer" aria-label="TikTok"><i class="fa fa-tiktok"/></a><span t-else="" class="is-disabled" aria-label="TikTok is not configured" title="TikTok is not configured"><i class="fa fa-tiktok"/></span><a t-if="request.website.social_facebook" href="/website/social/facebook" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="fa fa-facebook"/></a><span t-else="" class="is-disabled" aria-label="Facebook is not configured" title="Facebook is not configured"><i class="fa fa-facebook"/></span><a t-if="request.website.social_linkedin" href="/website/social/linkedin" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><i class="fa fa-linkedin"/></a><span t-else="" class="is-disabled" aria-label="LinkedIn is not configured" title="LinkedIn is not configured"><i class="fa fa-linkedin"/></span></div></div>
+            <div class="lt-footer__about">
+                <a class="lt-brand lt-brand--footer lt-brand--wordmark" href="/"><img t-att-src="'/web/image/website/%s/logo' % request.website.id" alt="Power and Grace Partner Hub" width="240" height="30"/></a>
+                <p>Professional and commercial audio for distributors, system integrators, and audio brands worldwide.</p>
+                <div class="lt-footer__social" aria-label="Social media">
+                    <a t-if="request.website.social_tiktok" href="/website/social/tiktok" target="_blank" rel="noopener noreferrer" aria-label="TikTok"><i class="fa fa-tiktok"/></a><span t-else="" class="is-disabled" aria-label="TikTok is not configured" title="TikTok is not configured"><i class="fa fa-tiktok"/></span>
+                    <a t-if="request.website.social_facebook" href="/website/social/facebook" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="fa fa-facebook"/></a><span t-else="" class="is-disabled" aria-label="Facebook is not configured" title="Facebook is not configured"><i class="fa fa-facebook"/></span>
+                    <a t-if="request.website.social_linkedin" href="/website/social/linkedin" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><i class="fa fa-linkedin"/></a><span t-else="" class="is-disabled" aria-label="LinkedIn is not configured" title="LinkedIn is not configured"><i class="fa fa-linkedin"/></span>
+                    <a t-if="request.website.social_youtube" href="/website/social/youtube" target="_blank" rel="noopener noreferrer" aria-label="YouTube"><i class="fa fa-youtube-play"/></a><span t-else="" class="is-disabled" aria-label="YouTube is not configured" title="YouTube is not configured"><i class="fa fa-youtube-play"/></span>
+                </div>
+            </div>
             <div><h2>Products</h2><a href="/products">All Products</a><a href="/resources">Downloads</a><a href="/faq">Frequently asked questions</a><a href="/shipping">Shipping and Delivery</a></div>
             <div><h2>Services</h2><a href="/repair-service">Project Support</a><a href="/warranty">Warranty Policy</a><a t-att-href="'/samples' if not request.env.user._is_public() else '/web/login?redirect=/samples'">Sample Request</a><a href="/my/tickets">After-Sales Support</a><a t-att-href="'/my/orders' if not request.env.user._is_public() else '/web/login?redirect=/my/orders'">Order Tracking</a></div>
             <div><h2>Company</h2><a href="/#our-brands">Our Brands</a><a href="/about">About Us</a><a href="/contact">Contact us</a><a href="/partner-application">Become Partner</a></div>
@@ -12,7 +21,7 @@
     <template id="partner_layout" name="Lucky Tone Partner Hub Layout">
         <t t-call="website.layout">
             <t t-set="no_header" t-value="True"/><t t-set="no_footer" t-value="True"/>
-            <div class="lt-hub"><t t-call="b2b_website.partner_topbar"/><main id="main" tabindex="-1"><t t-out="0"/></main>
+            <div t-att-class="'lt-hub ph-home-page' if page_name == 'partner_home' else 'lt-hub'"><t t-call="b2b_website.partner_topbar"/><main id="main" tabindex="-1"><t t-out="0"/></main>
                 <t t-call="b2b_website.partner_footer"/>
             </div>
         </t>
@@ -40,7 +49,7 @@
         <t t-set="variant" t-value="product.product_variant_id"/><t t-set="price" t-value="prices.get(product.id)"/>
         <t t-set="procurement" t-value="request.env['b2b.product.service'].procurement_info(variant, pricelist=request.pricelist, website=website) if variant else {}"/>
         <article class="lt-product-card">
-            <a class="lt-product-card__image" t-att-href="'/products/%s' % request.env['ir.http']._slug(product)"><span class="lt-status-badge lt-status-badge--available">Partner Catalog</span><img t-att-src="'/web/image/product.template/%s/image_512' % product.id" t-att-alt="product.name" loading="lazy"/></a>
+            <a class="lt-product-card__image" t-att-href="'/products/%s' % request.env['ir.http']._slug(product)"><img t-att-src="'/web/image/product.template/%s/image_512' % product.id" t-att-alt="product.name" loading="lazy"/></a>
             <div class="lt-product-card__body"><span class="lt-product-card__category"><t t-if="product.public_categ_ids"><t t-out="product.public_categ_ids[:1].name"/></t><t t-else="">Professional Audio</t></span><h3><a t-att-href="'/products/%s' % request.env['ir.http']._slug(product)" t-out="product.name"/></h3><p class="lt-product-card__model">SKU: <span><t t-if="product.b2b_model_number"><t t-out="product.b2b_model_number"/></t><t t-else=""><t t-if="variant.default_code"><t t-out="variant.default_code"/></t><t t-else="">On request</t></t></span></p><p class="lt-product-card__description"><t t-if="product.description_sale"><t t-out="product.description_sale"/></t><t t-else="">Industrial-grade solution for professional projects.</t></p><t t-call="b2b_website.price_display"/>
                 <div class="lt-product-card__actions">
                     <a t-att-class="'lt-btn lt-btn--blue lt-btn--small lt-btn--wide' if catalog_details_only else 'lt-btn lt-btn--outline lt-btn--small'" t-att-href="'/products/%s' % request.env['ir.http']._slug(product)">Details</a>

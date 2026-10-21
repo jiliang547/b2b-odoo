@@ -1,0 +1,66 @@
+<odoo>
+    <template id="saved_order_customer_actions" inherit_id="sale.sale_order_portal_template" priority="140">
+        <xpath expr="//a[@id='o_sale_portal_paynow']/t[@t-if]" position="replace">
+            <t t-if="sale_order.b2b_checkout_mode == 'pay_later'"> Pay by Paypal</t>
+            <t t-elif="sale_order.b2b_review_state == 'ready'"> Review &amp; Pay</t>
+        </xpath>
+        <xpath expr="//div[@id='sale_order_sidebar_button']" position="before">
+            <div t-if="sale_order.b2b_checkout_mode == 'pay_later' and request.params.get('saved')" hidden="hidden" data-lt-toast="" data-lt-toast-type="success">Order saved. You can return here to pay later.</div>
+            <div t-if="sale_order.b2b_checkout_mode == 'pay_later' and sale_order._b2b_pending_bank_evidence()" class="alert alert-info mt-3" role="status">Finance is reviewing your bank payment. Do not pay again until the result is confirmed.</div>
+        </xpath>
+        <xpath expr="//div[@name='sale_order_actions']//t[@t-if='not sale_order.signature']" position="replace">
+            <t t-if="sale_order.b2b_checkout_mode == 'pay_later'">Pay by Paypal</t><t t-elif="not sale_order.signature">Accept &amp; Pay</t>
+        </xpath>
+        <xpath expr="//div[@id='modaldecline']//h4" position="replace">
+            <h4 class="modal-title"><t t-if="sale_order.b2b_checkout_mode == 'pay_later'">Cancel This Order</t><t t-else="">Reject This Quotation</t></h4>
+        </xpath>
+        <xpath expr="//div[@id='modaldecline']//main/p" position="replace">
+            <p><t t-if="sale_order.b2b_checkout_mode == 'pay_later'">Tell us why you want to cancel this order.</t><t t-else="">Tell us why you are refusing this quotation, this will help us improve our services.</t></p>
+        </xpath>
+        <xpath expr="//div[@t-if=&quot;sale_order.state == 'cancel'&quot;]/strong" position="replace">
+            <strong><t t-if="sale_order.b2b_checkout_mode == 'pay_later'">This order has been cancelled.</t><t t-else="">This quotation has been cancelled.</t></strong>
+        </xpath>
+        <xpath expr="//div[@t-if=&quot;sale_order.state == 'cancel'&quot;]/a" position="replace">
+            <a role="button" href="#discussion"><i class="fa fa-comment"/> Contact us for assistance.</a>
+        </xpath>
+    </template>
+    <template id="saved_order_report_copy" inherit_id="sale.report_saleorder_document" priority="140">
+        <!-- Change only the labels; retain the native report and PI branch. -->
+        <xpath expr="//t[@t-set='layout_document_title']/span[@t-elif]" position="attributes">
+            <attribute name="t-elif">doc.state in ['draft','sent'] and doc.b2b_checkout_mode != 'pay_later'</attribute>
+        </xpath>
+        <xpath expr="//div[@name='informations_date']/strong[@t-elif]" position="attributes">
+            <attribute name="t-elif">doc.state in ['draft','sent'] and doc.b2b_checkout_mode != 'pay_later'</attribute>
+        </xpath>
+    </template>
+    <template id="saved_order_pay_copy" inherit_id="sale.sale_order_portal_pay_modal" priority="140">
+        <xpath expr="//div[@t-if='sale_order._has_to_be_paid()']" position="before">
+            <p t-if="sale_order.b2b_checkout_mode == 'pay_later' and sale_order._has_to_be_paid()" class="mb-3">Payment for order <strong t-out="sale_order.name"/>: <span t-out="amount" t-options="{'widget':'monetary','display_currency':sale_order.currency_id}"/>. Review the current items and total before paying.</p>
+        </xpath>
+        <xpath expr="//div[@t-if='sale_order._has_to_be_paid()']" position="attributes">
+            <attribute name="t-if">sale_order._has_to_be_paid() and sale_order.b2b_checkout_mode != 'pay_later'</attribute>
+        </xpath>
+    </template>
+    <record id="saved_order_backend_form" model="ir.ui.view">
+        <field name="name">sale.order.saved.payment</field><field name="model">sale.order</field>
+        <field name="inherit_id" ref="b2b_website.view_order_form_b2b_review"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='b2b_checkout_mode']" position="after">
+                <field name="b2b_submitted_at" invisible="b2b_checkout_mode != 'pay_later'"/>
+            </xpath>
+            <xpath expr="//header" position="inside">
+                <button name="action_b2b_allow_saved_order_payment" type="object" string="Allow Later Payment" groups="b2b_core.group_b2b_manager" invisible="b2b_review_state != 'pending' or state != 'sent' or not website_id"/>
+            </xpath>
+            <xpath expr="//sheet" position="before">
+                <div class="alert alert-info" role="status" invisible="b2b_checkout_mode != 'pay_later' or state not in ('draft', 'sent')">Saved website order awaiting payment. Before any payment or bank evidence, edit the native order lines to add freight or adjust products, then save. The customer pays the latest amount. Saving does not confirm the order or send it to ERP.</div>
+            </xpath>
+        </field>
+    </record>
+    <record id="action_saved_unpaid_orders" model="ir.actions.act_window">
+        <field name="name">Awaiting Payment Orders</field><field name="res_model">sale.order</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('website_id','!=',False),('b2b_checkout_mode','=','pay_later'),('state','in',['draft','sent'])]</field>
+        <field name="context">{'create': False}</field>
+    </record>
+    <menuitem id="menu_saved_unpaid_orders_sale" name="Awaiting Payment Orders" parent="sale.sale_order_menu" action="action_saved_unpaid_orders" sequence="15" groups="b2b_core.group_b2b_manager"/>
+</odoo>

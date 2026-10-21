@@ -88,6 +88,8 @@ class CollectionPortal(http.Controller):
                 Receipt = request.env['b2b.bank.receipt'].sudo()
                 if Receipt.search_count([('order_id', '=', order.id), ('submission_key', '=', key)], limit=1):
                     return request.redirect('/my/orders/%s/collection' % order.id)
+                if order.b2b_checkout_mode == 'pay_later' and post.get('b2b_quote_token') != order._b2b_quote_token():
+                    raise UserError(_('Your order has changed. Refresh this page and review the current amount before submitting payment evidence.'))
                 if Receipt.search_count([('commercial_partner_id', '=', order.partner_id.commercial_partner_id.id), ('create_date', '>=', fields.Datetime.now() - timedelta(days=1))]) >= 30:
                     raise UserError(_('Too many submissions today. Please contact our team.'))
                 amount = float(post.get('amount', '0'))

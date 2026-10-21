@@ -54,26 +54,23 @@
         </xpath>
     </template>
 
-    <template id="payment_submit_for_review" inherit_id="website_sale.navigation_buttons" name="Submit Order for Review">
+    <template id="payment_submit_for_review" inherit_id="website_sale.navigation_buttons" name="Save Order and Payment Actions">
         <!-- Keep the native zero-total confirmation branch and payment widget.
              Only organize the payable cart's existing actions. -->
         <xpath expr="//t[@t-elif='not hide_payment_button'][@t-call='payment.submit_button']" position="replace">
-            <div t-elif="not hide_payment_button" class="lt-checkout-payment-actions d-flex flex-column gap-2">
+            <div t-elif="not hide_payment_button or (not errors and website_sale_order._is_cart_ready())" class="lt-checkout-payment-actions d-flex flex-column gap-2">
+                <t t-if="not hide_payment_button" t-call="payment.submit_button">
+                    <t t-set="submit_button_label">Pay by Paypal</t>
+                </t>
+                <div t-if="not errors and website_sale_order._is_cart_ready()" class="lt-checkout-alternatives d-flex flex-column gap-2">
+                    <form action="/shop/submit-for-review" method="post" data-lt-submit-once="">
+                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                        <button type="submit" class="btn btn-outline-primary w-100" data-lt-stable-submit="">
+                            Save &amp; Pay Later
+                        </button>
+                    </form>
+                </div>
                 <div t-if="not errors and website_sale_order._is_cart_ready()" class="lt-checkout-bank-action d-flex flex-column gap-2"/>
-                <details class="lt-checkout-more-options">
-                    <summary><span>More options</span><i class="fa fa-angle-down" aria-hidden="true"/></summary>
-                    <div class="lt-checkout-more-options__body d-flex flex-column gap-2">
-                        <t t-call="payment.submit_button"/>
-                        <div t-if="not errors and website_sale_order._is_cart_ready()" class="lt-checkout-alternatives d-flex flex-column gap-2">
-                            <form action="/shop/submit-for-review" method="post" data-lt-submit-once="">
-                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-                                <button type="submit" class="btn btn-outline-primary w-100" data-lt-stable-submit="">
-                                    Submit Order
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </details>
             </div>
         </xpath>
     </template>
