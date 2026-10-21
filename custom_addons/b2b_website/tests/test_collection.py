@@ -835,6 +835,46 @@ class TestB2BCollection(B2BCollectionCommon):
 
 @tagged('post_install', '-at_install')
 class TestB2BCollectionHttp(B2BCollectionCommon, HttpCase):
+    def test_bank_history_uses_customer_labels_and_preserves_reversal_warning(self):
+        order = self._order()
+        Receipt = self.env['b2b.bank.receipt']
+        pending = Receipt.create({'order_id': order.id, 'declared_amount': 1,
+                                  'transfer_reference': 'Pending proof'})
+        returned = Receipt.create({'order_id': order.id, 'declared_amount': 1,
+                                   'transfer_reference': 'Unreadable proof',
+                                   'review_note': 'Please upload a readable proof.'})
+        returned.action_return()
+        rejected = Receipt.create({'order_id': order.id, 'declared_amount': 1,
+                                   'transfer_reference': 'Unverified proof',
+                                   'review_note': 'The transfer could not be verified.'})
+        rejected.action_reject()
+        confirmed = self._receipt(order, 100)
+        confirmed.action_confirm_receipt()
+        self.authenticate(self.portal_user.login, 'Portal-Test-2026!')
+        response = self.url_open('/my/orders/%s/collection' % order.id)
+        self.assertEqual(response.status_code, 200)
+        page = html.fromstring(response.text)
+        rows = page.xpath("//section[header/h2[normalize-space(.)='Bank Transfer History']]//tbody/tr")
+        statuses = {row.xpath('./td')[0].text_content().strip():
+                    row.xpath('./td')[3].text_content().strip() for row in rows}
+        for receipt, label in ((pending, 'Payment Verification Pending'),
+                               (returned, 'Additional Information Required'),
+                               (rejected, 'Payment Not Verified'),
+                               (confirmed, 'Payment Confirmed')):
+            self.assertTrue(statuses[receipt.name].startswith(label), statuses[receipt.name])
+        for old_label in ('Awaiting Finance', 'More Information Required', 'Receipt Confirmed'):
+            self.assertNotIn(old_label, page.text_content())
+        self.assertIn(returned.review_note, page.text_content())
+        self.assertEqual(dict(Receipt._fields['state'].selection)['submitted'], 'Awaiting Finance')
+        self.assertEqual(order.b2b_net_received, 100)
+        confirmed.payment_id.action_draft()
+        response = self.url_open('/my/orders/%s/collection' % order.id)
+        page = html.fromstring(response.text)
+        self.assertIn('Receipt reversed or unposted — not counted', page.text_content())
+        self.assertNotIn('Payment Confirmed', page.text_content())
+        self.assertEqual(confirmed.state, 'confirmed')
+        self.assertEqual(order.b2b_net_received, 0)
+
     def test_collection_payment_copy_and_pending_review_guards(self):
         order = self._order('b20')
         self.authenticate(self.portal_user.login, 'Portal-Test-2026!')

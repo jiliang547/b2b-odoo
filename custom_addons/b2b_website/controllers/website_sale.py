@@ -139,47 +139,15 @@ class PartnerHubWebsiteSale(WebsiteSale):
             # Roll back partial form changes as one native transaction, keeping
             # the same cart and session available after a business validation.
             with request.env.cr.savepoint():
-                self._submit_review_order(order.sudo())
+                self._submit_saved_order(order.sudo())
         except UserError:
             return render_checkout_error()
         request.session["sale_last_order_id"] = order.id
         request.website.sale_reset()
-        return request.redirect("/my/orders/%s?review_submitted=1" % order.id)
+        return request.redirect("/my/orders/%s?saved=1" % order.id)
 
-    def _submit_review_order(self, order):
-        for line in order.order_line.filtered(
-            lambda item: not item.display_type and not item.is_delivery
-        ):
-            order._b2b_check_product_allowed(line.product_id.id)
-            order._b2b_validate_sale_quantity(line.product_id.id, line.product_uom_qty)
-        order.write({
-            "b2b_checkout_mode": "review",
-            "b2b_review_state": "pending",
-            "require_payment": True,
-            "prepayment_percent": 1.0,
-        })
-        order.action_quotation_sent()
-        order._b2b_start_collection()
-        assigned_user = order.user_id.filtered(
-            lambda user: user.has_group("b2b_core.group_b2b_manager")
-        )
-        if not assigned_user:
-            manager_group = request.env.ref("b2b_core.group_b2b_manager")
-            assigned_user = request.env["res.users"].sudo().search([
-                ("active", "=", True),
-                ("share", "=", False),
-                ("all_group_ids", "in", manager_group.ids),
-            ], limit=1)
-        if assigned_user:
-            order.activity_schedule(
-                "mail.mail_activity_data_todo",
-                user_id=assigned_user.id,
-                summary=_("Review customer order before payment"),
-                note=_("The customer chose Submit for Review at checkout."),
-            )
-        order.message_post(body=_(
-            "The customer submitted this order for review before payment."
-        ))
+    def _submit_saved_order(self, order):
+        order._b2b_save_for_later()
 
     @route()
     def shop_payment_validate(self, sale_order_id=None, **post):

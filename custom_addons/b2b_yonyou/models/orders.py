@@ -95,7 +95,8 @@ class SaleOrder(models.Model):
     def action_quotation_sent(self):
         # A pending quotation is explicitly asking operations to finish its
         # pricing/tax configuration. It cannot be paid or confirmed yet.
-        self.filtered(lambda order: order.b2b_review_state != 'pending')._yonyou_check_checkout(refresh=True)
+        self.filtered(lambda order: order.b2b_review_state != 'pending'
+                      and order.b2b_checkout_mode != 'pay_later')._yonyou_check_checkout(refresh=True)
         return super().action_quotation_sent()
 
     def action_b2b_mark_review_ready(self):
@@ -132,6 +133,10 @@ class SaleOrder(models.Model):
 
     def action_confirm(self):
         candidates = self.filtered(lambda o: o.state in ('draft', 'sent') and o._yonyou_enabled())
+        # Saving does not require complete ERP configuration. Recheck the cached
+        # mapping and native taxes at the final confirmation boundary, without
+        # network calls in a payment callback or finance transaction.
+        candidates.filtered(lambda order: order.b2b_checkout_mode == 'pay_later')._yonyou_check_checkout()
         result = super().action_confirm()
         # The base connector's hook runs inside super; our enqueue below also
         # covers module inheritance order without depending on it.

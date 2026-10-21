@@ -109,6 +109,87 @@ class TestYonyouOrders(TestYonyouMapping):
             order.action_quotation_sent()
         self.assertEqual(order.state, 'draft')
 
+    def _saved_with_freight(self):
+        order = self._order()
+        website = self.env['website'].create({'name': 'Saved ERP test website',
+            'company_id': self.env.company.id, 'b2b_default_account_brand_id': self.brand.id})
+        self.product.write({'is_published': True, 'b2b_visibility_mode': 'all'})
+        self.customer.b2b_collection_policy_id = self.env.ref('b2b_website.collection_policy_b20')
+        order.website_id = website
+        with patch.object(type(self.env['b2b.yonyou.client']), '_http',
+                          side_effect=AssertionError('Saving must not call ERP')):
+            order._b2b_save_for_later()
+        self.assertFalse(order.b2b_erp_job_ids)
+        freight = self.env['product.product'].create({'name': 'Mapped saved order freight',
+            'type': 'service', 'yonyou_code': '000020', 'taxes_id': [Command.set(self.tax.ids)]})
+        with self._mock():
+            freight._erp_verify()
+        website.b2b_freight_product_id = freight
+        self.env['sale.order.line'].create({'order_id': order.id, 'product_id': freight.id,
+            'product_uom_qty': 1, 'price_unit': 20, 'tax_ids': [Command.set(self.tax.ids)]})
+        self.assertEqual(order.amount_total, 200)
+        self.assertEqual(order.b2b_payable_now, 40)
+        return order
+
+    def test_saved_order_freight_payments_enqueue_one_current_erp_order(self):
+        order = self._saved_with_freight()
+        name = order.name
+
+        def completed_payment(amount, reference):
+            # Native completed-transaction fixtures, not a real PayPal charge
+            # or a browser acceptance test. Exercise the shared payment hook.
+            tx = self.env['payment.transaction'].create({
+                'provider_id': self.env.ref('payment.payment_provider_demo').id,
+                'payment_method_id': self.env.ref('payment.payment_method_card').id,
+                'reference': reference, 'amount': amount, 'currency_id': order.currency_id.id,
+                'partner_id': order.partner_id.id, 'operation': 'online_direct', 'state': 'done',
+                'sale_order_ids': [Command.set(order.ids)]})
+            tx._check_amount_and_confirm_order()
+
+        completed_payment(10, 'SAVED-ERP-FIRST')
+        self.assertEqual(order.state, 'sent')
+        self.assertFalse(order.b2b_erp_job_ids)
+        with patch.object(type(self.env['b2b.yonyou.client']), '_http',
+                          side_effect=AssertionError('Confirmation must not call ERP')):
+            completed_payment(30, 'SAVED-ERP-DEPOSIT')
+        self.assertEqual(order.state, 'sale')
+        self.assertEqual(order.name, name)
+        self.assertEqual(len(order.b2b_erp_job_ids), 1)
+        job = order.b2b_erp_job_ids
+        with self._mock():
+            job._process_locked()
+        self.assertEqual(job.yonyou_payload['data']['payMoney'], 200)
+        self.assertEqual(len(job.yonyou_payload['data']['orderDetails']), 2)
+        remote = self._remote(job.yonyou_payload['data'])
+        creates = []
+
+        def dispatch(path, payload):
+            if path == ORDER_LIST:
+                return {'pageCount': 1, 'recordList': [
+                    {'id': remote['id'], 'code': remote['code']}] if creates else []}
+            if path == ORDER_CREATE:
+                creates.append(deepcopy(payload))
+                return {'id': remote['id']}
+            if path == ORDER_DETAIL:
+                return remote
+            raise AssertionError(path)
+
+        with self._mock(dispatch):
+            self.assertTrue(job._process_locked())
+            order._b2b_enqueue_erp_sync()
+            self.assertFalse(job._process_locked())
+        self.assertEqual(job.state, 'success')
+        self.assertEqual(len(creates), 1)
+        self.assertEqual(len(order.b2b_erp_job_ids), 1)
+
+    def test_saved_order_can_wait_for_mapping_but_cannot_confirm_bad_taxes(self):
+        order = self._saved_with_freight()
+        self.tax.amount = 13  # The cached customer country is RO, requiring 0%.
+        with self.assertRaises(ValidationError):
+            order.action_confirm()
+        self.assertEqual(order.state, 'sent')
+        self.assertFalse(order.b2b_erp_job_ids)
+
     def test_preparation_temporary_failure_retries_same_order(self):
         order, job = self._confirm()
         key, code = order.yonyou_key, order.yonyou_code

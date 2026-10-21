@@ -335,7 +335,8 @@ class TestPartnerHubPublicBranding(HttpCase):
             homepage.text,
         )
         self.assertTrue(asset_paths)
-        bundle = self.url_open(asset_paths[0])
+        # A cold frontend bundle can take longer than the default HTTP test timeout.
+        bundle = self.url_open(asset_paths[0], timeout=30)
         self.assertEqual(bundle.status_code, 200)
         self.assertIn("Your Partner Hub session is no longer active", bundle.text)
 
@@ -348,7 +349,7 @@ class TestPartnerHubPublicBranding(HttpCase):
             signup.text,
         )
         self.assertTrue(asset_paths)
-        bundle = self.url_open(asset_paths[0])
+        bundle = self.url_open(asset_paths[0], timeout=30)
         self.assertEqual(bundle.status_code, 200)
         self.assertIn("Completing security check", bundle.text)
         self.assertIn("Retry verification", bundle.text)

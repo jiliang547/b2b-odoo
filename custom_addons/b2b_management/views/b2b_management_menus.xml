@@ -63,6 +63,7 @@
     <menuitem id="menu_b2b_contact_requests" name="Contact Requests" parent="menu_b2b_operations" action="b2b_website.action_b2b_contact_requests" sequence="15"/>
     <menuitem id="menu_b2b_order_changes" name="Order Changes" parent="menu_b2b_operations" action="b2b_website.action_b2b_order_changes" sequence="16"/>
     <menuitem id="menu_b2b_pending_order_reviews" name="Orders Pending Review" parent="menu_b2b_operations" action="action_b2b_pending_order_reviews" sequence="17" groups="b2b_core.group_b2b_manager"/>
+    <menuitem id="menu_b2b_saved_unpaid_orders" name="Awaiting Payment Orders" parent="menu_b2b_operations" action="b2b_website.action_saved_unpaid_orders" sequence="16" groups="b2b_core.group_b2b_manager"/>
     <menuitem id="menu_b2b_pending_registrations" name="Pending Registrations" parent="menu_b2b_operations" action="action_b2b_pending_registrations" sequence="18" groups="b2b_core.group_b2b_manager"/>
     <menuitem id="menu_b2b_erp_jobs" name="ERP Jobs" parent="menu_b2b_operations" action="b2b_erp_connector.action_b2b_integration_jobs" sequence="20" groups="b2b_core.group_b2b_operator"/>
     <menuitem id="menu_b2b_business_data" name="Business Data" parent="menu_b2b_management_root" sequence="20"/>

@@ -52,5 +52,5 @@ class CollectionPaymentPortal(PaymentPortal):
         if order.b2b_collection_active:
             order._b2b_lock_collection()
             if not b2b_quote_token or b2b_quote_token != order._b2b_quote_token():
-                raise ValidationError(_("Your order has changed. Refresh the page and review the latest quotation before paying."))
+                raise ValidationError(_("Your order has changed. Refresh the page and review the latest amount before paying."))
         return super().portal_order_transaction(order_id, access_token, **kwargs)

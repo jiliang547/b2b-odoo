@@ -1,0 +1,4 @@
+<odoo>
+    <!-- Safe on both install and upgrade; the initializer never reapplies presets. -->
+    <function model="b2b.product.brand" name="_b2b_initialize_homepage_brands"/>
+</odoo>
