@@ -531,9 +531,29 @@ function initializeCategoryBrowsers() {
     });
 }
 
+function observeCarouselSize(owner, tracks, update) {
+    const observer = new ResizeObserver(update);
+    tracks.filter(Boolean).forEach((track) => observer.observe(track));
+    // The AI shell can replace the page without a document unload.
+    const release = () => {
+        if (!owner.isConnected) {
+            observer.disconnect();
+            document.removeEventListener("partner-hub:page-ready", release);
+        }
+    };
+    document.addEventListener("partner-hub:page-ready", release);
+}
+
 function initializeHorizontalCarousels() {
     document.querySelectorAll("[data-pg-carousel]").forEach((carousel) => {
         const track = carousel.querySelector("[data-pg-carousel-track]");
+        const update = () => carousel.querySelectorAll("[data-pg-carousel-scroll]").forEach((button) => {
+            const atStart = !track || track.scrollLeft <= 1;
+            const atEnd = !track || track.scrollLeft + track.clientWidth >= track.scrollWidth - 1;
+            button.disabled = button.dataset.pgCarouselScroll === "left" ? atStart : atEnd;
+        });
+        track?.addEventListener("scroll", update, { passive: true });
+        observeCarouselSize(carousel, [track], update);
         carousel.querySelectorAll("[data-pg-carousel-scroll]").forEach((button) => {
             button.addEventListener("click", () => {
                 track?.scrollBy({
@@ -543,6 +563,7 @@ function initializeHorizontalCarousels() {
                 });
             });
         });
+        update();
     });
 }
 
@@ -550,27 +571,73 @@ function initializeFeaturedProducts() {
     document.querySelectorAll("[data-pg-featured]").forEach((featured) => {
         const tabs = [...featured.querySelectorAll("[data-pg-featured-tab]")];
         const panels = [...featured.querySelectorAll("[data-pg-featured-panel]")];
+        const arrowGroup = featured.querySelector("[data-pg-featured-arrows]");
+        const pagination = featured.querySelector("[data-pg-featured-pagination]");
+        const progress = featured.querySelector("[data-pg-featured-progress]");
+        const counter = featured.querySelector("[data-pg-featured-counter]");
+        const activeTrack = () => panels.find((panel) => !panel.hidden)?.querySelector("[data-pg-featured-track]");
+        const update = () => {
+            const track = activeTrack();
+            const scrollable = track && track.scrollWidth > track.clientWidth + 1;
+            if (arrowGroup) arrowGroup.hidden = !scrollable;
+            if (pagination) pagination.hidden = !scrollable;
+            if (track && counter && progress) {
+                const total = track.children.length;
+                const step = total > 1 ? Math.abs(track.children[1].offsetLeft - track.children[0].offsetLeft) : track.clientWidth;
+                const visible = Math.max(1, Math.round(track.clientWidth / Math.max(1, step)));
+                const first = Math.min(Math.max(1, total - visible + 1), Math.round(Math.abs(track.scrollLeft) / Math.max(1, step)) + 1);
+                counter.textContent = total ? `${first}\u00a0\u2013\u00a0${Math.min(total, first + visible - 1)} / ${total}` : "";
+                const width = Math.min(100, track.clientWidth / Math.max(1, track.scrollWidth) * 100);
+                progress.style.width = `${width}%`;
+                progress.style.left = `${Math.min(1, Math.abs(track.scrollLeft) / Math.max(1, track.scrollWidth - track.clientWidth)) * (100 - width)}%`;
+            }
+            featured.querySelectorAll("[data-pg-scroll]").forEach((button) => {
+                button.disabled = !track || (button.dataset.pgScroll === "left"
+                    ? track.scrollLeft <= 1
+                    : track.scrollLeft + track.clientWidth >= track.scrollWidth - 1);
+            });
+        };
+        const tracks = [];
+        panels.forEach((panel) => {
+            const track = panel.querySelector("[data-pg-featured-track]");
+            track?.addEventListener("scroll", update, { passive: true });
+            if (track) tracks.push(track);
+        });
+        observeCarouselSize(featured, tracks, update);
         tabs.forEach((tab) => tab.addEventListener("click", () => {
             tabs.forEach((item) => {
                 const selected = item === tab;
                 item.classList.toggle("is-active", selected);
                 item.setAttribute("aria-selected", String(selected));
+                item.tabIndex = selected ? 0 : -1;
             });
             panels.forEach((panel) => {
                 const selected = panel.dataset.pgFeaturedPanel === tab.dataset.pgFeaturedTab;
                 panel.classList.toggle("is-active", selected);
                 panel.hidden = !selected;
             });
+            update();
+        }));
+        tabs.forEach((tab, index) => tab.addEventListener("keydown", (event) => {
+            const next = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1
+                : event.key === "ArrowRight" ? (index + 1) % tabs.length
+                : event.key === "ArrowLeft" ? (index + tabs.length - 1) % tabs.length : null;
+            if (next !== null) {
+                event.preventDefault();
+                tabs[next].click();
+                tabs[next].focus();
+            }
         }));
         featured.querySelectorAll("[data-pg-scroll]").forEach((button) => {
             button.addEventListener("click", () => {
-                const track = button.parentElement.querySelector("[data-pg-featured-track]");
+                const track = button.closest("[data-pg-featured-panel]")?.querySelector("[data-pg-featured-track]") || activeTrack();
                 track?.scrollBy({
                     left: (button.dataset.pgScroll === "left" ? -1 : 1) * Math.max(280, track.clientWidth * 0.8),
                     behavior: "smooth",
                 });
             });
         });
+        update();
     });
 }
 

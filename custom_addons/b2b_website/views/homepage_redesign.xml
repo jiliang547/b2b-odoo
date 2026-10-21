@@ -6,7 +6,7 @@
     </function>
 
     <template id="homepage_featured_card" name="Homepage Featured Product Card">
-        <article class="pg-featured-card">
+        <article t-att-class="'ph-product-card' if home_design_card else 'pg-featured-card'">
             <a class="pg-featured-card__image" t-att-href="'/products/%s' % request.env['ir.http']._slug(product)">
                 <span t-if="section == 'special' and price.get('base_price') and price.get('base_price') &gt; price.get('price', 0)" class="pg-sale-badge">SALE</span>
                 <img t-att-src="'/web/image/product.template/%s/image_512' % product.id" t-att-alt="product.name" loading="lazy"/>
@@ -14,20 +14,21 @@
             <div class="pg-featured-card__body">
                 <h3><a t-att-href="'/products/%s' % request.env['ir.http']._slug(product)" t-out="product.name"/></h3>
                 <p class="pg-featured-card__sku"><t t-if="product.b2b_model_number"><t t-out="product.b2b_model_number"/></t><t t-else=""><t t-if="product.product_variant_id.default_code"><t t-out="product.product_variant_id.default_code"/></t><t t-else="">On request</t></t></p>
-                <p class="pg-featured-card__summary"><t t-if="product.description_sale"><t t-out="product.description_sale"/></t><t t-else="">Professional audio solution for partner projects.</t></p>
+                <span t-if="home_design_card" class="ph-product-card__rule" aria-hidden="true"/>
+                <p t-else="" class="pg-featured-card__summary"><t t-if="product.description_sale"><t t-out="product.description_sale"/></t><t t-else="">Professional audio solution for partner projects.</t></p>
                 <div class="pg-featured-card__purchase">
                     <div class="pg-featured-card__pricing">
                         <div t-if="price.get('state') == 'visible'" class="pg-featured-card__price">
                             <strong t-out="price.get('price')" t-options="{'widget': 'monetary', 'display_currency': price.get('currency')}"/>
                             <del t-if="section == 'special' and price.get('base_price') and price.get('base_price') &gt; price.get('price', 0)" t-out="price.get('base_price')" t-options="{'widget': 'monetary', 'display_currency': price.get('currency')}"/>
                         </div>
-                        <a t-elif="price.get('state') == 'login'" class="pg-featured-card__price-link" t-att-href="'/web/login?redirect=%s' % request.httprequest.path">Sign in to view price</a>
+                        <a t-elif="price.get('state') == 'login'" class="pg-featured-card__price-link" t-att-href="'/web/login?redirect=%s' % request.httprequest.path"><t t-if="home_design_card">Sign in to view partner pricing</t><t t-else="">Sign in to view price</t></a>
                         <a t-elif="price.get('state') == 'pending_approval'" class="pg-featured-card__price-link" href="/my">Your account is awaiting approval.</a>
                         <a t-elif="price.get('state') == 'pricing_pending'" class="pg-featured-card__price-link" href="/contact">Your pricing is being configured. Contact us</a>
                         <a t-else="" class="pg-featured-card__price-link" href="/contact">Contact sales for pricing</a>
-                        <span class="pg-featured-card__moq">MOQ: <t t-out="procurement.get('minimum_quantity', 1)"/> <t t-out="procurement.get('uom_name') or 'pcs'"/></span>
+                        <span t-if="not home_design_card" class="pg-featured-card__moq">MOQ: <t t-out="procurement.get('minimum_quantity', 1)"/> <t t-out="procurement.get('uom_name') or 'pcs'"/></span>
                     </div>
-                    <a class="lt-btn lt-btn--small pg-featured-card__view" t-att-href="'/products/%s' % request.env['ir.http']._slug(product)">View</a>
+                    <a t-att-class="'ph-product-card__details' if home_design_card else 'lt-btn lt-btn--small pg-featured-card__view'" t-att-href="'/products/%s' % request.env['ir.http']._slug(product)">View Details <svg t-if="home_design_card" class="ph-icon" viewBox="0 0 48 48" aria-hidden="true"><use href="/b2b_website/static/src/img/homepage/icons.svg#ph-icon-arrow"/></svg></a>
                 </div>
             </div>
         </article>
@@ -36,36 +37,92 @@
     <template id="partner_hub_homepage_power_grace" inherit_id="b2b_website.partner_hub_homepage" name="Power and Grace Homepage">
         <xpath expr="//t[@t-call='b2b_website.partner_layout']" position="replace">
             <t t-call="b2b_website.partner_layout">
-                <section class="pg-hero">
-                    <img class="pg-hero__image" src="/b2b_website/static/src/img/power_grace_hero.jpg" alt="Professional audio equipment"/>
-                    <div class="pg-hero__shade"/>
-                    <div class="container pg-hero__content"><div class="pg-hero__grid"><div class="pg-hero__copy"><span class="pg-hero__eyebrow">B2B Partner Portal</span><h1>Professional Audio<br/><em>Solution B2B Supply</em></h1><p>POWER &amp; GRACE Partner Hub — We are your strategic partner for cost-effective, One-stop audio excellence.</p><div class="lt-actions"><a class="lt-btn lt-btn--lime" href="/products"><i class="fa fa-bars"/> Explore Products</a><a class="lt-btn lt-btn--hero-outline" href="/contact">Contact Sales</a></div></div><div class="pg-hero__services"><a href="/products"><i class="fa fa-tags"/><strong>Partner Pricing</strong><small>Account-specific B2B pricing</small></a><a t-att-href="'/samples' if not request.env.user._is_public() else '/web/login?redirect=/samples'"><i class="fa fa-flask"/><strong>Sample Evaluation</strong><small>Request products for project testing</small></a><a href="/repair-service"><i class="fa fa-wrench"/><strong>Project Support</strong><small>Order-linked after-sales support</small></a><a href="/warranty"><i class="fa fa-shield"/><strong>Up to 5-Year Warranty</strong><small>Product-specific warranty coverage</small></a></div></div></div>
-                </section>
-
-                <section class="pg-home-section"><div class="container"><div class="pg-section-heading"><div><h2>Product Categories</h2></div></div>
-                    <div class="pg-category-browser" data-pg-category-browser="" data-brand-id="">
-                        <div class="pg-category-browser__trail" data-pg-category-trail="" hidden="hidden"><button type="button" data-pg-category-back=""><i class="fa fa-arrow-left"/> Back</button><span>|</span><nav aria-label="Category breadcrumb" data-pg-category-breadcrumbs=""/></div>
-                        <div t-if="root_categories" class="pg-category-grid" data-pg-category-grid=""><button t-foreach="root_categories" t-as="row" type="button" t-att-data-category-id="row['id']" t-att-data-has-children="'1' if row['has_children'] else '0'"><span><img t-att-src="row['image_url']" t-att-alt="row['name']" loading="lazy"/></span><strong t-out="row['name']"/></button></div>
-                        <div t-else="" class="lt-empty" data-pg-category-empty=""><p>Published product categories will appear here.</p></div>
-                    </div>
-                </div></section>
-
-                <section class="pg-home-section pg-home-section--soft"><div class="container"><div class="pg-section-heading"><div><h2>Featured Products</h2></div></div>
-                    <div class="pg-featured" data-pg-featured="">
-                        <div class="pg-featured__tabs" role="tablist"><button type="button" class="is-active" role="tab" aria-selected="true" data-pg-featured-tab="recommended">Recommended</button><button type="button" role="tab" aria-selected="false" data-pg-featured-tab="special">Special Offers</button><button type="button" role="tab" aria-selected="false" data-pg-featured-tab="best_seller">Best Sellers</button></div>
-                        <t t-foreach="[('recommended', recommended_products), ('special', special_products), ('best_seller', best_seller_products)]" t-as="featured_section">
-                            <div t-att-class="'pg-featured__panel is-active' if featured_section[0] == 'recommended' else 'pg-featured__panel'" t-att-data-pg-featured-panel="featured_section[0]" t-att-hidden="None if featured_section[0] == 'recommended' else 'hidden'">
-                                <button t-if="featured_section[1]" type="button" class="pg-carousel-arrow pg-carousel-arrow--left" data-pg-scroll="left" aria-label="Scroll left"><i class="fa fa-angle-left"/></button>
-                                <div t-if="featured_section[1]" class="pg-featured__viewport"><div class="pg-featured__track" data-pg-featured-track=""><t t-foreach="featured_section[1]" t-as="product"><t t-set="section" t-value="featured_section[0]"/><t t-set="price" t-value="featured_prices.get(product.id, {})"/><t t-set="procurement" t-value="featured_procurement.get(product.id, {})"/><t t-call="b2b_website.homepage_featured_card"/></t></div></div>
-                                <div t-else="" class="lt-empty"><p>This selection is being prepared by our product team.</p></div>
-                                <button t-if="featured_section[1]" type="button" class="pg-carousel-arrow pg-carousel-arrow--right" data-pg-scroll="right" aria-label="Scroll right"><i class="fa fa-angle-right"/></button>
+                <div class="ph-home">
+                    <section class="ph-hero" aria-labelledby="ph-hero-title">
+                        <img class="ph-hero__image" src="/b2b_website/static/src/img/homepage/hero.webp" alt="Professional audio for an event venue" width="986" height="762" fetchpriority="high"/>
+                        <div class="ph-hero__shade"/>
+                        <div class="ph-container ph-hero__content">
+                            <span class="ph-hero__eyebrow">B2B PARTNER PORTAL</span>
+                            <h1 id="ph-hero-title"><span>Professional &amp;</span> <span>Commercial Audio</span></h1>
+                            <p>Explore our product range, access partner pricing, request samples, and manage your orders—all in one place.</p>
+                            <div class="ph-hero__benefits">
+                                <a href="/products"><svg class="ph-icon" aria-hidden="true"><use href="/b2b_website/static/src/img/homepage/icons.svg#ph-icon-tag"/></svg><span>Partner Pricing</span></a>
+                                <a t-att-href="'/samples' if not request.env.user._is_public() else '/web/login?redirect=/samples'"><svg class="ph-icon" aria-hidden="true"><use href="/b2b_website/static/src/img/homepage/icons.svg#ph-icon-sample"/></svg><span>Sample Evaluation</span></a>
+                                <a href="/contact"><svg class="ph-icon" aria-hidden="true"><use href="/b2b_website/static/src/img/homepage/icons.svg#ph-icon-project"/></svg><span>Technical Support</span></a>
+                                <a href="/warranty"><svg class="ph-icon" aria-hidden="true"><use href="/b2b_website/static/src/img/homepage/icons.svg#ph-icon-shield"/></svg><span>Up to 5-Year Warranty</span></a>
                             </div>
-                        </t>
-                    </div>
-                </div></section>
+                            <a class="ph-explore" href="/products">Explore Products <i class="fa fa-arrow-right" aria-hidden="true"/></a>
+                        </div>
+                    </section>
 
-                <section id="our-brands" class="pg-home-section"><div class="container"><div class="pg-section-heading"><div><h2>Our Brands</h2></div></div><div t-if="homepage_brands" class="pg-brand-grid"><a t-foreach="homepage_brands[:6]" t-as="brand" t-att-href="'/brands/%s' % request.env['ir.http']._slug(brand)"><span class="pg-brand-grid__visual"><img t-if="brand.logo" t-att-src="'/web/image/b2b.product.brand/%s/logo' % brand.id" t-att-alt="brand.name"/><img t-elif="brand.cover_image" t-att-src="'/web/image/b2b.product.brand/%s/cover_image' % brand.id" t-att-alt="brand.name"/><span t-else="" t-out="brand.name"/></span><span class="pg-brand-grid__copy"><small><t t-if="brand.tagline"><t t-out="brand.tagline"/></t><t t-else="">Professional Audio Solutions</t></small><b>View brand <i class="fa fa-angle-right"/></b></span></a></div><div t-else="" class="lt-empty"><p>Published partner brands will appear here.</p></div></div></section>
-                <section class="pg-partner-cta"><div class="container"><div class="pg-partner-cta__copy"><h2>Ready to become a partner?</h2><p>Apply for a B2B partner account to access exclusive pricing, sample requests, technical documentation, and dedicated account support.</p></div><div class="lt-actions"><a class="lt-btn lt-btn--lime" href="/partner-application">Apply for Partnership</a><a class="lt-btn pg-partner-cta__secondary" href="/contact">Contact Sales Team</a></div></div></section>
+                    <section id="our-brands" class="ph-section ph-brands" aria-labelledby="ph-brands-title"><div class="ph-container">
+                        <h2 id="ph-brands-title">Our Brands</h2>
+                        <div t-if="homepage_brands" class="ph-brands__grid">
+                            <a t-foreach="homepage_brands" t-as="brand" t-att-href="'/brands/%s' % request.env['ir.http']._slug(brand)" t-att-data-home-brand="brand.id">
+                                <span class="ph-brands__visual"><img t-if="brand.logo" t-att-src="'/web/image/b2b.product.brand/%s/logo' % brand.id" t-att-alt="brand.name" loading="lazy"/><img t-elif="brand.cover_image" t-att-src="'/web/image/b2b.product.brand/%s/cover_image' % brand.id" t-att-alt="brand.name" loading="lazy"/><strong t-else="" t-out="brand.name"/></span>
+                                <span class="ph-brands__tagline" t-out="brand.tagline or brand.name"/>
+                            </a>
+                        </div>
+                        <div t-else="" class="lt-empty"><p>Published partner brands will appear here.</p></div>
+                    </div></section>
+
+                    <section id="categories" class="ph-section ph-categories" aria-labelledby="ph-categories-title"><div class="ph-container">
+                        <h2 id="ph-categories-title">Explore Product Categories</h2>
+                        <div class="pg-category-browser" data-pg-category-browser="" data-brand-id="">
+                            <div class="pg-category-browser__trail" data-pg-category-trail="" hidden="hidden"><button type="button" data-pg-category-back="" aria-label="Back to previous category"><svg class="ph-icon" viewBox="0 0 48 48" aria-hidden="true"><use href="/b2b_website/static/src/img/homepage/icons.svg#ph-icon-arrow"/></svg>Back</button><nav aria-label="Category breadcrumb" data-pg-category-breadcrumbs=""/></div>
+                            <div t-if="root_categories" class="pg-category-grid" data-pg-category-grid=""><button t-foreach="root_categories" t-as="row" type="button" t-att-data-category-id="row['id']" t-att-data-has-children="'1' if row['has_children'] else '0'"><span><img t-att-src="row['image_url']" t-att-alt="row['name']" loading="lazy"/></span><strong t-out="row['name']"/></button></div>
+                            <div t-else="" class="lt-empty" data-pg-category-empty=""><p>Published product categories will appear here.</p></div>
+                        </div>
+                    </div></section>
+
+                    <section class="ph-section ph-featured" aria-labelledby="ph-featured-title"><div class="ph-container">
+                        <h2 id="ph-featured-title">Featured Products</h2>
+                        <div data-pg-featured="">
+                            <div class="ph-featured__toolbar">
+                                <div class="pg-featured__tabs" role="tablist" aria-label="Featured product selections"><button id="ph-tab-recommended" type="button" class="is-active" role="tab" aria-controls="ph-panel-recommended" aria-selected="true" data-pg-featured-tab="recommended">Recommended</button><button id="ph-tab-special" type="button" role="tab" aria-controls="ph-panel-special" aria-selected="false" tabindex="-1" data-pg-featured-tab="special">Special Offers</button><button id="ph-tab-best_seller" type="button" role="tab" aria-controls="ph-panel-best_seller" aria-selected="false" tabindex="-1" data-pg-featured-tab="best_seller">Best Sellers</button></div>
+                                <div class="ph-arrows" data-pg-featured-arrows=""><button type="button" data-pg-scroll="left" aria-label="Previous featured products"><svg class="ph-icon" viewBox="0 0 48 48" aria-hidden="true"><use href="/b2b_website/static/src/img/homepage/icons.svg#ph-icon-arrow"/></svg></button><button type="button" data-pg-scroll="right" aria-label="Next featured products"><svg class="ph-icon" viewBox="0 0 48 48" aria-hidden="true"><use href="/b2b_website/static/src/img/homepage/icons.svg#ph-icon-arrow"/></svg></button></div>
+                            </div>
+                            <div class="ph-featured__panels"><t t-foreach="[('recommended', recommended_products), ('special', special_products), ('best_seller', best_seller_products)]" t-as="featured_section">
+                                <div class="ph-featured__panel" role="tabpanel" t-att-id="'ph-panel-%s' % featured_section[0]" t-att-aria-labelledby="'ph-tab-%s' % featured_section[0]" t-att-data-pg-featured-panel="featured_section[0]" t-att-hidden="None if featured_section[0] == 'recommended' else 'hidden'">
+                                    <div t-if="featured_section[1]" class="pg-featured__track" data-pg-featured-track="" tabindex="0" aria-label="Featured products"><t t-foreach="featured_section[1]" t-as="product"><t t-set="home_design_card" t-value="True"/><t t-set="section" t-value="featured_section[0]"/><t t-set="price" t-value="featured_prices.get(product.id, {})"/><t t-set="procurement" t-value="featured_procurement.get(product.id, {})"/><t t-call="b2b_website.homepage_featured_card"/></t></div>
+                                    <div t-else="" class="lt-empty"><p>This selection is being prepared by our product team.</p></div>
+                                </div>
+                            </t></div>
+                            <div class="ph-featured__pagination" data-pg-featured-pagination="" hidden="hidden" aria-hidden="true"><span class="ph-featured__progress"><span data-pg-featured-progress=""/></span><span class="ph-featured__counter" data-pg-featured-counter=""/></div>
+                        </div>
+                    </div></section>
+
+                    <section class="ph-section ph-services" aria-labelledby="ph-services-title"><div class="ph-container"><div class="ph-services__panel">
+                        <h2 id="ph-services-title">Partner Services</h2>
+                        <div class="ph-services__grid">
+                            <a href="/contact"><svg class="ph-icon" aria-hidden="true"><use href="/b2b_website/static/src/img/homepage/icons.svg#ph-icon-headset"/></svg><h3>Project Consultation</h3></a>
+                            <a href="/contact"><svg class="ph-icon" aria-hidden="true"><use href="/b2b_website/static/src/img/homepage/icons.svg#ph-icon-design"/></svg><h3>System Design</h3></a>
+                            <a href="/contact"><svg class="ph-icon" aria-hidden="true"><use href="/b2b_website/static/src/img/homepage/icons.svg#ph-icon-training"/></svg><h3>Training &amp; Resources</h3></a>
+                            <a href="/contact"><svg class="ph-icon" aria-hidden="true"><use href="/b2b_website/static/src/img/homepage/icons.svg#ph-icon-support"/></svg><h3>After-Sales Support</h3></a>
+                        </div>
+                    </div></div></section>
+
+                    <section class="ph-section ph-solutions" aria-labelledby="ph-solutions-title"><div class="ph-container" data-pg-carousel="">
+                        <div class="ph-solutions__heading"><h2 id="ph-solutions-title">Audio Solutions by Application</h2><div class="ph-arrows"><button type="button" data-pg-carousel-scroll="left" aria-label="Previous solutions"><i class="fa fa-angle-left" aria-hidden="true"/></button><button type="button" data-pg-carousel-scroll="right" aria-label="Next solutions"><i class="fa fa-angle-right" aria-hidden="true"/></button></div></div>
+                        <!-- Presentation only until the separate solution pages are designed. -->
+                        <div class="ph-solutions__track" data-pg-carousel-track="" tabindex="0" aria-label="Project solutions">
+                            <article><img src="/b2b_website/static/src/img/homepage/healthcare.webp" alt="Healthcare reception with ceiling audio speakers" loading="lazy"/><h3>Healthcare</h3></article>
+                            <article><img src="/b2b_website/static/src/img/homepage/education.webp" alt="Audio for educational facilities" loading="lazy"/><h3>Education</h3></article>
+                            <article><img src="/b2b_website/static/src/img/homepage/corporate.webp" alt="Corporate meeting room" loading="lazy"/><h3>Corporate</h3></article>
+                            <article><img src="/b2b_website/static/src/img/homepage/public-venues.webp" alt="Public venue sound system" loading="lazy"/><h3>Public Venues</h3></article>
+                            <article><img src="/b2b_website/static/src/img/homepage/retail.webp" alt="Retail background audio" loading="lazy"/><h3>Retail</h3></article>
+                            <article><img src="/b2b_website/static/src/img/homepage/entertainment.webp" alt="Entertainment venue audio" loading="lazy"/><h3>Entertainment</h3></article>
+                        </div>
+                    </div></section>
+
+                    <section class="ph-credentials" aria-label="Partner credentials"><div class="ph-container">
+                        <div><svg class="ph-icon" aria-hidden="true"><use href="/b2b_website/static/src/img/homepage/icons.svg#ph-icon-medal"/></svg><p><strong>20+ Years</strong> <span>of Experience</span></p></div>
+                        <div><svg class="ph-icon" aria-hidden="true"><use href="/b2b_website/static/src/img/homepage/icons.svg#ph-icon-globe"/></svg><p><strong>Serving 100+</strong> <span>Countries</span></p></div>
+                        <div><svg class="ph-icon" aria-hidden="true"><use href="/b2b_website/static/src/img/homepage/icons.svg#ph-icon-iso"/></svg><p><strong>ISO 9001</strong> <span>Certified</span></p></div>
+                        <div><svg class="ph-icon" aria-hidden="true"><use href="/b2b_website/static/src/img/homepage/icons.svg#ph-icon-shield"/></svg><p><strong>Strict</strong> <span>Quality Control</span></p></div>
+                    </div></section>
+                    <section class="ph-partner-cta" aria-labelledby="ph-partner-title"><div class="ph-container"><div class="ph-partner-cta__inner"><div><h2 id="ph-partner-title">Become a Power &amp; Grace Partner</h2><p>Apply for a partner account to access partner pricing, request samples, download technical resources, and get support from our sales team.</p></div><div class="ph-partner-cta__actions"><a class="ph-partner-cta__button" href="/partner-application">Apply for a Partner Account</a><a class="ph-partner-cta__button ph-partner-cta__button--secondary" href="/contact">Contact Sales</a></div></div></div></section>
+                </div>
             </t>
         </xpath>
     </template>

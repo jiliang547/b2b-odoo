@@ -39,12 +39,12 @@
     </template>
     <template id="review_orders_list_status" inherit_id="b2b_website.portal_orders_figma" priority="120">
         <xpath expr="//span[hasclass('lt-status-badge--awaiting_payment')]" position="replace">
-            <span t-else="" class="lt-status-badge lt-status-badge--awaiting_payment"><t t-if="order.b2b_review_state in ('pending','ready')" t-out="order._b2b_customer_order_status()"/><t t-else="">Awaiting Payment</t></span>
+            <span t-else="" class="lt-status-badge lt-status-badge--awaiting_payment"><t t-if="order.b2b_checkout_mode == 'pay_later' or order.b2b_review_state in ('pending','ready')" t-out="order._b2b_customer_order_status()"/><t t-else="">Awaiting Payment</t></span>
         </xpath>
     </template>
     <template id="review_overview_status" inherit_id="b2b_website.portal_home_figma" priority="120">
         <xpath expr="//span[hasclass('lt-status-badge--awaiting_payment')]" position="replace">
-            <span t-else="" class="lt-status-badge lt-status-badge--awaiting_payment"><t t-if="order.b2b_review_state in ('pending','ready')" t-out="order._b2b_customer_order_status()"/><t t-else="">Awaiting Payment</t></span>
+            <span t-else="" class="lt-status-badge lt-status-badge--awaiting_payment"><t t-if="order.b2b_checkout_mode == 'pay_later' or order.b2b_review_state in ('pending','ready')" t-out="order._b2b_customer_order_status()"/><t t-else="">Awaiting Payment</t></span>
         </xpath>
     </template>
 </odoo>

@@ -7,6 +7,7 @@ from . import sale_order
 from . import website
 from . import web_submission
 from . import homepage_product
+from . import homepage_brand
 from . import website_track
 from . import faq
 from . import registration_application
@@ -19,3 +20,4 @@ from . import order_collection
 from . import bank_receipt
 from . import password_policy
 from . import manual_freight
+from . import saved_order

@@ -14,7 +14,7 @@
         </xpath>
     </template>
     <template id="collection_order_terms" inherit_id="sale.sale_order_portal_template" priority="100"><xpath expr="//div[@id='sale_order_sidebar_button']" position="before"><p t-if="sale_order.b2b_collection_active" class="my-3"><strong>Payment terms: </strong><span t-out="sale_order._b2b_customer_terms_label()"/></p></xpath></template>
-    <template id="collection_order_link" inherit_id="sale.sale_order_portal_template" priority="99"><xpath expr="//div[@id='sale_order_sidebar_button']" position="inside"><a t-if="sale_order.website_id and not sale_order.b2b_is_change_revision" class="btn btn-outline-primary" t-att-href="'/my/orders/%s/collection' % sale_order.id">Payments, Bank Transfer &amp; PI</a></xpath></template>
+    <template id="collection_order_link" inherit_id="sale.sale_order_portal_template" priority="99"><xpath expr="//div[@id='sale_order_sidebar_button']" position="inside"><a t-if="sale_order.website_id and not sale_order.b2b_is_change_revision" class="btn btn-outline-primary" t-att-href="'/my/orders/%s/collection' % sale_order.id"><t t-if="sale_order.b2b_checkout_mode == 'pay_later' and sale_order.b2b_balance &gt; 0">Pay by Bank (TT)</t><t t-else="">Payments, Bank Transfer &amp; PI</t></a></xpath></template>
     <template id="collection_checkout" inherit_id="b2b_website.payment_submit_for_review" priority="99">
         <xpath expr="//div[hasclass('lt-checkout-bank-action')]" position="inside">
             <form action="/shop/b2b-submit-order" method="post" data-lt-submit-once="">
@@ -36,7 +36,7 @@
                 <dl class="row"><dt class="col-7">Payment Terms</dt><dd class="col-5"><t t-out="order._b2b_customer_terms_label()"/></dd><dt class="col-7"><t t-if="order.b2b_review_state == 'pending'">Estimated Total</t><t t-else="">Order Total</t></dt><dd class="col-5"><span t-field="order.amount_total"/></dd><dt class="col-7">Confirmed Payments</dt><dd class="col-5"><span t-field="order.b2b_net_received"/></dd><dt class="col-7">Evidence Awaiting Review</dt><dd class="col-5"><span t-field="order.b2b_pending_proof"/></dd><dt class="col-7">Remaining Balance</dt><dd class="col-5"><span t-field="order.b2b_balance"/></dd><dt class="col-7">Required for Current Stage</dt><dd class="col-5"><span t-field="order.b2b_payable_now"/></dd></dl>
 
                 <p t-if="order.b2b_shipment_percent &lt; 100">Credit balance follows the due dates on your issued invoices. A remaining balance does not necessarily mean overdue payment.</p>
-                <a t-if="order.b2b_balance &gt; 0 and not payment_summary['online_pending'] and order.b2b_review_state != 'pending' and order.state != 'cancel'" class="lt-btn lt-btn--blue" t-att-href="order.get_portal_url(query_string='&amp;payment_amount=%s' % (order.b2b_payable_now or order.b2b_balance))">Pay by PayPal</a>
+                <a t-if="order.b2b_balance &gt; 0 and not payment_summary['online_pending'] and order.b2b_review_state != 'pending' and order.state != 'cancel' and (order.b2b_checkout_mode != 'pay_later' or not order._b2b_pending_bank_evidence())" class="lt-btn lt-btn--blue" t-att-href="order.get_portal_url(query_string='&amp;payment_amount=%s' % (order.b2b_payable_now or order.b2b_balance))">Pay by PayPal</a>
             </div></section><section class="lt-portal-card"><header><h2>Bank Transfer Instructions</h2></header><div class="lt-card-body"><p t-if="order.b2b_bank_instructions" class="lt-preserve-lines" t-out="order.b2b_bank_instructions"/><p t-else="">Our team must configure your receiving account. Please contact us before transferring funds.</p><a t-if="order.b2b_bank_instructions and order.b2b_review_state != 'pending' and order.state != 'cancel'" class="lt-btn lt-btn--outline" t-att-href="'/my/orders/%s/collection/pi' % order.id">Download Current PI</a><a t-else="" class="lt-btn lt-btn--outline" href="/contact">Contact us</a></div></section></div>
             <section t-if="order.b2b_collection_active and order.b2b_balance &gt; 0 and order.b2b_receiving_journal_id and order.b2b_review_state != 'pending' and order.state != 'cancel'" class="lt-portal-card lt-bank-transfer-payment mt-4">
                 <header><h2>Pay by Bank Transfer</h2></header>
@@ -44,6 +44,7 @@
                     <form t-att-action="'/my/orders/%s/collection/proof' % order.id" method="post" enctype="multipart/form-data" data-lt-submit-once="">
                         <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                         <input type="hidden" name="submission_key" t-att-value="submission_key"/>
+                        <input t-if="order.b2b_checkout_mode == 'pay_later'" type="hidden" name="b2b_quote_token" t-att-value="order._b2b_quote_token()"/>
                         <div class="row g-3">
                             <div class="col-md-4"><label class="form-label" for="transfer_amount">Transfer Amount (<t t-out="order.currency_id.name"/>)</label><input id="transfer_amount" t-att-value="form_values.get('amount', '')" class="form-control" name="amount" type="number" step="any" min="0.01" required="required"/></div>
                             <div class="col-md-4"><label class="form-label" for="transfer_date">Transfer Date</label><input id="transfer_date" t-att-value="form_values.get('transfer_date', '')" class="form-control" name="transfer_date" type="date" required="required"/></div>
@@ -55,7 +56,14 @@
                     </form>
                 </div>
             </section>
-            <section class="lt-portal-card mt-4"><header><h2>Bank Transfer History</h2></header><div class="table-responsive"><table class="lt-data-table"><thead><tr><th>Reference</th><th>Declared</th><th>Confirmed</th><th>Status / Finance Note</th><th>Evidence</th></tr></thead><tbody><tr t-foreach="receipts" t-as="receipt"><td t-out="receipt.name"/><td><span t-field="receipt.declared_amount"/></td><td><span t-field="receipt.effective_credit"/></td><td><t t-if="receipt.state == 'confirmed' and not receipt.accounting_effective">Receipt reversed or unposted — not counted</t><t t-else="" t-out="dict(receipt._fields['state'].selection).get(receipt.state)"/><p t-if="receipt.review_note" t-out="receipt.review_note"/></td><td><a t-foreach="receipt.attachment_ids" t-as="attachment" t-att-href="'/my/orders/%s/collection/proof/%s/%s' % (order.id, receipt.id, attachment.id)">Download</a></td></tr></tbody></table></div><div t-if="not receipts" class="lt-card-body">No payment evidence submitted yet.</div></section>
+            <section class="lt-portal-card mt-4"><header><h2>Bank Transfer History</h2></header><div class="table-responsive"><table class="lt-data-table"><thead><tr><th>Reference</th><th>Declared</th><th>Confirmed</th><th>Status / Finance Note</th><th>Evidence</th></tr></thead><tbody><tr t-foreach="receipts" t-as="receipt"><td t-out="receipt.name"/><td><span t-field="receipt.declared_amount"/></td><td><span t-field="receipt.effective_credit"/></td><td>
+                <!-- Customer wording is independent of the native finance labels. -->
+                <t t-if="receipt.state == 'confirmed' and not receipt.accounting_effective">Receipt reversed or unposted — not counted</t>
+                <t t-elif="receipt.state == 'submitted'">Payment Verification Pending</t>
+                <t t-elif="receipt.state == 'returned'">Additional Information Required</t>
+                <t t-elif="receipt.state == 'confirmed'">Payment Confirmed</t>
+                <t t-elif="receipt.state == 'rejected'">Payment Not Verified</t>
+                <p t-if="receipt.review_note" t-out="receipt.review_note"/></td><td><a t-foreach="receipt.attachment_ids" t-as="attachment" t-att-href="'/my/orders/%s/collection/proof/%s/%s' % (order.id, receipt.id, attachment.id)">Download</a></td></tr></tbody></table></div><div t-if="not receipts" class="lt-card-body">No payment evidence submitted yet.</div></section>
             <section t-if="pis" class="lt-portal-card mt-4"><header><h2>Issued PI Versions</h2></header><div class="lt-card-body"><p t-foreach="pis" t-as="pi"><a t-att-href="'/my/orders/%s/collection/pi?version=%s' % (order.id, pi.id)">Download PI v<t t-out="pi.revision"/></a> · <span t-field="pi.create_date"/></p></div></section>
         </t>
     </template>

@@ -38,7 +38,7 @@ class TestCheckoutRecovery(TransactionCase):
         with MockRequest(self.env, website=website, sale_order_id=order.id) as req, \
                 patch.object(website_sale, '_can_checkout', return_value=True), \
                 patch.object(type(order), '_is_cart_ready', return_value=True), \
-                patch.object(website_sale.PartnerHubWebsiteSale, '_submit_review_order', fail), \
+                patch.object(website_sale.PartnerHubWebsiteSale, '_submit_saved_order', fail), \
                 patch.object(website_sale, 'render_checkout_error', return_value='SAFE NOTICE'):
             req.cart = order
             result = website_sale.PartnerHubWebsiteSale.shop_submit_for_review.__wrapped__(

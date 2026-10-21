@@ -3,9 +3,8 @@
     <template id="partner_topbar" name="Partner Hub Topbar">
         <nav class="lt-subnav" aria-label="Partner Hub navigation">
             <div class="container lt-subnav__inner">
-                <a class="lt-brand" href="/" aria-label="Power and Grace home">
-                    <span class="lt-brand__mark" aria-hidden="true"><img t-att-src="'/web/image/website/%s/logo' % request.website.id" alt=""/></span>
-                    <span><strong>POWER &amp; GRACE</strong><small>PARTNER HUB</small></span>
+                <a class="lt-brand lt-brand--wordmark" href="/" aria-label="Power and Grace home">
+                    <img t-att-src="'/web/image/website/%s/logo' % request.website.id" alt="Power and Grace Partner Hub" width="256" height="32"/>
                 </a>
                 <button class="lt-nav-toggle" type="button" aria-expanded="false" aria-controls="lt-native-navigation">
                     <span class="visually-hidden">Toggle navigation</span><i class="fa fa-bars" aria-hidden="true"/>

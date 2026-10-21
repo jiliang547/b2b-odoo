@@ -1,0 +1,146 @@
+// Storefront visual system. Frontend assets only; no backend/ERP styles.
+// Header/footer use exactly the approved homepage scale on every route.
+.lt-subnav, .lt-footer {
+    --lt-chrome-vw: min(1vw, 15px);
+    --lt-chrome-u: max(1px, calc(.078125 * var(--lt-chrome-vw)));
+    --lt-chrome-content-max: calc(1500px * .92865);
+}
+.lt-subnav .container, .lt-footer .container { max-width: var(--lt-chrome-content-max); padding-inline: 0; width: 92.865%; }
+.lt-subnav { font-family: 'PH Home Inter', Arial, sans-serif; font-size: calc(14 * var(--lt-chrome-u)); line-height: 1.5; min-height: 0; }
+.lt-subnav .lt-subnav__inner { gap: calc(24 * var(--lt-chrome-u)); height: calc(64 * var(--lt-chrome-u)); min-height: 0; padding-block: 0; }
+.lt-subnav .lt-brand--wordmark > img { height: auto; width: calc(224 * var(--lt-chrome-u)); }
+
+// Restore the source footer's Inter/DM Sans type scale and five-track grid.
+// One shared component for storefront, portal and authentication pages.
+.lt-footer { color: #9ca3af; font-family: 'PH Home Inter', Arial, sans-serif; font-size: calc(14 * var(--lt-chrome-u)); line-height: 1.5; padding-top: 0; -webkit-font-smoothing: antialiased; }
+.lt-footer .lt-footer__grid { gap: calc(32 * var(--lt-chrome-u)); grid-template-columns: repeat(5, minmax(0, 1fr)); padding-block: calc(36 * var(--lt-chrome-u)); }
+.lt-footer .lt-footer__about { grid-column: span 2; min-width: 0; }
+.lt-footer .lt-brand--footer { margin-bottom: calc(16 * var(--lt-chrome-u)); }
+.lt-footer .lt-brand--wordmark > img { height: auto; width: calc(256 * var(--lt-chrome-u)); }
+.lt-footer .lt-footer__about p { font-size: calc(14 * var(--lt-chrome-u)); line-height: calc(22.75 * var(--lt-chrome-u)); margin: 0 0 calc(16 * var(--lt-chrome-u)); max-width: none; }
+.lt-footer h2 { font-family: 'PH Home DM Sans', Arial, sans-serif; font-size: calc(14 * var(--lt-chrome-u)); font-weight: 600; letter-spacing: normal; line-height: calc(20 * var(--lt-chrome-u)); margin: 0 0 calc(12 * var(--lt-chrome-u)); }
+.lt-footer .lt-footer__grid > div:not(:first-child) { gap: 0; min-width: 0; }
+.lt-footer .lt-footer__grid > div > a:not(.lt-brand) { color: #9ca3af; font-size: calc(14 * var(--lt-chrome-u)); font-weight: 400; line-height: calc(20 * var(--lt-chrome-u)); padding-block: calc(2 * var(--lt-chrome-u)); }
+.lt-footer .lt-footer__grid > div > a + a { margin-top: calc(8 * var(--lt-chrome-u)); }
+.lt-footer .lt-footer__grid a:not(.lt-brand):hover,
+.lt-footer .lt-footer__grid a:not(.lt-brand):focus-visible { color: var(--lt-orange); }
+.lt-footer .lt-footer__social { gap: calc(8 * var(--lt-chrome-u)); }
+.lt-footer .lt-footer__social > * { background: #1f2937; border: 0; border-radius: calc(6 * var(--lt-chrome-u)); height: calc(32 * var(--lt-chrome-u)); width: calc(32 * var(--lt-chrome-u)); }
+.lt-footer .lt-footer__bottom { font-size: calc(12 * var(--lt-chrome-u)); margin-top: 0; padding-block: calc(16 * var(--lt-chrome-u)); }
+.lt-subnav strong { font-family: inherit; }
+@media (max-width: 1023px) {
+    .lt-subnav .container, .lt-footer .container { padding-inline: 24px; width: 100%; }
+    .lt-footer .lt-footer__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 767px) { .lt-footer .lt-footer__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 639px) {
+    .lt-subnav .container, .lt-footer .container { padding-inline: 16px; }
+    .lt-subnav .lt-brand--wordmark > img { width: clamp(120px, calc(34 * var(--lt-chrome-vw)), 150px); }
+}
+
+// Keep the homepage artwork/layout intact; normalize text on other surfaces.
+.lt-hub:not(.ph-home-page), .lt-auth-page, .lt-portal-wrap,
+.lt-native-checkout, .o_portal_wrap, .lt-contact-page {
+    font-family: var(--lt-font-body);
+    font-size: 16px;
+    line-height: 1.5;
+}
+.lt-hub:not(.ph-home-page), .lt-auth-page, .lt-portal-wrap, .lt-native-checkout, .lt-contact-page {
+    h1, h2, h3, h4 { font-family: var(--lt-font-body); }
+    input, select, textarea, button { font-family: inherit; }
+    input[type='checkbox'], input[type='radio'] { accent-color: var(--lt-primary); }
+}
+.lt-hub .lt-btn, .lt-native-checkout .lt-btn, .lt-portal-wrap .lt-btn, .lt-auth-page .lt-btn {
+    font-size: 15px;
+    line-height: 1.35;
+}
+.lt-hub .lt-btn--small, .lt-portal-wrap .lt-btn--small { font-size: 14px; }
+.lt-btn--lime { background: var(--lt-primary); color: #fff !important; }
+.lt-btn--lime:hover { background: var(--lt-primary-hover); }
+.lt-partner-cta .lt-btn--lime, .pg-info-cta .lt-btn--lime { background: #fff; color: var(--lt-link) !important; }
+
+// Native Bootstrap/Odoo controls retain their behavior, disabled states and roles.
+:is(.lt-hub, .lt-auth-page, .lt-portal-wrap, .lt-native-checkout),
+body:has(.lt-hub, .lt-auth-page, .lt-portal-wrap, .lt-native-checkout) .modal {
+    --primary-rgb: var(--lt-primary-rgb);
+    --link-color: var(--lt-link);
+    --link-hover-color: var(--lt-primary-hover);
+    .btn-primary, .btn-fill-primary, .btn-info {
+        --btn-color: #fff;
+        --btn-bg: var(--lt-primary);
+        --btn-border-color: var(--lt-primary);
+        --btn-hover-color: #fff;
+        --btn-hover-bg: var(--lt-primary-hover);
+        --btn-hover-border-color: var(--lt-primary-hover);
+        --btn-active-color: #fff;
+        --btn-active-bg: var(--lt-primary-hover);
+        --btn-active-border-color: var(--lt-primary-hover);
+        --btn-disabled-color: #fff;
+        --btn-disabled-bg: var(--lt-primary);
+        --btn-disabled-border-color: var(--lt-primary);
+        --btn-focus-shadow-rgb: var(--lt-primary-rgb);
+        background-color: var(--lt-primary);
+        border-color: var(--lt-primary);
+        color: #fff;
+        font-size: 15px;
+        &:hover, &:focus-visible, &:active { background-color: var(--lt-primary-hover); border-color: var(--lt-primary-hover); color: #fff; }
+    }
+    .btn-outline-primary {
+        --btn-color: var(--lt-primary);
+        --btn-border-color: var(--lt-primary);
+        --btn-hover-bg: var(--lt-primary);
+        --btn-hover-border-color: var(--lt-primary);
+        --btn-hover-color: #fff;
+        --btn-active-bg: var(--lt-primary-hover);
+        --btn-active-color: #fff;
+        --btn-disabled-color: var(--lt-primary);
+        --btn-disabled-border-color: var(--lt-primary);
+        --btn-focus-shadow-rgb: var(--lt-primary-rgb);
+    }
+    .btn-link, .text-primary, .text-info { color: var(--lt-link) !important; }
+    .bg-primary, .bg-info { background-color: var(--lt-primary) !important; }
+    .border-primary { border-color: var(--lt-primary) !important; }
+    .nav-link.active, .page-link { color: var(--lt-link); }
+    .page-item.active .page-link { background: var(--lt-primary); border-color: var(--lt-primary); color: #fff; }
+    .form-check-input:checked { background-color: var(--lt-primary); border-color: var(--lt-primary); }
+    .form-control:focus:not(.is-invalid), .form-select:focus:not(.is-invalid) { border-color: var(--lt-orange); box-shadow: 0 0 0 3px rgba(var(--lt-primary-rgb), .12); }
+    .alert-primary, .alert-info { background-color: var(--lt-orange-soft); border-color: var(--lt-orange-border); color: #74412e; }
+}
+body:has(.lt-hub, .lt-auth-page, .lt-portal-wrap, .lt-native-checkout) .modal {
+    font-family: var(--lt-font-body);
+    font-size: 16px;
+}
+.lt-breadcrumb:not(.lt-breadcrumb--dark) { flex-wrap: wrap; padding-top: 16px; font-size: 13px; line-height: 1.5; }
+.lt-catalog-intro { padding: 12px 0 24px; }
+.lt-catalog-intro h1 { margin: 0 0 8px; font-size: 36px; line-height: 1.2; }
+.lt-catalog-intro p { font-size: 16px; line-height: 1.5; }
+.lt-section { padding-block: 48px; }
+.lt-page-head { padding-block: 44px; }
+.lt-page-head--compact { padding-block: 32px; }
+
+// Equal-height product text rows; no image, SKU data or pricing changes.
+.lt-product-card h3 { min-height: 2.7em; font-size: 18px; line-height: 1.35; }
+.lt-product-card__category { display: block; overflow: hidden; font-size: 13px; line-height: 1.4; letter-spacing: .035em; text-overflow: ellipsis; white-space: nowrap; }
+.lt-product-card__model, .lt-purchase-panel__model { font-family: var(--lt-font-body); font-size: 14px; line-height: 1.45; letter-spacing: normal; }
+.lt-product-card__description { height: 3em; font-size: 14px; line-height: 1.5; }
+.lt-product-card .lt-price > span, .lt-product-card .lt-price a { font-size: 14px; line-height: 1.5; }
+.lt-product-card .lt-status-badge { font-size: 13px; }
+.lt-field label, .lt-field legend { font-size: 14px; line-height: 1.4; }
+.lt-field input:not([type='radio']):not([type='checkbox']), .lt-field select, .lt-field textarea { font-size: 16px; }
+.lt-portal-breadcrumb { height: auto; min-height: 20px; flex-wrap: wrap; overflow: visible; font-size: 13px; line-height: 1.5; white-space: normal; }
+.lt-portal-heading { margin-bottom: 20px; }
+.lt-portal-heading h1 { font-size: 28px; line-height: 1.25; }
+.lt-portal-heading p { height: auto; min-height: 21px; overflow: visible; font-size: 14px; line-height: 1.5; white-space: normal; }
+.lt-portal-tabs a, .lt-workspace p, .lt-compact-list small { font-size: 14px; }
+.lt-status-badge { font-size: 13px; line-height: 1.4; }
+.lt-metric-icon--blue, .lt-metric-icon--green, .lt-metric-icon--orange { background: var(--lt-orange-soft); color: var(--lt-primary); }
+.lt-detail-meta dt, .lt-detail-meta dd { font-size: 14px; line-height: 1.5; }
+.lt-portal-main .text-muted, .lt-native-checkout .text-muted { font-size: 14px; }
+@media (max-width: 767px) {
+    .lt-section { padding-block: 32px; }
+    .lt-page-head { padding-block: 32px; }
+    .lt-catalog-intro { padding-top: 10px; padding-bottom: 20px; }
+    .lt-catalog-intro h1 { font-size: 30px; }
+    .lt-product-card h3 { font-size: 17px; }
+    .lt-portal-heading h1 { font-size: 26px; }
+}

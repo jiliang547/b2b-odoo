@@ -50,14 +50,17 @@ class PartnerHubPortal(CustomerPortal):
         (``sale``).  A failed website payment can leave the linked order in
         ``draft`` though, which makes the still-valid checkout disappear from
         both native lists.  Keep the native sale and payment states and only
-        broaden the portal domain for website orders that have a transaction.
+        broaden the portal domain for website orders that have a transaction,
+        an explicit review submission, or a Save & Pay Later submission. Saved
+        orders are visible before payment without confirming them in Odoo.
         """
         attempted_order_ids = self._website_payment_order_ids(partner)
         return [
             ("partner_id", "child_of", [partner.commercial_partner_id.id]),
-            "|", "|",
+            "|", "|", "|",
             ("state", "=", "sale"),
             ("id", "in", attempted_order_ids),
+            "&", ("b2b_checkout_mode", "=", "pay_later"), ("state", "in", ("draft", "sent")),
             "&",
             ("state", "=", "sent"),
             ("b2b_review_state", "in", ("pending", "ready")),
@@ -71,6 +74,7 @@ class PartnerHubPortal(CustomerPortal):
             ("state", "=", "sent"),
             ("id", "not in", attempted_order_ids),
             ("b2b_review_state", "=", "none"),
+            ("b2b_checkout_mode", "!=", "pay_later"),
         ]
 
     def _order_change_domain(self):

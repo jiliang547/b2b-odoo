@@ -19,6 +19,12 @@ class PaymentTransaction(models.Model):
                     raise ValidationError(_('Another payment is being processed. Please wait for its result.'))
                 if order.b2b_collection_active:
                     order._b2b_lock_collection()
+                    if order.b2b_checkout_mode == 'pay_later' and (order.transaction_ids - tx).filtered(
+                            lambda other: other.operation not in ('refund', 'validation')
+                            and other.state in ('draft', 'pending', 'authorized')):
+                        raise ValidationError(_('Another payment is being processed. Please wait for its result.'))
+                    if order.b2b_checkout_mode == 'pay_later' and order._b2b_pending_bank_evidence():
+                        raise ValidationError(_('Finance is reviewing your bank payment. Wait for the result before paying online.'))
                     if tx.currency_id != order.currency_id or tx.amount <= 0 or order.currency_id.compare_amounts(tx.amount, order.b2b_balance) > 0:
                         raise ValidationError(_('The payment exceeds the current outstanding balance. Please refresh the order.'))
         # Check resolved native M2M links before any provider request is sent.

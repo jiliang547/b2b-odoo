@@ -800,8 +800,7 @@ class PartnerHubWebsite(WebsiteController):
                 homepage_brands=request.env["b2b.product.brand"].sudo().search([
                     ("active", "=", True),
                     ("website_published", "=", True),
-                    ("product_ids", "any", domain),
-                ], order="sequence, name, id"),
+                ], order="sequence, name, id", limit=5),
                 catalog_total=request.env["product.template"].sudo().search_count(domain),
                 page_name="partner_home",
             ),
