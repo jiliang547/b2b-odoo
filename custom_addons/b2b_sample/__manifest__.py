@@ -1,7 +1,7 @@
 {
     "name": "Lucky Tone B2B Sample Requests",
     "summary": "Partner Hub sample requests, review, Portal isolation, and ERP handoff",
-    "version": "19.0.1.2.1",
+    "version": "19.0.1.2.2",
     "category": "Sales/B2B",
     "license": "LGPL-3",
     "author": "Lucky Tone",

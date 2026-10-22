@@ -1,0 +1,30 @@
+<odoo>
+    <template id="portal_customer_conversation" name="Customer Conversation">
+        <t t-call="portal.portal_layout">
+            <t t-set="no_index" t-value="True"/>
+            <nav class="lt-portal-breadcrumb"><a href="/">Home</a><span>/</span><a href="/my/inquiries">Messages</a><span>/</span><t t-out="thread.name"/></nav>
+            <header class="lt-portal-heading lt-portal-heading--action"><div><h1 t-out="thread.subject or thread.name"/><p><t t-out="thread.source_type"/> · Messages shared with our team</p></div><a t-if="source_url" t-att-href="source_url" class="lt-btn lt-btn--outline">View Related Record</a></header>
+            <section class="lt-portal-card">
+                <header><h2>Conversation</h2></header>
+                <div class="lt-card-body">
+                    <p class="text-muted mb-4">Messages shared with our team are also sent by email.</p>
+                    <article t-foreach="messages" t-as="message" class="border-bottom pb-3 mb-3">
+                        <div class="d-flex flex-wrap justify-content-between gap-2 mb-2"><strong t-out="message_authors[message.id]"/><small class="text-muted" t-field="message.date" t-options="{'widget':'datetime'}"/></div>
+                        <div class="text-break" t-out="message.body"/>
+                        <ul t-if="message.attachment_ids" class="mt-2"><li t-foreach="message.attachment_ids" t-as="attachment"><a t-att-href="'/my/messages/%s/attachments/%s/%s' % (thread.id,message.id,attachment.id)" t-out="attachment.name"/></li></ul>
+                    </article>
+                    <p t-if="not messages">No public messages yet.</p>
+                    <t t-if="pager" t-call="portal.pager"/>
+                    <div t-if="error" class="alert alert-danger" role="alert" t-out="error"/>
+                    <form t-att-action="'/my/messages/%s/reply' % thread.id" method="post" data-lt-submit-once="">
+                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                        <input type="hidden" name="submission_key" t-att-value="submission_key"/>
+                        <label class="form-label" for="customer_message_body">Your reply</label>
+                        <textarea id="customer_message_body" name="body" class="form-control" rows="4" maxlength="8000" required="required" t-out="reply_body"/>
+                        <button type="submit" class="lt-btn lt-btn--blue mt-3" data-lt-stable-submit="">Send Message</button>
+                    </form>
+                </div>
+            </section>
+        </t>
+    </template>
+</odoo>

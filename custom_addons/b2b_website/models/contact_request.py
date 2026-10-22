@@ -224,10 +224,8 @@ class B2BContactRequest(models.Model):
         recipient is used without creating spam contacts in master data.
         """
         for record in self:
-            record.message_post(
+            record._b2b_post_customer_message(
                 body=body,
-                message_type="comment",
-                subtype_xmlid="mail.mt_comment",
                 outgoing_email_to=record.email if not record.partner_id else False,
             )
 

@@ -365,19 +365,15 @@ class PartnerHubPortal(CustomerPortal):
 
     @route("/my/messages/<int:thread_id>/open", type="http", auth="user", website=True)
     def portal_message_thread_open(self, thread_id, **kwargs):
-        company = request.env.user.partner_id.commercial_partner_id
         thread = request.env["b2b.message.thread"].sudo().browse(thread_id).exists()
-        if not thread or thread.commercial_partner_id != company:
+        if not thread:
+            raise NotFound()
+        try:
+            source, context = thread._customer_source()
+        except AccessError:
             raise NotFound()
         thread.action_mark_read(request.env.user.partner_id)
-        routes = {
-            "b2b.contact.request": "/my/inquiries/%s",
-            "sale.order": "/my/orders/%s",
-            "b2b.sample.request": "/my/sample-requests/%s",
-            "helpdesk.ticket": "/my/ticket/%s",
-            "b2b.order.change.request": "/my/order-changes/%s",
-        }
-        return request.redirect(routes[thread.source_model] % thread.res_id)
+        return request.redirect("/my/messages/%s" % thread.id)
 
     @route("/my/inquiries/<int:inquiry_id>", type="http", auth="user", website=True)
     def portal_inquiry(self, inquiry_id, **kwargs):

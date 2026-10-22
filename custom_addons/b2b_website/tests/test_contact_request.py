@@ -321,7 +321,7 @@ class TestContactRequestSecurity(TransactionCase):
         with self.assertRaises(AccessError):
             self.salesperson.partner_id.with_user(self.portal_user).check_access("read")
         thread.last_author_id = False
-        self.assertEqual(thread.with_user(self.portal_user).last_author_name, "System")
+        self.assertEqual(thread.with_user(self.portal_user).last_author_name, "Our team")
 
     def test_duplicate_open_company_request_is_rejected(self):
         with self.assertRaises(ValidationError):

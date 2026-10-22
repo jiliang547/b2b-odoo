@@ -7,3 +7,4 @@ from . import terms
 from . import collection
 from . import collection_payment
 from . import service
+from . import customer_messages

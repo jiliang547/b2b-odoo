@@ -206,8 +206,7 @@ class HelpdeskTicket(models.Model):
         result = super().write(vals)
         if 'stage_id' in vals:
             for ticket in changed:
-                ticket.message_post(body=_('Service progress: %s', ticket.stage_id.name),
-                                    message_type='comment', subtype_xmlid='mail.mt_comment')
+                ticket._b2b_post_customer_message(body=_('Service progress: %s', ticket.stage_id.name))
         return result
 
     def _b2b_step(self, step):
