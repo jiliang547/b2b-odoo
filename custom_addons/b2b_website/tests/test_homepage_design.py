@@ -166,6 +166,14 @@ class TestHomepageDesign(HttpCase):
         self.assertIsNotNone(divider)
         self.assertRegex(divider.group(1), r"border-bottom:\s*1px solid #f0f1f3")
         self.assertRegex(divider.group(1), r"padding:\s*0(?:;|$)")
+        for square_selector, minimum_rules in (
+            (r"\.pg-category-grid\s*>\s*button\s*>\s*span", 2),
+            (r"\.pg-featured-card__image", 1),
+        ):
+            square_rules = re.findall(r"\.ph-home\s+" + square_selector + r"\s*\{([^}]+)\}", css)
+            self.assertGreaterEqual(len(square_rules), minimum_rules)
+            for square_rule in square_rules:
+                self.assertRegex(square_rule, r"aspect-ratio:\s*1\s*/\s*1\s*(?:;|$)")
         for image_selector in (r"\.pg-category-grid\s*>\s*button\s+img",
                                r"\.pg-featured-card__image\s+img"):
             image_rule = re.search(r"\.ph-home\s+" + image_selector + r"\s*\{([^}]+)\}", css)
