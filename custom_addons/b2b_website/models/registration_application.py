@@ -298,9 +298,9 @@ class B2BRegistrationApplication(models.Model):
                 raise_if_not_found=False,
             )
             if template:
-                template.sudo().with_context(
+                self.sudo().with_context(
                     lang=self.partner_id.lang or self.website_id.default_lang_id.code,
-                ).send_mail(self.id, force_send=True)
+                ).message_post_with_source(template, message_type="comment", subtype_xmlid="mail.mt_comment")
         return True
 
     def action_reject(self):
@@ -318,9 +318,9 @@ class B2BRegistrationApplication(models.Model):
                 raise_if_not_found=False,
             )
             if template:
-                template.sudo().with_context(
+                self.sudo().with_context(
                     lang=self.partner_id.lang or self.website_id.default_lang_id.code,
-                ).send_mail(self.id, force_send=True)
+                ).message_post_with_source(template, message_type="comment", subtype_xmlid="mail.mt_comment")
         return True
 
     def action_return_to_review(self):

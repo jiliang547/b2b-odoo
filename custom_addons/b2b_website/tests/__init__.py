@@ -18,3 +18,4 @@ from . import test_checkout_recovery
 from . import test_saved_order
 from . import test_homepage_design
 from . import test_site_theme
+from . import test_customer_messages

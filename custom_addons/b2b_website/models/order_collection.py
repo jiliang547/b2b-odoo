@@ -200,7 +200,7 @@ class SaleOrder(models.Model):
             if order.b2b_balance_payment_requested:
                 continue
             super(SaleOrder, order).write({'b2b_balance_payment_requested': True})
-            order.with_context(mail_notify_force_send=False).message_post(
+            order.with_context(mail_notify_force_send=False)._b2b_post_customer_message(
                 body=_('Please pay the remaining balance for order %s. Open Payments, Bank Transfer & PI in your account to view the current amount and payment instructions.', order.name),
                 partner_ids=order.partner_id.ids, subtype_xmlid='mail.mt_comment')
         return True
@@ -329,7 +329,7 @@ class SaleOrder(models.Model):
             if not order.b2b_configuration_reason:
                 raise UserError(_('Record the reason before applying collection configuration.'))
             super(SaleOrder, order).write(order._b2b_collection_defaults())
-            order.message_post(body=_('Collection instructions changed: %s. Please download the latest PI.', order.b2b_configuration_reason), partner_ids=order.partner_id.ids)
+            order._b2b_post_customer_message(body=_('Collection instructions changed: %s. Please download the latest PI.', order.b2b_configuration_reason), partner_ids=order.partner_id.ids)
         return True
 
     def write(self, vals):
@@ -369,7 +369,7 @@ class SaleOrder(models.Model):
             if order.state not in ('draft', 'sent'):
                 snapshot = {key: value for key, value in snapshot.items() if key in {'b2b_brand_id', 'b2b_receiving_journal_id', 'b2b_brand_logo', 'b2b_bank_instructions', 'b2b_pi_bank_instructions'}}
             super(SaleOrder, order).write(snapshot)
-            order.message_post(body=_('Collection instructions updated: %s. Please download the latest PI.', order.b2b_configuration_reason), partner_ids=order.partner_id.ids)
+            order._b2b_post_customer_message(body=_('Collection instructions updated: %s. Please download the latest PI.', order.b2b_configuration_reason), partner_ids=order.partner_id.ids)
         return result
 
     @api.constrains('b2b_receiving_journal_id', 'b2b_brand_id', 'company_id', 'currency_id')

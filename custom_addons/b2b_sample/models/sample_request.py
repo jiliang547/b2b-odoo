@@ -220,7 +220,9 @@ class B2BSampleRequest(models.Model):
                 "state": "quotation",
             })
             request.message_post(
-                body=_("Sample quotation %s was created and is awaiting customer payment.", order.name)
+                body=_("Sample quotation %s was created and is awaiting customer payment.", order.name),
+                message_type="comment", subtype_xmlid="mail.mt_comment",
+                author_id=self.env.ref("base.partner_root").id if self.env.su and self.env.user.share else None,
             )
         return True
 
@@ -401,7 +403,9 @@ class SaleOrder(models.Model):
                 sample._transition({"quotation"}, "erp_pending")
             else:
                 sample._transition({"quotation"}, "order_confirmed")
-            sample.message_post(body=_("Sample order %s was confirmed after payment.", order.name))
+            sample.message_post(body=_("Sample order %s was confirmed after payment.", order.name),
+                                message_type="comment", subtype_xmlid="mail.mt_comment",
+                                author_id=self.env.ref("base.partner_root").id if self.env.su and self.env.user.share else None)
         return True
 
     def _b2b_on_erp_job_success(self, job, result):

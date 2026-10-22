@@ -306,7 +306,7 @@ class B2BOrderChangeRequest(models.Model):
                 lambda activity: activity.activity_type_id
                 == self.env.ref("mail.mail_activity_data_todo")
             ).action_feedback(feedback=_("Revision proposal sent to the customer."))
-            request.message_post(
+            request._b2b_post_customer_message(
                 body=_("The revised order proposal is ready for customer confirmation."),
                 partner_ids=request.partner_id.ids,
             )
@@ -321,7 +321,7 @@ class B2BOrderChangeRequest(models.Model):
                 raise ValidationError(_("Enter a rejection reason before rejecting the request."))
             request.write({"state": "rejected"})
             request.activity_ids.action_feedback(feedback=_("Order change rejected."))
-            request.message_post(
+            request._b2b_post_customer_message(
                 body=_("Your order change request was declined: %(reason)s", reason=request.rejection_reason),
                 partner_ids=request.partner_id.ids,
             )
@@ -408,7 +408,7 @@ class B2BOrderChangeRequest(models.Model):
                 values["completed_at"] = fields.Datetime.now()
                 request.order_id.b2b_change_payment_hold = False
             request.write(values)
-            request.message_post(body=_("The customer accepted the revised order proposal."))
+            request._b2b_post_customer_message(body=_("The customer accepted the revised order proposal."))
             if next_state == "finance_review":
                 request._schedule_finance_review_activity()
         return True
@@ -419,7 +419,7 @@ class B2BOrderChangeRequest(models.Model):
             if request.state != "customer_confirmation":
                 raise ValidationError(_("Only a proposal awaiting confirmation can be declined."))
             request.write({"state": "cancelled"})
-            request.message_post(body=_("The customer declined the revised order proposal."))
+            request._b2b_post_customer_message(body=_("The customer declined the revised order proposal."))
         return True
 
     def _check_customer_action(self):
@@ -443,7 +443,7 @@ class B2BOrderChangeRequest(models.Model):
                     values["completed_at"] = fields.Datetime.now()
                     order.b2b_change_payment_hold = False
                 request.write(values)
-                request.message_post(body=_("The additional payment has been received."))
+                request._b2b_post_customer_message(body=_("The additional payment has been received."))
                 if next_state == "finance_review":
                     request._schedule_finance_review_activity()
 
@@ -519,7 +519,7 @@ class B2BOrderChangeRequest(models.Model):
                 lambda activity: activity.summary == _("Complete financial adjustment %(request)s", request=request.name)
                 and activity.activity_type_id == self.env.ref("mail.mail_activity_data_todo")
             ).action_feedback(feedback=_("Financial adjustment completed."))
-            request.message_post(
+            request._b2b_post_customer_message(
                 body=_(
                     "Finance completed the order adjustment. Reference: %(reference)s",
                     reference=request.finance_reference,

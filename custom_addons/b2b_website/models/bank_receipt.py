@@ -130,7 +130,7 @@ class BankReceipt(models.Model):
                 raise ValidationError(_('Allocate only the outstanding order amount. Leave excess funds as an unallocated customer credit.'))
             super(BankReceipt, receipt).write({'state': 'confirmed', 'order_amount': credit, 'reviewed_by_id': self.env.uid, 'reviewed_at': fields.Datetime.now()})
             receipt.activity_ids.action_feedback(feedback=_('Bank receipt verified.'))
-            receipt.order_id.message_post(body=_('Bank receipt %(receipt)s confirmed: %(amount)s %(currency)s.', receipt=receipt.name, amount=credit, currency=receipt.currency_id.name), partner_ids=receipt.partner_id.ids)
+            receipt.order_id._b2b_post_customer_message(body=_('Bank receipt %(receipt)s confirmed: %(amount)s %(currency)s.', receipt=receipt.name, amount=credit, currency=receipt.currency_id.name), partner_ids=receipt.partner_id.ids)
             receipt.order_id.sudo()._b2b_after_receipt()
         return True
 
@@ -142,7 +142,7 @@ class BankReceipt(models.Model):
                 raise UserError(_('Select an awaiting-finance submission and explain the review result.'))
             super(BankReceipt, receipt).write({'state': state, 'reviewed_by_id': self.env.uid, 'reviewed_at': fields.Datetime.now()})
             receipt.activity_ids.action_feedback(feedback=receipt.review_note)
-            receipt.order_id.message_post(body=_('Payment evidence %(name)s: %(note)s', name=receipt.name, note=receipt.review_note), partner_ids=receipt.partner_id.ids)
+            receipt.order_id._b2b_post_customer_message(body=_('Payment evidence %(name)s: %(note)s', name=receipt.name, note=receipt.review_note), partner_ids=receipt.partner_id.ids)
         return True
 
     def action_return(self):

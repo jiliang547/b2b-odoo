@@ -213,7 +213,7 @@ class SaleOrder(models.Model):
                 "require_payment": True,
                 "prepayment_percent": 1.0,
             })
-            order.message_post(
+            order._b2b_post_customer_message(
                 body=_("The reviewed order is ready for payment."),
                 partner_ids=order.partner_id.ids,
             )
