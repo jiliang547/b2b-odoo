@@ -164,6 +164,10 @@ class ResPartner(models.Model):
 
     def write(self, vals):
         self._b2b_check_sensitive_partner_values(vals)
+        portal_ownership_change = (self.env.registry.ready
+            and bool({'parent_id', 'is_company', 'company_type'}.intersection(vals))
+            and self.env['res.users'].sudo().with_context(active_test=False).search_count([
+                ('share', '=', True), ('partner_id', 'child_of', self.ids)], limit=1))
         result = super().write(vals)
         if vals.get("parent_id"):
             # A contact that joins a company immediately adopts that company's
@@ -184,6 +188,12 @@ class ResPartner(models.Model):
                     "b2b_customer_type_id": False,
                 })
                 linked_contacts.mapped("b2b_pricelist_override_ids").sudo().unlink()
+        if portal_ownership_change:
+            # Native ir.rule domains cache expressions containing
+            # user.partner_id.commercial_partner_id. Re-parenting a logged-in
+            # contact must invalidate the old owner in this and other workers,
+            # just as native res.users does for company/group changes.
+            self.env.registry.clear_cache()
         return result
 
     def action_b2b_approve(self):
