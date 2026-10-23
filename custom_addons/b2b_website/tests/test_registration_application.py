@@ -154,6 +154,53 @@ class TestB2BRegistrationApplication(TransactionCase):
         self.assertEqual(application.partner_id.parent_id, existing)
         self.assertTrue(existing.b2b_approved)
 
+    def _assert_public_review_notice(self, application, subject):
+        messages = self.env['mail.message'].sudo().search([
+            ('model', '=', application._name), ('res_id', '=', application.id),
+            ('message_type', '=', 'comment'), ('subject', '=', subject),
+            ('subtype_id', '=', self.env.ref('mail.mt_comment').id),
+        ])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(messages.author_id, self.manager.partner_id)
+        self.assertIn(self.website.company_id.email, messages.email_from)
+        notices = messages.notification_ids.filtered(lambda notice: notice.res_partner_id == application.partner_id)
+        self.assertEqual(len(notices), 1)
+        self.assertEqual(notices.notification_type, 'email')
+        self.assertTrue(notices.mail_mail_id)
+        self.assertFalse(notices.is_read)
+        thread = self.env['b2b.message.thread'].sudo().search([
+            ('source_model', '=', application._name), ('res_id', '=', application.id)])
+        self.assertEqual(thread.last_message_id, messages)
+        self.assertIn(messages, thread.with_user(application.user_id)._customer_messages())
+        return messages
+
+    def test_approval_create_and_link_with_seller_mailbox_and_dual_channel(self):
+        self.website.company_id.email = 'registration-legal-seller@example.test'
+        for resolution in ('create', 'existing'):
+            with self.subTest(resolution=resolution):
+                existing = self.env['res.partner'].create({'name': 'Native notification existing company', 'is_company': True})
+                application = self._application('seller-' + resolution, state='pending',
+                    company_resolution=resolution, resolved_partner_id=existing.id if resolution == 'existing' else False)
+                application.user_id.active = True
+                application.with_user(self.manager).with_context(mail_notify_force_send=False).action_approve()
+                self.assertEqual(application.state, 'approved')
+                self.assertEqual(application.partner_id.parent_id, application.resolved_partner_id)
+                self._assert_public_review_notice(application, 'Your Partner Hub access is active')
+                with self.assertRaises(UserError):
+                    application.with_user(self.manager).action_approve()
+                self._assert_public_review_notice(application, 'Your Partner Hub access is active')
+
+    def test_rejection_with_seller_mailbox_and_dual_channel_is_not_duplicated(self):
+        self.website.company_id.email = 'registration-legal-seller@example.test'
+        application = self._application('seller-reject', state='pending', rejection_reason='Please correct the submitted details.')
+        application.user_id.active = True
+        application.with_user(self.manager).with_context(mail_notify_force_send=False).action_reject()
+        self.assertEqual(application.state, 'rejected')
+        self._assert_public_review_notice(application, 'Update on your Partner Hub registration')
+        with self.assertRaises(UserError):
+            application.with_user(self.manager).action_reject()
+        self._assert_public_review_notice(application, 'Update on your Partner Hub registration')
+
     def test_existing_customer_review_activity_and_chatter(self):
         customer = self.env['res.partner'].create({'name': 'Mail customer', 'is_company': True})
         application = self._application('mail-existing', state='pending',

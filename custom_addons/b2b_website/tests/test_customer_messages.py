@@ -181,6 +181,26 @@ class TestCustomerMessages(CustomerMessagesCommon):
         self.evidence.message_subscribe(staff.partner_id.ids)
         self.assertFalse(self.notifications(self.public(self.evidence), staff.partner_id))
 
+    def test_private_note_cannot_notify_staff_outside_the_source_company(self):
+        company = self.env['res.company'].create({'name': 'Unrelated private-note company'})
+        staff = mail_new_test_user(self.env, login='message-unrelated-private-note-staff', groups='base.group_user',
+            company_id=company.id, company_ids=[Command.set(company.ids)])
+        note = self.evidence.with_context(mail_notify_force_send=False).message_post(body='Private note',
+            message_type='comment', subtype_xmlid='mail.mt_note', partner_ids=staff.partner_id.ids)
+        self.assertFalse(self.notifications(note, staff.partner_id))
+
+    def test_internal_conversation_lookup_cannot_bypass_native_index_company_rule(self):
+        application = self.all_sources()[-1]
+        self.public(application)
+        company = self.env['res.company'].create({'name': 'Unrelated registration reviewer company'})
+        staff = mail_new_test_user(self.env, login='message-unrelated-registration-reviewer',
+            groups='b2b_core.group_b2b_manager', company_id=company.id, company_ids=[Command.set(company.ids)])
+        # Registration review is a shared workspace; its source ACL alone must
+        # not bypass the company rule on the indexed conversation.
+        application.with_user(staff).with_context(allowed_company_ids=company.ids).check_access('read')
+        with self.assertRaises(AccessError):
+            self.thread(application).with_user(staff).with_context(allowed_company_ids=company.ids)._customer_source()
+
     def test_unlinked_customer_payment_reuses_native_customer_salesperson(self):
         self.contact.user_id = self.operator
         payment = self.env['account.payment'].create({'payment_type': 'outbound', 'partner_type': 'customer',
@@ -243,6 +263,7 @@ class TestCustomerMessages(CustomerMessagesCommon):
         self.assertEqual(self.env['mail.mail'].search_count([('mail_message_id', '=', message.id)]), mails)
 
     def test_registration_result_template_uses_one_native_public_delivery(self):
+        self.env.company.email = 'message-legal-seller@example.test'
         application = self.all_sources()[-1]
         for xmlid in ('b2b_website.mail_template_registration_approved', 'b2b_website.mail_template_registration_rejected'):
             message = application.with_context(mail_notify_force_send=False).message_post_with_source(
@@ -251,6 +272,72 @@ class TestCustomerMessages(CustomerMessagesCommon):
             self.assertEqual(self.thread(application).last_message_id, message)
             self.assertEqual(len(self.notifications(message, self.contact)), 1)
             self.assertFalse(self.notifications(message, self.contact).is_read)
+            self.assertEqual(message.author_id, self.env.user.partner_id)
+            self.assertIn(self.env.company.email, message.email_from)
+
+    def test_every_customer_template_separates_company_mailbox_from_author(self):
+        self.env.company.email = 'message-legal-seller@example.test'
+        self.assertTrue(self.env.company.partner_id.partner_share)
+        for source in self.all_sources():
+            with self.subTest(model=source._name):
+                template = self.env['mail.template'].create({
+                    'name': 'Customer template sender regression',
+                    'model_id': self.env['ir.model']._get_id(source._name),
+                    'email_from': self.env.company.email,
+                    'partner_to': str(self.contact.id),
+                    'subject': 'Public customer template',
+                    'body_html': '<p>Public template notification.</p>',
+                })
+                message = source.with_context(mail_notify_force_send=False).message_post_with_source(
+                    template, message_type='comment', subtype_xmlid='mail.mt_comment')
+                self.assertEqual(message.author_id, self.env.user.partner_id)
+                self.assertIn(self.env.company.email, message.email_from)
+                self.assertEqual(self.thread(source).last_message_id, message)
+                notice = self.notifications(message, self.contact)
+                self.assertEqual(len(notice), 1)
+                self.assertEqual(notice.notification_type, 'email')
+                self.assertFalse(notice.is_read)
+                self.assertFalse(self.notifications(message, self.other_customer))
+
+    def test_template_author_fix_does_not_allow_other_customer_recipient(self):
+        self.env.company.email = 'message-legal-seller@example.test'
+        template = self.env['mail.template'].create({
+            'name': 'Foreign template recipient must stay blocked',
+            'model_id': self.env['ir.model']._get_id(self.evidence._name),
+            'email_from': self.env.company.email,
+            'partner_to': str(self.other_customer.id),
+            'use_default_to': False,
+            'body_html': '<p>Wrong recipient.</p>',
+        })
+        with self.assertRaisesRegex(ValidationError, "another customer's contacts"), self.cr.savepoint():
+            self.evidence.message_post_with_source(template, message_type='comment', subtype_xmlid='mail.mt_comment')
+
+    def test_registration_uses_native_resolved_seller_for_staff_isolation(self):
+        application = self.all_sources()[-1]
+        seller = self.env['res.company'].create({'name': 'Registration resolved seller',
+            'email': 'message-other-legal-seller@example.test'})
+        reviewer = mail_new_test_user(self.env, login='message-seller-reviewer', groups='b2b_core.group_b2b_manager',
+            email='message-seller-reviewer@example.test', company_id=seller.id, company_ids=[Command.set(seller.ids)])
+        self.customer.b2b_selling_company_id = seller
+        application.write({'resolved_partner_id': self.customer.id, 'approved_by_id': reviewer.id})
+        application.message_subscribe(self.operator.partner_id.ids)
+        self.assertEqual(application._b2b_customer_message_context()['company'], seller)
+        message = application.with_user(reviewer).sudo().with_context(mail_notify_force_send=False).message_post_with_source(
+            self.env.ref('b2b_website.mail_template_registration_approved'), message_type='comment', subtype_xmlid='mail.mt_comment')
+        self.assertEqual(message.author_id, reviewer.partner_id)
+        self.assertFalse(self.notifications(message, self.operator.partner_id))
+        self.assertEqual(len(self.notifications(message, self.contact)), 1)
+
+    def test_template_internal_note_still_never_notifies_customer(self):
+        template = self.env['mail.template'].create({
+            'name': 'Private template note', 'model_id': self.env['ir.model']._get_id(self.evidence._name),
+            'email_from': self.env.company.email or self.env.user.email,
+            'partner_to': str(self.contact.id), 'body_html': '<p>Private template note.</p>',
+        })
+        message = self.evidence.with_context(mail_notify_force_send=False).message_post_with_source(
+            template, message_type='comment', subtype_xmlid='mail.mt_note')
+        self.assertFalse(self.notifications(message, self.contact))
+        self.assertFalse(self.thread(self.evidence))
 
     def test_native_notification_retry_does_not_duplicate_email_or_thread(self):
         message = self.public(self.evidence)
@@ -293,6 +380,20 @@ class TestCustomerMessages(CustomerMessagesCommon):
         self.order.partner_id = self.other_customer
         self.assertFalse(thread.exists())
         self.assertFalse(self.env['b2b.message.thread']._sync_from_message(message))
+
+    def test_logged_in_contact_company_change_invalidates_native_owner_rules(self):
+        self.public(self.evidence)
+        old_thread = self.thread(self.evidence)
+        portal_threads = self.env['b2b.message.thread'].with_user(self.portal_user)
+        self.assertIn(old_thread, portal_threads.search([]))  # Warm native ir.rule cache.
+        self.contact.parent_id = self.other_customer
+        new_order = self.env['sale.order'].create({'partner_id': self.contact.id,
+            'website_id': self.website.id, 'user_id': self.operator.id})
+        self.public(new_order)
+        visible = portal_threads.search([])
+        self.assertIn(self.thread(new_order), visible)
+        self.assertNotIn(old_thread, visible)
+        self.assertFalse(old_thread.exists())
 
     def test_supplier_payment_and_invoice_are_not_customer_conversations(self):
         payment = self.env['account.payment'].create({'payment_type': 'outbound', 'partner_type': 'supplier',

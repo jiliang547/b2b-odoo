@@ -94,7 +94,10 @@ def customer_context(source):
         staff = source.user_id
     elif name == "b2b.registration.application":
         partner, website = source.partner_id, source.website_id
-        company, staff = website.company_id, source.approved_by_id
+        # Reuse the native registration mail-company resolver, including the
+        # legal seller selected by the multi-company extension after approval.
+        company = source._mail_get_companies(default=website.company_id).get(source.id) or website.company_id
+        staff = source.approved_by_id
     if not partner and name != "b2b.contact.request":
         return None
     if related and related._name == "sale.order" and (

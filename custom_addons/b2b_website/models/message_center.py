@@ -136,6 +136,9 @@ class MailThread(models.AbstractModel):
                 kwargs["notify_author"] = True
         recipients = super()._notify_get_recipients(message, msg_vals=msg_vals, **kwargs)
         internal = bool(message.is_internal or message.subtype_id.internal)
+        staff_context = context
+        if not staff_context and self and self._name in MESSAGE_CENTER_MODELS:
+            staff_context = self.sudo()._b2b_customer_message_context()
         result, seen, mailboxes = [], set(), set()
         for recipient in sorted(recipients, key=lambda item: not bool(item.get("uid"))):
             partner = self.env["res.partner"].sudo().browse(recipient.get("id")).exists()
@@ -144,14 +147,14 @@ class MailThread(models.AbstractModel):
             # external mention or stale follower, including non-B2B models.
             if (internal or foreign_author) and not staff:
                 continue
+            if staff and staff_context and staff_context['company'] and not partner.user_ids.filtered(
+                    lambda user: user.active and not user.share and staff_context['company'] in user.company_ids):
+                continue
             if context and not foreign_author:
                 owner = context["partner"].commercial_partner_id
                 if partner and not staff and owner and partner.commercial_partner_id != owner:
                     continue
                 if partner and not staff and guest and partner.email_normalized != guest_email:
-                    continue
-                if staff and context["company"] and not partner.user_ids.filtered(
-                        lambda user: user.active and not user.share and context["company"] in user.company_ids):
                     continue
                 if not partner:
                     allowed = {value.lower() for value in context["recipients"].mapped("email_normalized") if value}
@@ -432,6 +435,7 @@ class B2BMessageThread(models.Model):
             raise AccessError(_("This conversation is unavailable."))
         user = self.env.user
         if user._is_internal():
+            self.with_user(user).check_access("read")
             source.with_user(user).check_access("read")
         elif (not self.commercial_partner_id
               or self.commercial_partner_id != user.partner_id.commercial_partner_id
